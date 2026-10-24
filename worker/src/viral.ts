@@ -86,6 +86,7 @@ export const EVENTS = new Set([
   'jornada_from_daily',
   'fallback_shown',
   'save_click',
+  'install',
 ])
 const EV_KEY = /^[a-z0-9_:.=+-]{0,24}$/
 const SURFACE = /^[a-z0-9_]{1,16}$/

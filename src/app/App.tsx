@@ -1,4 +1,7 @@
+import { AnimatePresence, motion } from 'motion/react'
 import { lazy, Suspense } from 'react'
+import { prefersReduced, screenOut } from '../ui/motion'
+import { Splash } from '../ui/Splash'
 import { useNav } from './nav'
 
 // Cada tela é um chunk próprio: a primeira tela abre rápido.
@@ -26,9 +29,14 @@ const screens = {
 export function App() {
   const screen = useNav((s) => s.screen)
   const Screen = screens[screen]
+  // troca de tela: a anterior apaga em 3 degraus (100 ms) e a nova entra com a cortina pontilhada (PixelWipe)
   return (
-    <Suspense fallback={<div className="boot" aria-busy="true" />}>
-      <Screen />
-    </Suspense>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div key={screen} className="scr-swap" exit={prefersReduced() ? undefined : screenOut}>
+        <Suspense fallback={<Splash />}>
+          <Screen />
+        </Suspense>
+      </motion.div>
+    </AnimatePresence>
   )
 }

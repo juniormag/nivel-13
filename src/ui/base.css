@@ -36,11 +36,11 @@
   border: 0;
   cursor: pointer;
   font-family: var(--f-hud);
-  font-size: 14px;
+  font-size: var(--fs-sm);
   letter-spacing: 0.02em;
   text-transform: uppercase;
   line-height: 1.15;
-  padding: 12px 18px;
+  padding: var(--sp-3) var(--sp-4);
   min-height: 48px;
   min-width: 48px;
   background: var(--b-fill);
@@ -56,13 +56,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--sp-3);
   text-decoration: none;
   text-shadow: none;
   position: relative;
 }
-.btn:hover {
-  --b-fill: var(--dusk);
+@media (hover: hover) {
+  .btn:hover {
+    --b-fill: var(--dusk);
+  }
 }
 .btn:focus-visible {
   outline: var(--px) solid var(--gold-hi);
@@ -75,8 +77,10 @@
   --b-lo: var(--crimson);
   --b-ink: var(--white);
 }
-.btn--red:hover {
-  --b-fill: #ea2c33;
+@media (hover: hover) {
+  .btn--red:hover {
+    --b-fill: var(--red-hot);
+  }
 }
 .btn--gold {
   --b-fill: var(--gold);
@@ -85,23 +89,27 @@
   --b-lo: var(--gold-1);
   --b-ink: var(--night);
 }
-.btn--gold:hover {
-  --b-fill: #efbd48;
+@media (hover: hover) {
+  .btn--gold:hover {
+    --b-fill: var(--gold-hi);
+  }
 }
 .btn--ghost {
   --b-ink: var(--stone-3);
   background: transparent;
   box-shadow: none;
   min-height: 44px;
-  padding: 8px 12px;
+  padding: var(--sp-2) var(--sp-3);
 }
-.btn--ghost:hover {
-  --b-ink: var(--stone-hi);
-  background: var(--dusk);
+@media (hover: hover) {
+  .btn--ghost:hover {
+    --b-ink: var(--stone-hi);
+    background: var(--dusk);
+  }
 }
 .btn--big {
-  font-size: 18px;
-  padding: 16px 26px;
+  font-size: var(--fs-lg);
+  padding: var(--sp-4) var(--sp-6);
   min-height: 60px;
 }
 .btn--wide {
@@ -118,11 +126,11 @@
 
 .kbd {
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1;
   min-width: 18px;
   height: 18px;
-  padding: 0 3px;
+  padding: 0 var(--sp-1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -154,26 +162,26 @@
   width: min(560px, 100%);
   max-height: 100%;
   overflow: auto;
-  padding: 22px;
+  padding: var(--sp-5);
   position: relative;
 }
 .eyebrow {
   font-family: var(--f-hud);
   text-transform: uppercase;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.08em;
   color: var(--red-hot);
-  margin-bottom: 8px;
+  margin-bottom: var(--sp-2);
 }
 .muted {
   color: var(--stone-3);
 }
 .small {
-  font-size: 13px !important;
+  font-size: var(--fs-sm) !important;
 }
 .row {
   display: flex;
-  gap: 12px;
+  gap: var(--sp-3);
   flex-wrap: wrap;
   align-items: center;
 }
@@ -186,23 +194,24 @@
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 .topbar {
   position: absolute;
   left: 0;
   right: 0;
   top: 0;
-  padding: calc(10px + var(--safe-t)) calc(12px + var(--safe-r)) 10px calc(12px + var(--safe-l));
+  padding: calc(var(--sp-3) + var(--safe-t)) calc(var(--sp-3) + var(--safe-r)) var(--sp-3)
+    calc(var(--sp-3) + var(--safe-l));
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   font-family: var(--f-hud);
   text-transform: uppercase;
 }
 .countdown {
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.06em;
   color: var(--gold);
 }
@@ -213,10 +222,10 @@
   border: 0;
   cursor: pointer;
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  padding: 8px 14px;
+  padding: var(--sp-2) var(--sp-4);
   background: var(--night);
   color: var(--stone-3);
   box-shadow:
@@ -226,9 +235,11 @@
     var(--px) 0 0 0 var(--stone-1);
   min-height: 44px;
 }
-.chip:hover {
-  color: var(--stone-hi);
-  background: var(--dusk);
+@media (hover: hover) {
+  .chip:hover {
+    color: var(--stone-hi);
+    background: var(--dusk);
+  }
 }
 .chip[aria-pressed="true"],
 .chip[aria-selected="true"],
@@ -245,11 +256,11 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 .field label {
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--stone-3);
@@ -261,8 +272,8 @@
   background: var(--void);
   color: var(--stone-hi);
   font-family: var(--f-text);
-  font-size: 18px;
-  padding: 12px;
+  font-size: var(--fs-lg);
+  padding: var(--sp-3);
   box-shadow:
     0 calc(var(--px) * -1) 0 0 var(--stone-2),
     0 var(--px) 0 0 var(--stone-2),
@@ -666,8 +677,10 @@ select.input {
   box-shadow: 0 0 0 var(--px) var(--stone-2);
   min-height: 48px;
 }
-.boss-opt:hover {
-  background: var(--dusk);
+@media (hover: hover) {
+  .boss-opt:hover {
+    background: var(--dusk);
+  }
 }
 .boss-opt.ok {
   background: var(--vine-0);
