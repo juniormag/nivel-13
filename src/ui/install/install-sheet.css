@@ -540,3 +540,10 @@
 .inst-finger svg {
   display: block;
 }
+
+/* rótulos dos botões numa linha só, até em 360 px */
+.inst-actions .btn {
+  white-space: nowrap;
+  padding-left: 12px;
+  padding-right: 12px;
+}

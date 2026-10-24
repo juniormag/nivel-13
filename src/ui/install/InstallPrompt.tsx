@@ -225,23 +225,23 @@ function Banner({
       }}
     >
       <span className="inst-banner-icon">
-          <motion.img
-            src={icon}
-            alt=""
-            width={64}
-            height={64}
-            draggable={false}
-            style={{ originY: 1 }}
-            initial={false}
-            animate={landed ? { scaleX: [1, 1.18, 0.94, 1], scaleY: [1, 0.82, 1.08, 1] } : undefined}
-            transition={{ duration: 0.36, times: [0, 0.25, 0.6, 1], ease: 'easeOut' }}
-          />
-          {landed && <Sparkle x={60} y={4} px={2} delay={0.12} />}
-        </span>
-        <div className="inst-banner-text">
-          <p className="inst-banner-title">{BANNER.title}</p>
-          <p className="inst-banner-sub">{inapp ? BANNER.subInApp : BANNER.sub}</p>
-        </div>
+        <motion.img
+          src={icon}
+          alt=""
+          width={64}
+          height={64}
+          draggable={false}
+          style={{ originY: 1 }}
+          initial={false}
+          animate={landed ? { scaleX: [1, 1.18, 0.94, 1], scaleY: [1, 0.82, 1.08, 1] } : undefined}
+          transition={{ duration: 0.36, times: [0, 0.25, 0.6, 1], ease: 'easeOut' }}
+        />
+        {landed && <Sparkle x={60} y={4} px={2} delay={0.12} />}
+      </span>
+      <div className="inst-banner-text">
+        <p className="inst-banner-title">{BANNER.title}</p>
+        <p className="inst-banner-sub">{inapp ? BANNER.subInApp : BANNER.sub}</p>
+      </div>
       <div className="inst-banner-actions">
         <PixelButton tone="ghost" size="sm" commit="back" onClick={onLater}>
           {BANNER.later}
