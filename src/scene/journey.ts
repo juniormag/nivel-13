@@ -1,5 +1,6 @@
 // Mapa da jornada em pixel: o Brasil em pedra sobre a noite (estilo do minimapa da referência),
-// a trilha pontilhada das 13 fases, os nós (feito = ouro, atual = anel vermelho, trancado = pedra)
+// a trilha pontilhada das 13 fases, os nós (feito = medalha de ouro com estrela, liberado = medalha
+// vermelha pulsando com ▶, trancado = pedra cinza com cadeado)
 // e o avatar pulando no nó escolhido. Só a paleta, escala inteira.
 import { inBrazil, LAT0, LAT1, LON0, LON1 } from '../content/brazil'
 import { LEVELS } from '../content/levels'
@@ -7,6 +8,10 @@ import { mulberry32 } from '../lib/rng'
 import { sprite } from '../lib/sprites'
 import { Buf, dith, HEX, type K, makeNoise, vgrad } from './pal'
 import { drawSparkle } from './props'
+
+const STAR = ['...+...', '...#...', '+#####+', '.#####.', '..###..', '.##.##.', '.#...#.']
+const PLAY = ['.#.....', '.##....', '.###...', '.####..', '.###...', '.##....', '.#.....']
+const LOCK = ['..###..', '.#...#.', '.#...#.', '#######', '#++k++#', '#++k++#', '#######']
 
 export class JourneyMap {
   private g: CanvasRenderingContext2D
@@ -123,6 +128,29 @@ export class JourneyMap {
       g.fillStyle = HEX[k]
       g.fillRect(x, y, 1, 1)
     }
+    /** disco com contorno, luz de cima-esquerda e sombra de baixo-direita (rampa escuro → claro, 4 tons) */
+    const disc = (cx: number, cy: number, r: number, ramp: [K, K, K, K]) => {
+      for (let y = -r; y <= r; y++)
+        for (let x = -r; x <= r; x++) {
+          const d = Math.hypot(x, y)
+          if (d > r + 0.4) continue
+          const k = d > r - 0.6 ? ramp[0] : x + y < -r * 0.7 ? ramp[3] : x + y > r * 0.6 ? ramp[1] : ramp[2]
+          px(cx + x, cy + y, k)
+        }
+      // sombra de contato
+      for (let x = -r + 2; x <= r - 2; x++) px(cx + x + 1, cy + r + 1, 'void')
+    }
+    /** carimba um desenho 7×7 ('#' = cor, '+' = realce, 'k' = vazado escuro) centrado */
+    const stamp = (cx: number, cy: number, rows: string[], k: K, hi: K) => {
+      rows.forEach((row, y) => {
+        for (let x = 0; x < row.length; x++) {
+          const ch = row[x]
+          if (ch === '#') px(cx - 3 + x, cy - 3 + y, k)
+          else if (ch === '+') px(cx - 3 + x, cy - 3 + y, hi)
+          else if (ch === 'k') px(cx - 3 + x, cy - 3 + y, 'void')
+        }
+      })
+    }
     // trilha: ouro no que já foi, pedra no que falta, formiguinhas no trecho atual
     const march = reduced ? 0 : Math.floor(t * 6)
     LEVELS.forEach((l, i) => {
@@ -147,36 +175,29 @@ export class JourneyMap {
       const p = this.xy(l.lon, l.lat)
       const st = stars[i] ?? 0
       if (st > 0) {
-        g.fillStyle = HEX.gold0
-        g.fillRect(p.x - 3, p.y - 2, 7, 5)
-        g.fillRect(p.x - 2, p.y - 3, 5, 7)
-        g.fillStyle = HEX.gold
-        g.fillRect(p.x - 2, p.y - 2, 5, 5)
-        g.fillStyle = HEX.goldHi
-        g.fillRect(p.x - 2, p.y - 2, 2, 2)
-        px(p.x, p.y, 'sparkle')
+        // feita: medalha de ouro com estrela branca
+        disc(p.x, p.y, 6, ['gold0', 'gold1', 'gold', 'goldHi'])
+        stamp(p.x, p.y, STAR, 'sparkle', 'white')
       } else if (i <= done) {
-        // anel vermelho do minimapa: núcleo branco, anel red-hot, halo pontilhado
+        // liberada: medalha vermelha pulsando (anel de fora cresce 1 px a 3 fps) com ▶ branco
         const pulse = reduced ? 0 : Math.floor(t * 3) % 2
-        for (let y = -5; y <= 5; y++)
-          for (let x = -5; x <= 5; x++) {
+        const rr = 8 + pulse
+        for (let y = -rr; y <= rr; y++)
+          for (let x = -rr; x <= rr; x++) {
             const d = Math.hypot(x, y)
-            if (d < 1.2) px(p.x + x, p.y + y, 'white')
-            else if (d < 2.2) px(p.x + x, p.y + y, 'redGlow')
-            else if (d < 3.3) px(p.x + x, p.y + y, 'redHot')
-            else if (d < 4.3 + pulse && (x + y) & 1) px(p.x + x, p.y + y, 'crimson')
+            if (d > 6.6 && d < rr + 0.5 && (x + y + pulse) & 1)
+              px(p.x + x, p.y + y, d < 7.6 ? 'redHot' : 'crimson')
           }
+        disc(p.x, p.y, 6, ['blood0', 'crimson', 'red', 'redGlow'])
+        stamp(p.x, p.y, PLAY, 'white', 'sparkle')
       } else {
-        g.fillStyle = HEX.stone0
-        g.fillRect(p.x - 2, p.y - 2, 5, 5)
-        g.fillStyle = HEX.stone1
-        g.fillRect(p.x - 2, p.y - 2, 5, 1)
-        g.fillRect(p.x - 2, p.y - 2, 1, 5)
-        px(p.x, p.y, 'void')
+        // trancada: medalha de pedra cinza com cadeado
+        disc(p.x, p.y, 5, ['void', 'stone0', 'stone1', 'stone2'])
+        stamp(p.x, p.y, LOCK, 'stone3', 'stoneHi')
       }
       // cantoneiras brancas piscando no selecionado
       if (i === sel && (reduced || Math.floor(t * 4) % 2 === 0)) {
-        const r = 6
+        const r = 9
         for (const [sx, sy] of [
           [-1, -1],
           [1, -1],

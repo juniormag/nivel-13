@@ -384,6 +384,60 @@
   }
 }
 
+/* celular deitado (altura baixa): a arte vai para a esquerda, o texto para a direita, botões em linha */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mt-ov {
+    padding: 8px 12px;
+  }
+  .mt-card--intro {
+    width: min(760px, 100%);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0 14px;
+    text-align: left;
+  }
+  .mt-card--intro .mt-art {
+    margin: 0;
+    align-self: start;
+  }
+  .mt-card--intro .mt-title {
+    font-size: 22px;
+    margin-top: 0;
+  }
+  .mt-card--intro .mt-lead {
+    font-size: 15px;
+    margin: 0 0 10px;
+  }
+  .mt-tips {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .mt-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    margin-top: 10px;
+  }
+  .mt-card--intro .mt-actions > .btn:not(.btn--ghost) {
+    min-width: 0;
+  }
+  .mt-card--intro .btn--big {
+    min-height: 48px;
+    padding: 10px 18px;
+  }
+  .mt-card--win,
+  .mt-card--lose,
+  .mt-card--pause {
+    width: min(560px, 100%);
+  }
+  .mt-card--win .mt-actions,
+  .mt-card--lose .mt-actions,
+  .mt-card--pause .mt-actions {
+    justify-content: center;
+  }
+}
+
 /* entrada do card de intro, em degraus (180 a 320 ms), escalonada */
 .mt-ov--intro .mt-card {
   animation: mt-drop 0.22s steps(4) both;

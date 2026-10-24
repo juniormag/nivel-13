@@ -3,7 +3,6 @@
 import './onde.css'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { hitstop, playMusic, sfx } from '../../audio/audio'
-import { PINS } from '../../content/onde'
 import { fmt } from '../../ui/hooks'
 import { prefersReduced } from '../../ui/motion'
 import { PixelButton, Tap } from '../../ui/PixelButton'
@@ -12,7 +11,6 @@ import { ev } from '../../viral/api'
 import type { Mark } from './draw'
 import { type EndRow, EndView } from './EndView'
 import { FactReveal } from './FactReveal'
-import { FIXTURE_PINS } from './fixture'
 import { type Pt, ufAt, ufInfo, ufNear } from './geo'
 import {
   distanceKm,
@@ -69,8 +67,8 @@ export function boardSize(w: number, h: number, end = false) {
   return { wide, S, L: Math.floor(size / S) }
 }
 
-const ALL_PINS = [...PINS, ...FIXTURE_PINS]
-const pinById = (id: string) => ALL_PINS.find((p) => p.id === id)
+/** Reabrir uma partida guardada: só pino ainda publicável (se um sair da revisão, some do mapa). */
+const pinById = (id: string) => pinPool().find((p) => p.id === id)
 
 export function OndeGame({
   seed,
