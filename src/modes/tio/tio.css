@@ -755,7 +755,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-.tio-pcard-txt span {
+.tio-pcard-txt > span {
   font-size: 16px;
   line-height: 1.2;
   color: var(--stone-3);
@@ -766,6 +766,12 @@
 .tio-pcard-go {
   font: 12px / 1 var(--f-hud);
   color: var(--red-hot);
+}
+.tio-pcard-txt b {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
 }
 .tio-seal {
   font: 10px / 1 var(--f-hud);

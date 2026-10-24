@@ -130,30 +130,6 @@ export function EndView({
         </motion.div>
 
         <div className="onde-end-side">
-          <motion.ol className="onde-end-list" variants={rise} aria-label="Seus pinos">
-            {rows.map((r, i) => (
-              <li key={r.pin.id} className={`is-${r.pin.side}`}>
-                <i className={`onde-dot is-${r.pin.side}`} aria-hidden="true" />
-                <span className="onde-end-place">
-                  <b>{r.pin.title}</b>
-                  <small>{r.pin.place}</small>
-                </span>
-                <span className="onde-end-km">{fmtKm(r.km)}</span>
-                <span className="onde-end-pts">+{fmtInt(r.s * weightOf(i))}</span>
-              </li>
-            ))}
-          </motion.ol>
-
-          <motion.figure className="onde-grid pf pf--hud" variants={rise}>
-            <figcaption className="sr-only">Texto que vai no WhatsApp</figcaption>
-            <p>
-              Onde Foi? {seedLabel(seed)} · {fmtInt(total)}/{fmtInt(ONDE_MAX)}
-            </p>
-            {lines.map((l) => (
-              <p key={l}>{l}</p>
-            ))}
-          </motion.figure>
-
           <motion.div className="onde-end-cta" variants={rise}>
             <PixelButton tone="red" size="big" wide onClick={() => setSharing(true)}>
               Compartilhar
@@ -170,12 +146,36 @@ export function EndView({
             >
               Desafiar no WhatsApp
             </a>
-            <div className="onde-end-row">
-              <PixelButton onClick={onAgain}>Jogar de novo</PixelButton>
-              <Tap className="btn btn--ghost" commit="back" onClick={onHome}>
-                Início
-              </Tap>
-            </div>
+          </motion.div>
+          <motion.figure className="onde-grid pf pf--hud" variants={rise}>
+            <figcaption className="sr-only">Texto que vai no WhatsApp</figcaption>
+            <p>
+              Onde Foi? {seedLabel(seed)} · {fmtInt(total)}/{fmtInt(ONDE_MAX)}
+            </p>
+            {lines.map((l) => (
+              <p key={l}>{l}</p>
+            ))}
+          </motion.figure>
+
+          <motion.ol className="onde-end-list" variants={rise} aria-label="Seus pinos">
+            {rows.map((r, i) => (
+              <li key={r.pin.id} className={`is-${r.pin.side}`}>
+                <i className={`onde-dot is-${r.pin.side}`} aria-hidden="true" />
+                <span className="onde-end-place">
+                  <b>{r.pin.title}</b>
+                  <small>{r.pin.place}</small>
+                </span>
+                <span className="onde-end-km">{fmtKm(r.km)}</span>
+                <span className="onde-end-pts">+{fmtInt(r.s * weightOf(i))}</span>
+              </li>
+            ))}
+          </motion.ol>
+
+          <motion.div className="onde-end-row" variants={rise}>
+            <PixelButton onClick={onAgain}>Jogar de novo</PixelButton>
+            <Tap className="btn btn--ghost" commit="back" onClick={onHome}>
+              Início
+            </Tap>
           </motion.div>
         </div>
       </div>

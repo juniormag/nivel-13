@@ -1,5 +1,7 @@
 // Escolha do parente: 5 cartas com retrato, nome e a preocupação em 1 linha; quem já foi convencido ganha selo.
 import { motion } from 'motion/react'
+import { useEffect } from 'react'
+import { sfx } from '../../audio/audio'
 import type { Parente } from '../../content/tio'
 import { rise, stagger } from '../../ui/motion'
 import { Tap } from '../../ui/PixelButton'
@@ -19,6 +21,16 @@ export function Picker({
   fixture?: boolean
 }) {
   const convinced = useTio((s) => s.convinced)
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        sfx('back')
+        onClose()
+      }
+    }
+    addEventListener('keydown', on)
+    return () => removeEventListener('keydown', on)
+  }, [onClose])
   return (
     <section className="tio-pick pf pf--hud pf--bracket pf--lift" aria-labelledby="tio-pick-h">
       <header className="tio-pick-head">
@@ -50,18 +62,19 @@ export function Picker({
                 >
                   <Face id={p.id} expr={done ? 'pensando' : 'neutro'} className="tio-pcard-face" />
                   <span className="tio-pcard-txt">
-                    <b>{p.name}</b>
+                    <b>
+                      {p.name}
+                      {done && (
+                        <span className="tio-seal" aria-hidden="true">
+                          Convencido
+                        </span>
+                      )}
+                    </b>
                     <span>{p.worry}</span>
                   </span>
-                  {done ? (
-                    <span className="tio-seal" aria-hidden="true">
-                      Convencido
-                    </span>
-                  ) : (
-                    <span className="tio-pcard-go" aria-hidden="true">
-                      ▶
-                    </span>
-                  )}
+                  <span className="tio-pcard-go" aria-hidden="true">
+                    ▶
+                  </span>
                 </Tap>
               </motion.li>
             )

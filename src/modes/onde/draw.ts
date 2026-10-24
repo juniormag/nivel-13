@@ -144,8 +144,19 @@ const SIDE: Record<Side, { base: PaletteKey; hi: PaletteKey; lo: PaletteKey }> =
   caso: { base: 'red', hi: 'redGlow', lo: 'crimsonDeep' },
 }
 
-// alfinete do ponto certo: ponta em (2, 6)
-const PIN = ['.kkk.', 'kHCCk', 'kCCCk', 'kCCLk', '.kLk.', '..s..', '..s..']
+// alfinete do ponto certo: ponta em (3, 9)
+const PIN = [
+  '.kkkkk.',
+  'kHHCCCk',
+  'kHCCCCk',
+  'kCCCCCk',
+  'kCCCCLk',
+  '.kCCLk.',
+  '..kLk..',
+  '...s...',
+  '...s...',
+  '...s...',
+]
 // mira do toque: centro em (3, 3)
 const AIM = ['..kgk..', '.kgkgk.', 'kgk.kgk', 'gk.w.kg', 'kgk.kgk', '.kgkgk.', '..kgk..']
 
@@ -166,7 +177,7 @@ function sprite(
 
 export function drawPin(g: CanvasRenderingContext2D, x: number, y: number, side: Side, drop = 0) {
   const s = SIDE[side]
-  sprite(g, PIN, Math.round(x) - 2, Math.round(y) - 6 - Math.round(drop), {
+  sprite(g, PIN, Math.round(x) - 3, Math.round(y) - 9 - Math.round(drop), {
     k: 'void',
     H: 'white',
     C: s.base,

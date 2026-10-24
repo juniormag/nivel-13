@@ -108,7 +108,9 @@ describe('textos de share', () => {
   const p = PARENTES[0]
   const ms = msgsOf({ msgs: TIO_MSGS }, 'tio')
   it('link do desafio abre o parente', () => {
-    expect(challengeLink('https://jogo.com.br/', 'tia', 'abc', 'wa')).toBe('https://jogo.com.br/?t=tia&r=abc&s=wa')
+    expect(challengeLink('https://jogo.com.br/', 'tia', 'abc', 'wa')).toBe(
+      'https://jogo.com.br/?t=tia&r=abc&s=wa',
+    )
   })
   it('mensagem da família: 5 respostas boas, fontes e link na última linha', () => {
     if (!p) return

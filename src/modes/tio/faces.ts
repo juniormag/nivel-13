@@ -214,7 +214,8 @@ function prop(g: Grid, id: ParenteId) {
 
 function face(g: Grid, id: ParenteId, L: Look, e: Expr) {
   const eye: PaletteKey = 'night'
-  const mouth: PaletteKey = id === 'tia' ? 'redGlow' : id === 'vo' || id === 'prima' ? 'crimsonDeep' : 'blood0'
+  const mouth: PaletteKey =
+    id === 'tia' ? 'redGlow' : id === 'vo' || id === 'prima' ? 'crimsonDeep' : 'blood0'
   const glasses = id === 'vo'
   const lowLip = 12
   if (e === 'neutro') {

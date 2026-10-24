@@ -13,9 +13,10 @@ import type { Mark } from './draw'
 import { type EndRow, EndView } from './EndView'
 import { FactReveal } from './FactReveal'
 import { FIXTURE_PINS } from './fixture'
-import { type Pt, ufAt, ufInfo } from './geo'
+import { type Pt, ufAt, ufInfo, ufNear } from './geo'
 import {
   distanceKm,
+  fmtKm,
   ondeTotal,
   pickPins,
   pinPoints,
@@ -239,7 +240,7 @@ export function OndeGame({
     .slice(0, phase === 'reveal' ? done - 1 : done)
     .map((_, i) => ({ side: pins[i]?.side ?? 'avanco', target: pins[i] ? pinPt(pins[i]) : null, past: true }))
   const cur = phase === 'reveal' ? results[done - 1] : undefined
-  const ufHere = guess ? (pickedUf ?? ufAt(guess)) : null
+  const ufHere = guess ? (pickedUf ?? ufNear(guess)) : null
   const ufName = ufHere ? (ufInfo(ufHere)?.name ?? ufHere) : null
 
   if (!pin) {
@@ -323,7 +324,7 @@ export function OndeGame({
             describedBy={statusId}
           />
           <p id={statusId} className="sr-only" aria-live="polite">
-            {phase === 'guess' ? (ufName ? `Alfinete em ${ufName}` : 'Nenhum alfinete ainda') : ''}
+            {phase === 'guess' ? (ufName ? `Alfinete: ${ufName}` : 'Nenhum alfinete ainda') : ''}
           </p>
           {list && phase === 'guess' && (
             <UfPicker value={pickedUf} onPick={pickUf} onClose={() => setList(false)} />
@@ -333,26 +334,43 @@ export function OndeGame({
         <div className="onde-dock">
           {phase === 'guess' && (
             <>
-              <p className="onde-hint">
-                {vs !== null && idx === 0 && !guess
-                  ? `Quem te chamou fez ${fmt(vs)}. Sua vez.`
-                  : guess
-                    ? `📍 ${ufName ?? 'Fora do mapa'} · arraste para ajustar`
-                    : 'Toque no mapa onde aconteceu'}
-              </p>
-              <div className="onde-dock-row">
-                <Tap
-                  className="btn onde-listbtn"
-                  aria-expanded={list}
-                  onClick={() => setList((v) => !v)}
-                  sound="select"
-                >
-                  {list ? 'Mapa' : 'Lista'}
-                  <span className="sr-only"> de estados</span>
-                </Tap>
-                <PixelButton tone="red" size="big" wide disabled={!guess} onClick={confirm} sound={null}>
-                  Confirmar ▶
-                </PixelButton>
+              <ol className="onde-trail" aria-label="Seus pinos até agora">
+                {pins.map((p, i) => {
+                  const r = results[i]
+                  return (
+                    <li
+                      key={p.id}
+                      className={`is-${p.side}${r ? ' is-done' : ''}${i === idx ? ' is-now' : ''}`}
+                    >
+                      <i className="onde-sw" aria-hidden="true" />
+                      {r ? fmtKm(r.km) : i === idx ? 'agora' : `${i + 1}`}
+                      <span className="sr-only">{` ${sideLabel(p.side)}`}</span>
+                    </li>
+                  )
+                })}
+              </ol>
+              <div className="onde-dock-foot">
+                <p className="onde-hint">
+                  {vs !== null && idx === 0 && !guess
+                    ? `Quem te chamou fez ${fmt(vs)}. Sua vez.`
+                    : guess
+                      ? `📍 ${pickedUf || ufAt(guess) ? ufName : `perto de ${ufName}`} · arraste para ajustar`
+                      : 'Toque no mapa onde aconteceu'}
+                </p>
+                <div className="onde-dock-row">
+                  <Tap
+                    className="btn onde-listbtn"
+                    aria-expanded={list}
+                    onClick={() => setList((v) => !v)}
+                    sound="select"
+                  >
+                    {list ? 'Mapa' : 'Lista'}
+                    <span className="sr-only"> de estados</span>
+                  </Tap>
+                  <PixelButton tone="red" size="big" wide disabled={!guess} onClick={confirm} sound={null}>
+                    Confirmar ▶
+                  </PixelButton>
+                </div>
               </div>
             </>
           )}

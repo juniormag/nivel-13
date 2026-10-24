@@ -89,6 +89,7 @@ export const useNav = create<NavState>((set, get) => ({
 
 // folhas e diálogos abertos (o último fecha primeiro com o voltar)
 const overlays: (() => void)[] = []
+let pendingPop = 0
 
 /** Voltar do Android fecha a folha/diálogo aberto em vez de sair da tela embaixo dela. */
 export function useBackClose(open: boolean, onClose: () => void) {
@@ -98,24 +99,33 @@ export function useBackClose(open: boolean, onClose: () => void) {
     if (!open) return
     const cur = useNav.getState().screen
     const fn = () => close.current()
-    idx++
-    stack.length = idx
-    stack.push(cur)
-    write('push', { screen: cur, i: idx, overlay: true })
+    if (pendingPop) {
+      // remontou no mesmo instante (StrictMode, troca de folha): reaproveita a entrada que já existe
+      clearTimeout(pendingPop)
+      pendingPop = 0
+    } else {
+      idx++
+      stack.length = idx
+      stack.push(cur)
+      write('push', { screen: cur, i: idx, overlay: true })
+    }
     overlays.push(fn)
     return () => {
       const k = overlays.indexOf(fn)
       if (k < 0) return // já fechou pelo voltar
       overlays.splice(k, 1)
-      // fechou pelo botão: tira do histórico a entrada que a folha criou
-      if (useNav.getState().screen === cur && (history.state as Entry | null)?.overlay) {
+      // fechou pelo botão: tira do histórico a entrada que a folha criou (depois do quadro, para não
+      // brigar com uma remontagem imediata)
+      pendingPop = window.setTimeout(() => {
+        pendingPop = 0
+        if (useNav.getState().screen !== cur || !(history.state as Entry | null)?.overlay) return
         idx--
         try {
           history.back()
         } catch {
           /* ignora */
         }
-      }
+      }, 0)
     }
   }, [open])
 }

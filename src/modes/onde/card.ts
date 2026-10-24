@@ -3,6 +3,7 @@
 // rodapé na zona mole até 1540 px) e Feed 1080×1350 (180×225). Rótulo de IA e responsável sempre.
 import { CONFIG, responsavelText } from '../../config'
 import {
+  bayer,
   CAP,
   canvas,
   compose,
@@ -82,7 +83,25 @@ export async function renderOndeCard(d: OndeCardData, fmt: OndeFormat): Promise<
 
   // fundo: noite, faixa de topo mais escura e poucas estrelas só na metade de cima
   rect(g, 0, 0, W, H, 'night')
-  rect(g, 0, 0, W, story ? 40 : 6, 'void')
+  const band = story ? 40 : 6
+  rect(g, 0, 0, W, band - 6, 'void')
+  for (let yy = band - 6; yy < band + 6; yy++)
+    for (let xx = 0; xx < W; xx++) if (bayer(xx, yy) > (yy - band + 6) / 12) rect(g, xx, yy, 1, 1, 'void')
+  // story: horizonte em brasa embaixo (fica sob a barra de resposta do Instagram, só arte)
+  if (story) {
+    const ramp: Ink[] = ['blood0', 'blood1', 'crimsonDeep', 'crimson']
+    for (let yy = 262; yy < H; yy++) {
+      const t = (yy - 262) / (H - 262)
+      const k = t * ramp.length
+      const lo = ramp[Math.min(ramp.length - 1, Math.floor(k))] ?? 'blood0'
+      const hi = ramp[Math.min(ramp.length - 1, Math.floor(k) + 1)] ?? lo
+      for (let xx = 0; xx < W; xx++) {
+        const base = bayer(xx, yy) < k - Math.floor(k) ? hi : lo
+        if (t < 0.12 && bayer(xx, yy) > t / 0.12) continue
+        rect(g, xx, yy, 1, 1, base)
+      }
+    }
+  }
   const stars: [number, number][] = story
     ? [
         [22, 18],

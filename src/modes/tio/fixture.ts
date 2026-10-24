@@ -38,4 +38,9 @@ const msg = (i: number, kind: 'tom' | 'fonte' | 'assunto'): TioMsg => ({
   review: 'pendente',
 })
 
-export const FIX_MSGS: TioMsg[] = [msg(1, 'tom'), msg(2, 'fonte'), msg(3, 'assunto')]
+// /* @__PURE__ */: o build de produção descarta a fixture inteira (só o DEV a usa)
+export const FIX_MSGS: TioMsg[] = [
+  /* @__PURE__ */ msg(1, 'tom'),
+  /* @__PURE__ */ msg(2, 'fonte'),
+  /* @__PURE__ */ msg(3, 'assunto'),
+]

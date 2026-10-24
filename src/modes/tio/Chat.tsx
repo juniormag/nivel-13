@@ -173,6 +173,29 @@ export function Chat({
     })
   }
 
+  // teclado no computador: 1 e 2 mandam a carta, Esc volta (a folha de share trata o próprio Esc)
+  const keyRef = useRef<(e: KeyboardEvent) => void>(() => {})
+  keyRef.current = (e) => {
+    kbd.current = true
+    if (share || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return
+    if (e.key === 'Escape') {
+      sfx('back')
+      onBack()
+      return
+    }
+    if (phase === 'choose' && (e.key === '1' || e.key === '2') && msg) {
+      const first = orders[i] ? msg.good : msg.trap
+      const second = orders[i] ? msg.trap : msg.good
+      sfx('tap')
+      send(e.key === '1' ? first : second)
+    }
+  }
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => keyRef.current(e)
+    addEventListener('keydown', on)
+    return () => removeEventListener('keydown', on)
+  }, [])
+
   const goodN = goods(marks)
   const win = phase === 'end' && won(marks, total)
   const ref = getSave().id
@@ -193,14 +216,6 @@ export function Chat({
   return (
     <div
       className="tio-chat pf pf--hud"
-      onKeyDownCapture={(e) => {
-        kbd.current = true
-        if (phase === 'choose' && (e.key === '1' || e.key === '2') && msg) {
-          const first = orders[i] ? msg.good : msg.trap
-          const second = orders[i] ? msg.trap : msg.good
-          send(e.key === '1' ? first : second)
-        }
-      }}
       onPointerDownCapture={() => {
         kbd.current = false
       }}
@@ -222,6 +237,7 @@ export function Chat({
           </p>
         </div>
         {fixture && <span className="tio-fixture">exemplo</span>}
+        {/* biome-ignore lint/a11y/useSemanticElements: medidor em degraus de pixel; <meter> não aceita esse desenho */}
         <div
           className="tio-meter"
           role="meter"

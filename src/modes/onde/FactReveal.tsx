@@ -62,12 +62,12 @@ export function FactReveal({
       <p className="sr-only" aria-live="polite">
         {`${pin.place}. ${viaUf ? `Você escolheu ${viaUf}. ` : ''}Faltaram ${fmtKm(km)}. ${points * weight} pontos.`}
       </p>
-      <motion.h3 id="onde-fact-t" className="onde-fact-title" variants={rise}>
-        {pin.title}
-      </motion.h3>
-      <motion.p className={`onde-seal is-${pin.status.kind}`} variants={rise}>
-        {pin.status.label}
-      </motion.p>
+      <motion.div className="onde-fact-head" variants={rise}>
+        <h3 id="onde-fact-t" className="onde-fact-title">
+          {pin.title}
+        </h3>
+        <p className={`onde-seal is-${pin.status.kind}`}>{pin.status.label}</p>
+      </motion.div>
       <motion.p className="onde-fact-body" variants={rise}>
         {pin.body}
       </motion.p>
@@ -78,6 +78,7 @@ export function FactReveal({
             href={src.url}
             target="_blank"
             rel="noopener noreferrer"
+            title={`${src.name} (${src.date})`}
             onClick={() => ev('source_open', `onde:${pin.id}`)}
           >
             {src.name}
@@ -89,7 +90,7 @@ export function FactReveal({
         <PixelButton
           ref={btn}
           tone={last ? 'gold' : 'red'}
-          size="big"
+          className="onde-next"
           wide
           disabled={!ready}
           sound="select"

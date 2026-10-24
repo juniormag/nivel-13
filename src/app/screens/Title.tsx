@@ -45,6 +45,13 @@ export default function Title() {
       hintLabel: `desafio do dia número ${n}`,
       onSelect: () => go('chuta'),
     },
+    {
+      id: 'tio',
+      label: 'Convence o Tio',
+      hint: 'novo',
+      hintLabel: 'modo novo: convença um parente com fato e fonte',
+      onSelect: () => go('tio'),
+    },
     { id: 'placar', label: 'Placar da virada', onSelect: () => go('placar') },
     {
       id: 'colecao',
