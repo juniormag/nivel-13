@@ -1,0 +1,541 @@
+/* Folha do tutorial de instalar + celular pixel. Prefixo inst-, só tokens de global.css.
+   Celular em unidades lógicas: --u = 2 ou 3 px CSS (escala inteira). Sem raio e sem blur. */
+
+.inst-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: color-mix(in srgb, var(--void) 78%, transparent);
+}
+.inst-sheet {
+  width: 100%;
+  max-width: 520px;
+  max-height: calc(100dvh - 10px - var(--safe-t));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 calc(16px + var(--safe-r)) calc(14px + var(--safe-b)) calc(16px + var(--safe-l));
+  outline: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.inst-sheet.is-wide {
+  max-width: 780px;
+  width: calc(100% - 48px);
+  padding: 20px 24px 20px;
+}
+.inst-scrim:has(.is-wide) {
+  align-items: center;
+}
+
+/* alça de arrastar */
+.inst-handle {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 2px;
+  touch-action: none;
+  cursor: grab;
+}
+.inst-handle span {
+  width: 40px;
+  height: 4px;
+  background: var(--stone-1);
+}
+
+.inst-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  touch-action: none;
+}
+.inst-head-icon {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  box-shadow:
+    0 -2px 0 0 var(--gold-1),
+    0 2px 0 0 var(--gold-1),
+    -2px 0 0 0 var(--gold-1),
+    2px 0 0 0 var(--gold-1);
+}
+.inst-head-text {
+  flex: 1;
+  min-width: 0;
+}
+.inst-eyebrow {
+  margin: 0 0 4px;
+  font-family: var(--f-hud);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--red-hot);
+}
+.inst-title {
+  margin: 0;
+  font-family: var(--f-hud);
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--stone-hi);
+  text-shadow: var(--shadow-text);
+}
+.inst-x {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  align-self: flex-start;
+}
+.inst-lede {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--stone-3);
+}
+
+.inst-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.is-wide .inst-body,
+.is-short .inst-body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 20px;
+}
+
+/* palco: noite com a faixa de brasa do horizonte, o celular de pé no meio */
+.inst-stage {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding: 12px 12px 14px;
+  overflow: hidden;
+  background: linear-gradient(
+    to bottom,
+    var(--void) 0 62%,
+    var(--blood-0) 62% 74%,
+    var(--blood-1) 74% 80%,
+    var(--blood-0) 80% 100%
+  );
+  box-shadow:
+    inset 0 2px 0 0 var(--stone-1),
+    inset 0 -2px 0 0 var(--stone-1),
+    inset 2px 0 0 0 var(--stone-1),
+    inset -2px 0 0 0 var(--stone-1);
+}
+.is-wide .inst-stage,
+.is-short .inst-stage {
+  padding: 14px 28px;
+}
+.inst-pause {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 12px;
+  z-index: 6;
+}
+
+/* passos: o ativo ganha a faixa vermelha com ▶ (o mesmo do menu de comandos) */
+.inst-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.inst-step {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--stone-3);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  position: relative;
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 8px;
+}
+.inst-step:hover {
+  background: var(--dusk);
+}
+.inst-step:focus-visible {
+  outline: var(--px) solid var(--gold-hi);
+  outline-offset: var(--px);
+}
+.inst-band {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--red);
+  box-shadow:
+    inset 0 2px 0 0 var(--red-glow),
+    inset 0 -2px 0 0 var(--crimson);
+}
+.inst-band::before {
+  content: "▶";
+  position: absolute;
+  left: -16px;
+  top: 50%;
+  margin-top: -8px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--red-hot);
+}
+.inst-num,
+.inst-step-text {
+  position: relative;
+  z-index: 1;
+}
+.inst-num {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  font-family: var(--f-hud);
+  font-size: 14px;
+  color: var(--stone-hi);
+  background: var(--night);
+  box-shadow:
+    0 -2px 0 0 var(--stone-2),
+    0 2px 0 0 var(--stone-2),
+    -2px 0 0 0 var(--stone-2),
+    2px 0 0 0 var(--stone-2);
+}
+.inst-step.is-on {
+  color: var(--white);
+}
+.inst-step.is-on .inst-num {
+  background: var(--gold);
+  color: var(--night);
+  box-shadow:
+    0 -2px 0 0 var(--gold-0),
+    0 2px 0 0 var(--gold-0),
+    -2px 0 0 0 var(--gold-0),
+    2px 0 0 0 var(--gold-0);
+}
+.inst-step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.inst-step-main {
+  font-size: 16px;
+  line-height: 1.25;
+}
+.inst-step-glyph {
+  display: inline-block;
+  vertical-align: -3px;
+  margin-left: 8px;
+  color: var(--gold-hi);
+}
+.inst-step.is-on .inst-step-glyph {
+  color: var(--white);
+}
+.inst-step-hint {
+  font-size: 14px;
+  line-height: 1.3;
+  color: var(--stone-2);
+}
+.inst-step.is-on .inst-step-hint {
+  color: var(--stone-hi);
+}
+
+/* ação na zona do polegar */
+.inst-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-top: 4px;
+}
+.inst-actions > :last-child {
+  flex: 1;
+}
+.is-wide .inst-actions {
+  justify-content: flex-end;
+}
+.is-wide .inst-actions > :last-child {
+  flex: none;
+  min-width: 220px;
+}
+
+/* ---------- celular pixel ---------- */
+.inst-phone {
+  position: relative;
+  flex: none;
+  --u: 2px;
+}
+.inst-phone-body {
+  position: absolute;
+  inset: 0;
+  background: var(--void);
+  clip-path: polygon(
+    calc(var(--u) * 3) 0,
+    calc(100% - var(--u) * 3) 0,
+    calc(100% - var(--u) * 3) var(--u),
+    calc(100% - var(--u)) var(--u),
+    calc(100% - var(--u)) calc(var(--u) * 3),
+    100% calc(var(--u) * 3),
+    100% calc(100% - var(--u) * 3),
+    calc(100% - var(--u)) calc(100% - var(--u) * 3),
+    calc(100% - var(--u)) calc(100% - var(--u)),
+    calc(100% - var(--u) * 3) calc(100% - var(--u)),
+    calc(100% - var(--u) * 3) 100%,
+    calc(var(--u) * 3) 100%,
+    calc(var(--u) * 3) calc(100% - var(--u)),
+    var(--u) calc(100% - var(--u)),
+    var(--u) calc(100% - var(--u) * 3),
+    0 calc(100% - var(--u) * 3),
+    0 calc(var(--u) * 3),
+    var(--u) calc(var(--u) * 3),
+    var(--u) var(--u),
+    calc(var(--u) * 3) var(--u)
+  );
+}
+.inst-phone-body::before {
+  content: "";
+  position: absolute;
+  inset: var(--u);
+  background: var(--stone-0);
+  box-shadow:
+    inset var(--u) var(--u) 0 0 var(--stone-1),
+    inset calc(var(--u) * -1) calc(var(--u) * -1) 0 0 var(--void);
+}
+.inst-phone-speaker {
+  position: absolute;
+  background: var(--void);
+}
+.inst-screen {
+  position: absolute;
+  overflow: hidden;
+  background: var(--night);
+  box-shadow: 0 0 0 var(--u) var(--void);
+}
+.inst-screen [style*="left"],
+.inst-screen [style*="top"] {
+  position: absolute;
+}
+.inst-app,
+.inst-home,
+.inst-page {
+  position: absolute;
+  inset: 0;
+}
+.inst-page {
+  background: linear-gradient(to bottom, var(--night) 0 60%, var(--blood-0) 60% 100%);
+}
+.inst-txt {
+  font-family: var(--f-hud);
+  font-size: calc(var(--u) * 4);
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--stone-hi);
+  overflow: visible;
+}
+.inst-txt.is-dim {
+  color: var(--stone-2);
+}
+.inst-page-title {
+  color: var(--red-hot);
+}
+.inst-bar {
+  background: var(--stone-1);
+}
+.inst-bar.is-dim {
+  background: var(--haze-dark);
+}
+.inst-page-cta {
+  background: var(--red);
+  box-shadow: inset 0 calc(var(--u) * -1) 0 0 var(--crimson);
+}
+.inst-mini-icon,
+.inst-fly-img {
+  image-rendering: pixelated;
+  display: block;
+}
+.inst-fly-img {
+  width: 100%;
+  height: 100%;
+}
+
+/* barras do navegador */
+.inst-chrome {
+  background: var(--dusk);
+  box-shadow: inset 0 var(--u) 0 0 var(--haze-dark);
+}
+.inst-chrome.is-top {
+  box-shadow: inset 0 calc(var(--u) * -1) 0 0 var(--haze-dark);
+}
+.inst-chrome.is-inapp {
+  background: var(--night);
+}
+.inst-urlpill {
+  background: var(--haze-dark);
+}
+.inst-tool {
+  background: var(--stone-1);
+}
+.inst-glyph {
+  display: grid;
+  place-items: center;
+  color: var(--stone-3);
+}
+.inst-glyph svg,
+.inst-row-glyph svg {
+  display: block;
+}
+.inst-glyph.is-lit {
+  color: var(--gold-hi);
+  background: var(--haze);
+}
+.inst-c {
+  color: inherit;
+}
+
+/* folha do sistema, menu e confirmar */
+.inst-sys {
+  background: var(--dusk);
+  box-shadow: inset 0 var(--u) 0 0 var(--haze);
+}
+.inst-grab {
+  background: var(--stone-1);
+}
+.inst-menu {
+  background: var(--dusk);
+  transform-origin: 100% 0;
+  box-shadow:
+    0 0 0 var(--u) var(--void),
+    inset 0 var(--u) 0 0 var(--haze);
+}
+.inst-dialog {
+  background: var(--dusk);
+  box-shadow:
+    0 0 0 var(--u) var(--void),
+    inset 0 var(--u) 0 0 var(--haze);
+}
+.inst-row {
+  background: var(--night);
+  color: var(--stone-3);
+}
+.inst-row .inst-txt {
+  color: inherit;
+}
+.inst-row-glyph {
+  display: grid;
+  place-items: center;
+}
+.inst-row.is-lit {
+  background: var(--red);
+  color: var(--white);
+  box-shadow: inset 0 calc(var(--u) * -1) 0 0 var(--crimson);
+}
+.inst-add {
+  color: var(--gold);
+  display: grid;
+  place-items: center;
+}
+.inst-add.is-lit {
+  background: var(--red);
+  color: var(--white);
+}
+.inst-toggle {
+  background: var(--green);
+  box-shadow: inset calc(var(--u) * -4) 0 0 0 var(--stone-hi);
+}
+.inst-tile {
+  box-shadow:
+    inset 0 var(--u) 0 0 color-mix(in srgb, var(--white) 30%, transparent),
+    inset 0 calc(var(--u) * -1) 0 0 color-mix(in srgb, var(--void) 40%, transparent);
+}
+.inst-tile-name {
+  background: var(--stone-2);
+}
+
+/* banner do jogo dentro do celular (app de mensagem → navegador) */
+.inst-mini {
+  background: var(--night);
+  box-shadow:
+    0 0 0 var(--u) var(--gold),
+    0 var(--u) 0 var(--u) var(--void);
+}
+.inst-pill {
+  background: var(--red);
+  box-shadow: inset 0 calc(var(--u) * -1) 0 0 var(--crimson);
+}
+.inst-pill.is-lit {
+  background: var(--gold);
+  box-shadow: inset 0 calc(var(--u) * -1) 0 0 var(--gold-1);
+}
+.inst-compass {
+  display: grid;
+  place-items: center;
+  color: var(--gold-hi);
+}
+
+/* tela de início */
+.inst-home {
+  background: var(--dusk);
+}
+.inst-home-sky {
+  background: linear-gradient(to bottom, var(--haze-dark) 0 50%, var(--dusk) 50% 100%);
+}
+.inst-home-dock {
+  background: color-mix(in srgb, var(--haze) 70%, transparent);
+}
+.inst-fly {
+  position: absolute;
+  z-index: 4;
+}
+.inst-fly-name {
+  position: absolute;
+  left: 0;
+  background: var(--gold);
+  transform-origin: 0 50%;
+}
+
+.inst-status {
+  z-index: 3;
+  color: var(--stone-hi);
+}
+.inst-clock {
+  font-size: calc(var(--u) * 3);
+  color: inherit;
+}
+.inst-battery {
+  line-height: 0;
+}
+
+.inst-ring {
+  z-index: 5;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 var(--u) var(--gold-hi),
+    inset 0 0 0 var(--u) var(--void);
+}
+.inst-finger {
+  position: absolute;
+  z-index: 6;
+  line-height: 0;
+  pointer-events: none;
+  transform-origin: 40% 0;
+}
+.inst-finger svg {
+  display: block;
+}

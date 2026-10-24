@@ -10,23 +10,21 @@
   margin: 0 auto;
   max-width: 440px;
   padding: 12px 12px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  column-gap: 12px;
+  row-gap: 8px;
+  align-items: center;
   touch-action: none;
   --pf-fill: var(--night);
 }
-.inst-banner-top {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-width: 0;
-}
+/* ícone 1× (64 px, sprite do agente de ícone): escala inteira */
 .inst-banner-icon {
   position: relative;
-  flex: none;
-  width: 48px;
-  height: 48px;
+  grid-row: span 2;
+  align-self: start;
+  width: 64px;
+  height: 64px;
   line-height: 0;
   box-shadow:
     0 -2px 0 0 var(--gold-1),
@@ -66,7 +64,9 @@
   gap: 10px;
 }
 .inst-banner-actions .btn--red {
-  min-width: 148px;
+  flex: 1;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 /* desktop: chip discreto (Chrome/Edge com o pedido nativo) */
@@ -114,8 +114,3 @@
   display: block;
 }
 
-@media (max-width: 359px) {
-  .inst-banner-actions .btn--red {
-    min-width: 0;
-  }
-}

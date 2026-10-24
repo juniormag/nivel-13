@@ -1,14 +1,45 @@
 {
+  "id": "/",
   "name": "Nível 13 · A Virada",
   "short_name": "Nível 13",
+  "description": "Um jogo curto sobre o Brasil de verdade: 13 fases, fatos com fonte e um desafio por dia.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone"],
   "orientation": "any",
   "background_color": "#0a0a0f",
   "theme_color": "#0a0a0f",
   "lang": "pt-BR",
+  "dir": "ltr",
+  "categories": ["games", "education"],
   "icons": [
-    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-mono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "monochrome" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Chuta Aí!",
+      "short_name": "Chuta Aí!",
+      "description": "O desafio do dia",
+      "url": "/?c=hoje",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Onde Foi?",
+      "short_name": "Onde Foi?",
+      "description": "O mapa do dia",
+      "url": "/?o=",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Convence o Tio",
+      "short_name": "Convence o Tio",
+      "description": "Convença um parente com fato e fonte",
+      "url": "/?t=tio",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
   ]
 }

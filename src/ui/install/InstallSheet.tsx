@@ -72,8 +72,9 @@ export default function InstallSheet({
 
   const wide = useMedia('(min-width: 720px) and (min-height: 600px)')
   const short = useMedia('(max-height: 520px)')
-  const roomy = useMedia('(min-height: 800px) and (min-width: 370px)')
-  const u = roomy && !short ? 3 : 2
+  // escala inteira do celular: 3 px por pixel lógico só quando sobra altura
+  const tall = useMedia(wide ? '(min-height: 760px)' : '(min-height: 940px) and (min-width: 370px)')
+  const u = tall && !short ? 3 : 2
   const reduced = prefersReduced()
   const [paused, setPaused] = useState(false)
   const [phase, setPhase, beats] = useTimeline(variant, open && !paused && !reduced)
@@ -92,7 +93,12 @@ export default function InstallSheet({
   }, [open, reduced, beats, setPhase])
 
   const onStepsKey = (e: KeyboardEvent<HTMLOListElement>) => {
-    const d = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0
+    const d =
+      e.key === 'ArrowDown' || e.key === 'ArrowRight'
+        ? 1
+        : e.key === 'ArrowUp' || e.key === 'ArrowLeft'
+          ? -1
+          : 0
     if (!d) return
     e.preventDefault()
     const k = (step + d + 3) % 3
@@ -105,7 +111,9 @@ export default function InstallSheet({
     const ok = await copyText(link)
     if (ok) haptic('success')
     toast(
-      ok ? `Link copiado. Cole no ${variant === 'inapp-android' ? 'Chrome' : 'Safari'}.` : 'Não deu para copiar.',
+      ok
+        ? `Link copiado. Cole no ${variant === 'inapp-android' ? 'Chrome' : 'Safari'}.`
+        : 'Não deu para copiar.',
       ok ? 'gold' : 'red',
     )
   }
@@ -152,16 +160,12 @@ export default function InstallSheet({
               }}
             >
               {!wide && (
-                <div
-                  className="inst-handle"
-                  onPointerDown={(e) => drag.start(e)}
-                  aria-hidden="true"
-                >
+                <div className="inst-handle" onPointerDown={(e) => drag.start(e)} aria-hidden="true">
                   <span />
                 </div>
               )}
               <header className="inst-head" onPointerDown={(e) => !wide && drag.start(e)}>
-                <img className="inst-head-icon" src={icon} alt="" width={48} height={48} draggable={false} />
+                <img className="inst-head-icon" src={icon} alt="" width={64} height={64} draggable={false} />
                 <div className="inst-head-text">
                   <p className="inst-eyebrow">{copy.eyebrow}</p>
                   <h2 id={titleId} className="inst-title">

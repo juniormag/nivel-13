@@ -4,18 +4,7 @@
 import { AnimatePresence, motion, type Transition } from 'motion/react'
 import type { CSSProperties, ReactNode } from 'react'
 import { steps } from '../motion'
-import {
-  ADD,
-  BATTERY,
-  COMPASS,
-  FINGER,
-  FINGER_TIP,
-  KEBAB,
-  MEATBALL,
-  SHARE,
-  Sparkle,
-  Sprite,
-} from './sprites'
+import { ADD, BATTERY, COMPASS, FINGER, FINGER_TIP, KEBAB, MEATBALL, SHARE, Sparkle, Sprite } from './sprites'
 import { beatsOf, type Phase, type Variant } from './timeline'
 import { useIconSrc } from './useIcon'
 
@@ -250,7 +239,10 @@ export function PhoneDemo({
                 <motion.span
                   key={c}
                   className="inst-tile"
-                  style={{ ...box(COLS[k % 4] as number, ROWS[Math.floor(k / 4)] as number, 12, 12), background: c }}
+                  style={{
+                    ...box(COLS[k % 4] as number, ROWS[Math.floor(k / 4)] as number, 12, 12),
+                    background: c,
+                  }}
                   initial={{ scale: 0.3, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ ...SPRING, delay: 0.02 + k * 0.018 }}
@@ -391,7 +383,10 @@ function InAppBar({ box, u, android, lit }: { box: BoxFn; u: number; android: bo
       </span>
       <span className="inst-bar" style={box(20, 3, 26, 2)} />
       <span className="inst-bar is-dim" style={box(24, 6, 18, 1)} />
-      <span className={`inst-glyph${lit ? ' is-lit' : ''}`} style={box(android ? 56 : 54, 1, android ? 6 : 9, 9)}>
+      <span
+        className={`inst-glyph${lit ? ' is-lit' : ''}`}
+        style={box(android ? 56 : 54, 1, android ? 6 : 9, 9)}
+      >
         <Sprite rows={android ? KEBAB : MEATBALL} px={u} className="inst-c" />
       </span>
     </div>
@@ -419,7 +414,13 @@ function IosShare({ P, box, u, lit }: { P: (n: number) => number; box: BoxFn; u:
         />
       ))}
       <Row box={box} y={29} />
-      <Row box={box} y={39} lit={lit} label="TELA DE INÍCIO" glyph={<Sprite rows={ADD} px={u} className="inst-c" />} />
+      <Row
+        box={box}
+        y={39}
+        lit={lit}
+        label="TELA DE INÍCIO"
+        glyph={<Sprite rows={ADD} px={u} className="inst-c" />}
+      />
       <Row box={box} y={49} />
       <Row box={box} y={59} />
     </>
@@ -466,7 +467,11 @@ function Row({
 
 function IosConfirm({ P, box, lit }: { P: (n: number) => number; box: BoxFn; lit: boolean }) {
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.12, ease: steps(3) }}>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.12, ease: steps(3) }}
+    >
       <span className="inst-txt is-dim" style={box(4, 4, 24, 4)}>
         CANCELAR
       </span>
@@ -611,9 +616,7 @@ function FlyingIcon({
           : { x: P(at.x), y: P(at.y), scale: 1 }
       }
       transition={
-        flying && !landed
-          ? { duration: 0.5, times: [0, 0.38, 1], ease: [0.3, 0, 0.6, 1] }
-          : { duration: 0 }
+        flying && !landed ? { duration: 0.5, times: [0, 0.38, 1], ease: [0.3, 0, 0.6, 1] } : { duration: 0 }
       }
     >
       <motion.img

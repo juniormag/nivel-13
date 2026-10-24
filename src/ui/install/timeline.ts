@@ -44,10 +44,17 @@ const INAPP: Beat[] = [
 export const beatsOf = (v: Variant) => (v.startsWith('inapp') ? INAPP : BROWSER)
 
 /** Primeiro quadro de cada passo (tocar no passo pula para ele). */
-export const firstOf = (beats: Beat[], step: number) => Math.max(0, beats.findIndex((b) => b.step === step))
+export const firstOf = (beats: Beat[], step: number) =>
+  Math.max(
+    0,
+    beats.findIndex((b) => b.step === step),
+  )
 
 /** Quadro parado de cada passo no movimento reduzido. */
 export const keyOf = (beats: Beat[], step: number) => {
   const want: Phase = step === 0 ? 'tap1' : step === 1 ? 'tap2' : 'land'
-  return Math.max(0, beats.findIndex((b) => b.id === want))
+  return Math.max(
+    0,
+    beats.findIndex((b) => b.id === want),
+  )
 }

@@ -66,6 +66,7 @@ export function InstallPrompt() {
 
   // Vindo do WhatsApp/Instagram com ?instalar: no navegador de verdade, o caminho aparece logo
   const fromLink = useRef(hasUrlParam())
+  // biome-ignore lint/correctness/useExhaustiveDependencies: roda uma vez, no boot
   useEffect(() => {
     if (!fromLink.current || inapp || standalone) return
     fromLink.current = false
@@ -77,7 +78,6 @@ export function InstallPrompt() {
       else if (!desktop || useInstall.getState().deferred) setBanner(true)
     }, 900)
     return () => clearTimeout(t)
-    // biome-ignore lint/correctness/useExhaustiveDependencies: roda uma vez, no boot
   }, [])
 
   // hora certa
@@ -223,26 +223,24 @@ function Banner({
         if (info.offset.y < -36 || info.velocity.y < -500) onLater()
       }}
     >
-      <div className="inst-banner-top">
-        <span className="inst-banner-icon">
+      <span className="inst-banner-icon">
           <motion.img
             src={icon}
             alt=""
-            width={48}
-            height={48}
+            width={64}
+            height={64}
             draggable={false}
             style={{ originY: 1 }}
             initial={false}
             animate={landed ? { scaleX: [1, 1.18, 0.94, 1], scaleY: [1, 0.82, 1.08, 1] } : undefined}
             transition={{ duration: 0.36, times: [0, 0.25, 0.6, 1], ease: 'easeOut' }}
           />
-          {landed && <Sparkle x={46} y={4} px={2} delay={0.12} />}
+          {landed && <Sparkle x={60} y={4} px={2} delay={0.12} />}
         </span>
         <div className="inst-banner-text">
           <p className="inst-banner-title">{BANNER.title}</p>
           <p className="inst-banner-sub">{inapp ? BANNER.subInApp : BANNER.sub}</p>
         </div>
-      </div>
       <div className="inst-banner-actions">
         <PixelButton tone="ghost" size="sm" commit="back" onClick={onLater}>
           {BANNER.later}

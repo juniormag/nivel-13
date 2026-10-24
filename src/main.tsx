@@ -16,7 +16,8 @@ initHistory('title')
   const q = new URLSearchParams(location.search)
   if (q.has('c') || q.has('d') || q.has('g')) go('chuta', { c: q.get('c'), d: q.get('d'), g: q.get('g') })
   else if (q.get('t')) go('tio', { parente: q.get('t') })
-  else if (q.get('o')) go('onde', { seed: q.get('o'), vs: q.get('vs') })
+  else if (q.has('o'))
+    go('onde', { seed: q.get('o'), vs: q.get('vs') }) // ?o= vazio: mapa do dia (atalho do app)
   else if (q.get('go') === 'ir') go('play', { level: 3 })
 }
 
