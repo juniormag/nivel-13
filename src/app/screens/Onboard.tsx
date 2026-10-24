@@ -49,12 +49,19 @@ export default function Onboard() {
     void api.hello()
     // primeira vez: direto para a fase 1 (o mapa aparece depois do primeiro fato); o onboarding sai do histórico
     if (next >= 1 && next <= 13) go('play', { level: next }, { replace: true })
-    else go(levelsDone(save) === 0 ? 'play' : 'map', levelsDone(save) === 0 ? { level: 1 } : {}, { replace: true })
+    else
+      go(levelsDone(save) === 0 ? 'play' : 'map', levelsDone(save) === 0 ? { level: 1 } : {}, {
+        replace: true,
+      })
   }
 
   return (
     <Screen world={levelsDone(save) / 13} className="scr--page">
-      <Page eyebrow={next ? `Antes da fase ${next}` : 'Antes de começar'} title="Escolha seu personagem" tone="red">
+      <Page
+        eyebrow={next ? `Antes da fase ${next}` : 'Antes de começar'}
+        title="Escolha seu personagem"
+        tone="red"
+      >
         <form
           className="page-body"
           onSubmit={(e) => {

@@ -47,6 +47,13 @@ export default function Title() {
       onSelect: () => go('chuta'),
     },
     {
+      id: 'onde',
+      label: 'Onde Foi?',
+      hint: `#${n}`,
+      hintLabel: `mapa do dia número ${n}`,
+      onSelect: () => go('onde'),
+    },
+    {
       id: 'tio',
       label: 'Convence o Tio',
       hint: 'novo',
