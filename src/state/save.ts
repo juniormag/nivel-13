@@ -25,6 +25,12 @@ export interface SaveData {
   muted: boolean
   finishedAt: number | null
   sharedMoments: string[]
+  /** Chuta Aí: notas e chutes por dia (AAAA-MM-DD) */
+  chute: Record<string, { s: number[]; guesses: (number | null)[] }>
+  groups: string[]
+  duels: { made: string[]; got: string[] }
+  /** plano de domingo: só no aparelho, nunca vai para a API */
+  plano: { hora: string; doc: string; com: string } | null
 }
 
 interface SaveActions {
@@ -32,6 +38,8 @@ interface SaveActions {
   completeLevel(n: number, stars: number, score: number, facts: string[]): { firstTime: boolean }
   like(fact: string): boolean
   recordDaily(date: string, grid: string): void
+  /** grava a partida do Chuta Aí e mantém a sequência do diário */
+  recordChute(date: string, s: number[], guesses: (number | null)[]): void
   reset(): void
 }
 
@@ -60,6 +68,10 @@ const fresh = (): SaveData => ({
   muted: false,
   finishedAt: null,
   sharedMoments: [],
+  chute: {},
+  groups: [],
+  duels: { made: [], got: [] },
+  plano: null,
 })
 
 const safeStorage = createJSONStorage(() => {
@@ -110,6 +122,12 @@ export const useSave = create<SaveData & SaveActions>()(
             results: { ...s.daily.results, [date]: grid },
           },
         })
+      },
+      recordChute(date, s, guesses) {
+        const st = get()
+        if (st.chute[date]) return
+        set({ chute: { ...st.chute, [date]: { s, guesses } } })
+        get().recordDaily(date, s.map((x) => (x >= 70 ? '1' : '0')).join(''))
       },
       reset: () => set(fresh()),
     }),

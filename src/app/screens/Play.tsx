@@ -5,10 +5,12 @@ import { LEVELS, type GameKind, type Level } from '../../content/levels'
 import { Runner } from '../../engine/runner'
 import type { MicroGame } from '../../engine/types'
 import { loadGame } from '../../games'
-import { skillIcon, sprite } from '../../lib/sprites'
 import { getSave, levelsDone, useSave } from '../../state/save'
 import { type SkillKind, usePlay } from '../../state/play'
-import { PixelIcon } from '../../ui/PixelIcon'
+import { CountUp } from '../../ui/CountUp'
+import { Hearts } from '../../ui/Hearts'
+import { Tap } from '../../ui/PixelButton'
+import { SkillBar } from '../../ui/SkillBar'
 import { go, useNav } from '../nav'
 
 export interface CustomRun {
@@ -75,6 +77,7 @@ export default function Play() {
         layer: layerRef.current,
         game,
         theme: level?.theme ?? LEVELS[1]?.theme ?? { top: '#0a0a14', mid: '#1a1430', ground: '#141020' },
+        level: level?.n,
         hearts: custom ? custom.hearts : 3,
         reduced: reducedMotion(),
         safeArea: () => ({
@@ -189,53 +192,39 @@ export default function Play() {
       <div ref={layerRef} className="g-layer" />
       <div className="play-hud">
         <div ref={topRef} className="play-top">
-          <div className="hearts" role="img" aria-label={`${hearts} de ${maxHearts} vidas`}>
-            {Array.from({ length: maxHearts }, (_, i) => (
-              <PixelIcon key={i} src={sprite(i < hearts ? 'heart' : 'heartOff')} className="heart" />
-            ))}
-          </div>
-          <div>
+          <Hearts n={hearts} max={maxHearts} />
+          <div className="play-mid">
             <div className="play-title">
-              {custom ? custom.sub : `Fase ${level?.n} · `}
+              {custom ? `${custom.sub} · ` : `Fase ${level?.n} · `}
               <b>{title}</b>
             </div>
-            <div className={`timer${low ? ' low' : ''}`} style={{ visibility: duration ? 'visible' : 'hidden' }} aria-hidden="true">
+            <div
+              className={`timer${low ? ' low' : ''}`}
+              style={{ visibility: duration ? 'visible' : 'hidden' }}
+              aria-hidden="true"
+            >
               <i style={{ width: `${duration ? (timeLeft / duration) * 100 : 100}%` }} />
             </div>
           </div>
-          <div className="row" style={{ gap: 4, flexWrap: 'nowrap' }}>
-            <div className="score" aria-label="Pontos">
-              {score.toLocaleString('pt-BR')}
-            </div>
-            <button type="button" className="btn btn--ghost" aria-label="Pausar" onClick={() => runnerRef.current?.pause()}>
-              II
-            </button>
+          <div className="play-right">
+            <CountUp value={score} className="score" label="Pontos" />
+            <Tap className="pause-btn" aria-label="Pausar" onClick={() => runnerRef.current?.pause()}>
+              <i />
+              <i />
+            </Tap>
           </div>
         </div>
         {!custom && (
-          <div ref={skillsRef} className="play-skills" aria-label="Habilidades">
-            {SKILLS.map((s) => {
-              const ok = unlocked(s.kind) && supported(s.kind)
-              const isUsed = used.includes(s.kind)
-              return (
-                <button
-                  key={s.kind}
-                  type="button"
-                  className={`skill${ok ? (isUsed ? ' used' : ' ready') : ' locked'}`}
-                  disabled={!ok || isUsed || phase !== 'run'}
-                  title={`${s.label}: ${unlocked(s.kind) ? s.desc : `libera com ${s.unlock} fases`}`}
-                  aria-label={`${s.label}, tecla ${s.key}`}
-                  onClick={() => useSkill(s.kind)}
-                >
-                  <PixelIcon src={skillIcon(s.kind)} />
-                  {s.label.toUpperCase()}
-                  <span className="kbd" aria-hidden="true">
-                    {s.key}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          <SkillBar
+            ref={skillsRef}
+            className="play-skills"
+            skills={SKILLS}
+            disabled={phase !== 'run'}
+            state={(k) =>
+              !unlocked(k) ? 'locked' : used.includes(k) ? 'used' : supported(k) ? 'ready' : 'na'
+            }
+            onUse={useSkill}
+          />
         )}
         {(slow || shield) && <div className={`status-glow${shield ? ' shield' : ''}`} aria-hidden="true" />}
       </div>

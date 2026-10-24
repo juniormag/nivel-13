@@ -6,6 +6,7 @@
 ## Laços
 - **Jornada (20–25 min):** 13 fases de 60 a 120 s, cada uma com uma mecânica, terminando numa carta de fato. O monumento se reconstrói a cada fase, e no nível 13 a coroa desce.
 - **Diário (2 min):** 5 cartas de Fato ou Fake iguais para o Brasil todo, resultado em emoji e sequência de dias com 1 congelamento por semana.
+  - **Decidido em 24/10 (proposta em `docs/VIRAL-DESIGN.md`):** o diário vira **Chuta Aí!** (5 chutes sobre números reais, nota por proximidade, pesos 2-2-3-3-3 até 1.300, rodada 5 em Fato ou Fake), com Tira-teima (`?d=`), Placar do Grupo (`?g=`), Papo de Almoço e plano de voto sem recompensa.
 - **Social:** corrente de convites (conta quem termina pelo seu link), placar por estado (declaração anônima) e 👍 nos fatos que convencem.
 
 ## Fases (mecânica = fato)

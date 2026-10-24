@@ -14,6 +14,11 @@ const screens = {
   colecao: lazy(() => import('./screens/Colecao')),
   votar: lazy(() => import('./screens/Votar')),
   sobre: lazy(() => import('./screens/Sobre')),
+  chuta: lazy(() => import('./screens/Chuta')),
+  papo: lazy(() => import('./screens/Papo')),
+  duelo: lazy(() => import('./screens/Duelo')),
+  grupo: lazy(() => import('./screens/Grupo')),
+  plano: lazy(() => import('./screens/Plano')),
 }
 
 export function App() {

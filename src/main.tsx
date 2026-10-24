@@ -11,6 +11,13 @@ addEventListener('pointerdown', () => unlockAudio(), { once: true })
 addEventListener('keydown', () => unlockAudio(), { once: true })
 history.replaceState({ screen: 'title' }, '')
 
+// Links do Chuta Aí (?c=, ?d=, ?g=) abrem direto no jogo do dia; ?go=ir abre a calculadora do IR.
+{
+  const q = new URLSearchParams(location.search)
+  if (q.has('c') || q.has('d') || q.has('g')) go('chuta', { c: q.get('c'), d: q.get('d'), g: q.get('g') })
+  else if (q.get('go') === 'ir') go('play', { level: 3 })
+}
+
 // gancho de QA em desenvolvimento: window.__go('play', { level: 5 })
 if (import.meta.env.DEV) (window as unknown as { __go: typeof go }).__go = go
 

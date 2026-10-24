@@ -4,6 +4,7 @@ import { sfx } from '../audio/audio'
 import { mulberry32 } from '../lib/rng'
 import { type PixelFit, computeFit, ditherGradient, offscreen } from '../lib/pixel'
 import { type SkillKind, usePlay } from '../state/play'
+import { Ambient } from './ambient'
 import { JuiceLayer } from './juice'
 import { tex } from './textures'
 import type { GameCtx, MicroGame } from './types'
@@ -19,11 +20,32 @@ export interface RunnerOpts {
   layer: HTMLElement
   game: MicroGame
   theme: Theme
+  /** número da fase (1–13) para o cenário próprio; ausente no desafio diário */
+  level?: number
   hearts: number
   reduced: boolean
   /** lido no início da fase: bordas do HUD em px CSS */
   safeArea: () => { top: number; bottom: number }
   onEnd: (r: { success: boolean; score: number }) => void
+}
+
+// Cenários por fase do diretor de arte (src/scene/index.ts); sem o arquivo, usa o fundo genérico.
+const sceneMods = import.meta.glob<{ renderLevelBackdrop?: (level: number, W: number, H: number) => HTMLCanvasElement }>(
+  '../scene/index.ts',
+)
+
+async function levelBackdrop(level: number | undefined, W: number, H: number, theme: Theme) {
+  const load = sceneMods['../scene/index.ts']
+  if (level && load) {
+    try {
+      const m = await load()
+      const c = m.renderLevelBackdrop?.(level, W, H)
+      if (c) return c
+    } catch (err) {
+      console.warn('cenário da fase indisponível', err)
+    }
+  }
+  return backdrop(W, H, theme)
 }
 
 export const playTarget = () => (innerWidth < innerHeight ? 150 : 220)
@@ -68,6 +90,7 @@ export class Runner {
   world = new Container()
   gameLayer = new Container()
   juice!: JuiceLayer
+  ambient!: Ambient
   ctx!: GameCtx
   time = 0
   slowUntil = 0
@@ -99,10 +122,11 @@ export class Runner {
     canvas.style.width = `${this.fit.W * this.fit.css}px`
     canvas.style.height = `${this.fit.H * this.fit.css}px`
     canvas.style.imageRendering = 'pixelated'
-    const bg = new Sprite(Texture.from(backdrop(this.fit.W, this.fit.H, this.o.theme)))
+    const bg = new Sprite(Texture.from(await levelBackdrop(this.o.level, this.fit.W, this.fit.H, this.o.theme)))
     bg.texture.source.scaleMode = 'nearest'
     this.juice = new JuiceLayer(this.fit.W, this.fit.H, this.o.reduced)
-    this.world.addChild(bg, this.gameLayer, this.juice.root)
+    this.ambient = new Ambient(this.fit.W, this.fit.H, this.o.reduced)
+    this.world.addChild(bg, this.ambient.root, this.gameLayer, this.juice.root)
     this.app.stage.addChild(this.world)
     usePlay.setState({
       phase: 'intro',
@@ -196,8 +220,8 @@ export class Runner {
       return
     }
     sfx('bad')
-    this.juice.flash(0xe3242b, 180, 0.4)
-    this.juice.shake(4, 220)
+    this.juice.impact(0xff4a3d)
+    this.juice.shake(4, 220, { x: 1, y: 0.6 })
     this.juice.hitstop(70)
     if (!this.o.hearts) return
     this.hearts--
@@ -248,6 +272,7 @@ export class Runner {
   private tick(realDt: number) {
     const dt0 = Math.min(0.05, realDt)
     this.juice.update(dt0)
+    this.ambient.update(dt0, performance.now() / 1000)
     const now = performance.now()
     const slow = now < this.slowUntil
     if (usePlay.getState().slow !== slow) usePlay.setState({ slow })
@@ -262,9 +287,9 @@ export class Runner {
         if (left <= 0) this.end(this.o.game.timeUp ? this.o.game.timeUp() : true)
       }
     }
-    const a = this.juice.shakeAmp
-    this.world.x = a > 0 ? Math.round((Math.random() - 0.5) * 2 * a) : 0
-    this.world.y = a > 0 ? Math.round((Math.random() - 0.5) * 2 * a) : 0
+    const off = this.juice.offset(performance.now() / 1000)
+    this.world.x = off.x
+    this.world.y = off.y
   }
 
   private bindInput() {
@@ -275,17 +300,21 @@ export class Runner {
       this.listeners.push([type, fn])
     }
     on('pointerdown', ((e: PointerEvent) => {
+      const p = L(e)
+      this.ambient.tap(p.x, p.y)
       if (!this.running) return
       e.preventDefault()
-      const p = L(e)
       this.o.game.down?.(p.x, p.y)
     }) as EventListener)
     on('pointermove', ((e: PointerEvent) => {
-      if (!this.running) return
       const p = L(e)
+      this.ambient.pointerMove(p.x, p.y)
+      if (!this.running) return
       this.o.game.move?.(p.x, p.y)
     }) as EventListener)
+    on('pointerleave', (() => this.ambient.pointerLeave()) as EventListener)
     on('pointerup', ((e: PointerEvent) => {
+      if (e.pointerType !== 'mouse') this.ambient.pointerLeave()
       if (!this.running) return
       const p = L(e)
       this.o.game.up?.(p.x, p.y)

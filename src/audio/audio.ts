@@ -1,273 +1,278 @@
-// Chiptune sintetizado na hora (WebAudio): nenhum arquivo de áudio para baixar.
-// A trilha é um baião em 8-bit: zabumba no 1 e no "e" do 2, triângulo nas semicolcheias.
+// Áudio do Nível 13: chiptune moderno com DNA brasileiro, 100% sintetizado na hora (WebAudio).
+// Nenhum arquivo para baixar. API pública (compatível com a anterior):
+//   unlockAudio() · setMuted(m) · playMusic(track) · sfx(name, opts?)
+// Novidades: setIntensity(0..1) · duck(ms) · hitstop(ms) · stinger(name) · faixas map/victory/daily.
 import { useSave } from '../state/save'
+import { buildGraph, duckGraph, type Graph } from './graph'
+import { Seq } from './sequencer'
+import { type Recipe, SFX, type Sfx, STINGERS, type Stinger } from './sfx-bank'
+import { DEFAULT_INTENSITY, SONGS, type Track } from './songs'
+import { Voice } from './voice'
 
-type Track = 'title' | 'game' | 'boss' | 'none'
+export type { Sfx, Stinger, Track }
+
+export interface SfxOpts {
+  /** posição horizontal 0..1 (esquerda..direita) para o pan estéreo */
+  x?: number
+  /** deslocamento em semitons (+12 = uma oitava acima) */
+  pitch?: number
+  /** combo atual: 'good', 'coin' e 'perfect' sobem meio tom por acerto (até +12); 'star' sobe pela tríade */
+  combo?: number
+  /** 0..2, multiplica o volume (padrão 1) */
+  volume?: number
+}
+
+const MAX_VOICES = 16
+const LOOKAHEAD = 0.25
+const TICK_MS = 30
 
 let ctx: AudioContext | null = null
-let master: GainNode | null = null
-let musicBus: GainNode | null = null
-let noiseBuf: AudioBuffer | null = null
-let track: Track = 'none'
-let nextTime = 0
-let step = 0
+let graph: Graph | null = null
+let unlocked = false
+let muted = useSave.getState().muted
+let hidden = typeof document !== 'undefined' && document.hidden
+let wanted: Track = 'none'
+let current: Track = 'none'
+let intensity: number | null = null
 let timer = 0
+let gestures = false
+const seqs: Seq[] = []
+const voices: Voice[] = []
+const lastAt = new Map<string, number>()
 
-function ensure() {
+const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
+
+function ensure(): AudioContext | null {
   if (ctx) return ctx
+  if (typeof window === 'undefined') return null
   const AC =
     window.AudioContext ??
-    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
   if (!AC) return null
-  ctx = new AC()
-  master = ctx.createGain()
-  master.gain.value = useSave.getState().muted ? 0 : 0.5
-  master.connect(ctx.destination)
-  musicBus = ctx.createGain()
-  musicBus.gain.value = 0.32
-  musicBus.connect(master)
-  noiseBuf = ctx.createBuffer(1, ctx.sampleRate * 0.5, ctx.sampleRate)
-  const d = noiseBuf.getChannelData(0)
-  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1
+  try {
+    ctx = new AC({ latencyHint: 'interactive' })
+  } catch {
+    return null
+  }
+  graph = buildGraph(ctx)
+  graph.out.gain.value = muted ? 0 : 1
   return ctx
 }
 
-/** Precisa de um gesto do usuário (política de autoplay). */
-let unlocked = false
-let wanted: Track = 'none'
+/** Liga ou desliga o contexto conforme aba visível, mudo e desbloqueio. */
+function syncRun() {
+  const c = ctx
+  if (!c || !unlocked) return
+  const want = !hidden && !muted
+  if (want && c.state !== 'running') {
+    c.resume().catch(() => {})
+  } else if (!want && c.state === 'running') {
+    // no mudo, deixa o fade de 150 ms terminar antes de suspender
+    window.setTimeout(
+      () => {
+        if ((hidden || muted) && c.state === 'running') c.suspend().catch(() => {})
+      },
+      hidden ? 0 : 150,
+    )
+  }
+}
 
+/** Precisa de um gesto do usuário (política de autoplay). */
 export function unlockAudio() {
   unlocked = true
   const c = ensure()
-  if (c && c.state === 'suspended') void c.resume()
-  if (wanted !== 'none' && track !== wanted) playMusic(wanted)
+  if (!c) return
+  // um sample de silêncio dentro do gesto destrava o iOS
+  try {
+    const s = c.createBufferSource()
+    s.buffer = c.createBuffer(1, 1, c.sampleRate)
+    s.connect(c.destination)
+    s.start(0)
+  } catch {
+    // sem problema
+  }
+  syncRun()
+  if (!gestures) {
+    gestures = true
+    // iOS e Android podem suspender o contexto (ligação, outro app): o próximo toque religa
+    for (const ev of ['pointerdown', 'keydown', 'touchend'] as const) {
+      addEventListener(ev, () => ctx?.state !== 'running' && syncRun(), { passive: true, capture: true })
+    }
+  }
+  if (wanted !== current) playMusic(wanted)
+}
+
+function applyMuted(m: boolean) {
+  muted = m
+  if (graph && ctx) graph.out.gain.setTargetAtTime(m ? 0 : 1, ctx.currentTime, 0.03)
+  syncRun()
 }
 
 export function setMuted(m: boolean) {
   useSave.getState().patch({ muted: m })
-  if (master && ctx) master.gain.setTargetAtTime(m ? 0 : 0.5, ctx.currentTime, 0.02)
+  applyMuted(m)
 }
 
-function tone(
-  freq: number,
-  t: number,
-  dur: number,
-  type: OscillatorType,
-  vol: number,
-  dest: AudioNode | null,
-  slideTo?: number,
-) {
-  if (!ctx || !dest) return
-  const o = ctx.createOscillator()
-  const g = ctx.createGain()
-  o.type = type
-  o.frequency.setValueAtTime(freq, t)
-  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur)
-  g.gain.setValueAtTime(0.0001, t)
-  g.gain.exponentialRampToValueAtTime(vol, t + 0.006)
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-  o.connect(g)
-  g.connect(dest)
-  o.start(t)
-  o.stop(t + dur + 0.02)
-}
+useSave.subscribe((s) => {
+  if (s.muted !== muted) applyMuted(s.muted)
+})
 
-function noise(t: number, dur: number, vol: number, hp: number, dest: AudioNode | null) {
-  if (!ctx || !dest || !noiseBuf) return
-  const s = ctx.createBufferSource()
-  s.buffer = noiseBuf
-  const f = ctx.createBiquadFilter()
-  f.type = 'highpass'
-  f.frequency.value = hp
-  const g = ctx.createGain()
-  g.gain.setValueAtTime(vol, t)
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
-  s.connect(f)
-  f.connect(g)
-  g.connect(dest)
-  s.start(t)
-  s.stop(t + dur)
-}
+// ---------------------------------------------------------------- trilha
 
-const N = (semi: number) => 220 * 2 ** (semi / 12) // 0 = A3
-
-// Progressão em lá menor: Am · G · F · E (andaluza, dramática como a referência)
-const CHORDS = [
-  [0, 3, 7],
-  [-2, 2, 5],
-  [-4, 0, 3],
-  [-5, -1, 2],
-]
-// Melodia em mixolídio nordestino (com a sétima abaixada e a sexta maior)
-const MELODY: (number | null)[] = [
-  12,
-  null,
-  10,
-  12,
-  15,
-  null,
-  14,
-  12,
-  10,
-  null,
-  7,
-  null,
-  9,
-  10,
-  12,
-  null,
-  10,
-  null,
-  9,
-  10,
-  12,
-  null,
-  7,
-  5,
-  7,
-  null,
-  null,
-  3,
-  5,
-  null,
-  7,
-  null,
-  8,
-  null,
-  7,
-  8,
-  12,
-  null,
-  10,
-  8,
-  7,
-  null,
-  5,
-  null,
-  3,
-  5,
-  7,
-  null,
-  4,
-  null,
-  7,
-  8,
-  11,
-  null,
-  9,
-  null,
-  8,
-  null,
-  7,
-  null,
-  null,
-  null,
-  null,
-  null,
-]
-
-function schedule() {
-  if (!ctx || track === 'none') return
-  const bpm = track === 'title' ? 92 : track === 'boss' ? 132 : 116
-  const s16 = 60 / bpm / 4
-  while (nextTime < ctx.currentTime + 0.12) {
-    const t = nextTime
-    const bar = Math.floor(step / 16) % 4
-    const i16 = step % 16
-    const chord = CHORDS[bar] ?? CHORDS[0] ?? [0, 3, 7]
-    const root = chord[0] ?? 0
-    // zabumba: grave no 1 e no "e" do 2 (baião)
-    if (i16 === 0 || i16 === 6) tone(N(root - 24), t, 0.22, 'triangle', 0.55, musicBus, N(root - 26))
-    if (i16 === 10) tone(N(root - 12), t, 0.12, 'triangle', 0.35, musicBus)
-    // triângulo
-    if (track !== 'title' || i16 % 4 === 2)
-      noise(t, i16 % 4 === 2 ? 0.06 : 0.025, i16 % 4 === 2 ? 0.16 : 0.06, 6000, musicBus)
-    // caixa no boss
-    if (track === 'boss' && (i16 === 4 || i16 === 12)) noise(t, 0.12, 0.22, 1200, musicBus)
-    // acorde em arpejo
-    if (track === 'title') {
-      if (i16 % 4 === 0) {
-        const n = chord[(i16 / 4) % 3] ?? root
-        tone(N(n), t, s16 * 3.5, 'square', 0.05, musicBus)
-      }
-    } else if (i16 % 2 === 0) {
-      const n = chord[(i16 / 2) % 3] ?? root
-      tone(N(n), t, s16 * 1.4, 'square', 0.045, musicBus)
-    }
-    // melodia
-    const m = MELODY[step % MELODY.length]
-    if (m !== null && m !== undefined && (track !== 'title' || step % 2 === 0)) {
-      tone(N(m), t, s16 * (track === 'title' ? 3 : 1.8), 'square', track === 'title' ? 0.07 : 0.06, musicBus)
-    }
-    nextTime += s16
-    step++
+function tick() {
+  const c = ctx
+  if (c?.state !== 'running') return
+  const now = c.currentTime
+  for (let i = seqs.length - 1; i >= 0; i--) {
+    const s = seqs[i]
+    if (!s) continue
+    if (s.done(now)) {
+      s.dispose()
+      seqs.splice(i, 1)
+    } else s.advance(now, now + LOOKAHEAD)
+  }
+  if (!seqs.length) {
+    clearInterval(timer)
+    timer = 0
   }
 }
 
+/** Troca de faixa no próximo compasso, com crossfade curto. */
 export function playMusic(t: Track) {
   wanted = t
-  if (!unlocked || track === t) return
-  track = t
+  if (!unlocked || t === current) return
   const c = ensure()
-  if (!c) return
-  clearInterval(timer)
+  const g = graph
+  if (!c || !g) return
+  current = t
+  intensity = null
+  const now = c.currentTime
+  const live = seqs.filter((s) => s.stopAt === Number.POSITIVE_INFINITY)
+  // uma troca ainda pendente (não começou) é cancelada já
+  const started = live.filter((s) => s.start <= now + 0.02)
+  for (const s of live) if (!started.includes(s)) s.release(now, 0.02)
+  const main = started[started.length - 1]
+  const at = main ? main.boundary(now) : now + 0.06
+  for (const s of started) s.release(at, t === 'none' ? 0.25 : 0.09)
   if (t === 'none') return
-  nextTime = c.currentTime + 0.05
-  step = 0
-  timer = window.setInterval(schedule, 40)
+  const seq = new Seq(g, SONGS[t], at, DEFAULT_INTENSITY[t], main ? 0.05 : 0.02)
+  seqs.push(seq)
+  seq.advance(now, now + LOOKAHEAD)
+  if (!timer) timer = window.setInterval(tick, TICK_MS)
 }
 
-export type Sfx = 'tap' | 'good' | 'bad' | 'coin' | 'level' | 'swipe' | 'power' | 'boom' | 'fanfare' | 'tick'
+/** Intensidade da trilha 0..1: camadas entram e saem (percussão, baixo, harmonia, melodia, extra). */
+export function setIntensity(v: number) {
+  intensity = clamp(v, 0, 1)
+  if (!ctx) return
+  const now = ctx.currentTime
+  for (const s of seqs) if (s.stopAt === Number.POSITIVE_INFINITY) s.setIntensity(intensity, now)
+}
 
-export function sfx(name: Sfx) {
-  if (!unlocked) return
-  const c = ensure()
-  if (!c || !master) return
-  const t = c.currentTime
-  switch (name) {
-    case 'tap':
-      tone(880, t, 0.05, 'square', 0.12, master)
-      break
-    case 'tick':
-      tone(1320, t, 0.03, 'square', 0.06, master)
-      break
-    case 'good':
-      tone(N(12), t, 0.08, 'square', 0.14, master)
-      tone(N(19), t + 0.06, 0.12, 'square', 0.14, master)
-      break
-    case 'coin':
-      tone(N(26), t, 0.05, 'square', 0.12, master)
-      tone(N(31), t + 0.05, 0.16, 'square', 0.12, master)
-      break
-    case 'bad':
-      tone(160, t, 0.25, 'sawtooth', 0.16, master, 70)
-      noise(t, 0.12, 0.2, 400, master)
-      break
-    case 'swipe':
-      noise(t, 0.09, 0.12, 2500, master)
-      break
-    case 'power':
-      tone(N(0), t, 0.3, 'square', 0.12, master, N(24))
-      break
-    case 'boom':
-      noise(t, 0.5, 0.5, 80, master)
-      tone(90, t, 0.4, 'triangle', 0.4, master, 40)
-      break
-    case 'level':
-      ;[0, 4, 7, 12].forEach((s, i) => {
-        tone(N(12 + s), t + i * 0.08, 0.14, 'square', 0.13, master)
-      })
-      break
-    case 'fanfare':
-      ;[0, 4, 7, 12, 7, 12, 16, 19].forEach((s, i) => {
-        tone(N(12 + s), t + i * 0.11, i === 7 ? 0.6 : 0.16, 'square', 0.13, master)
-      })
-      break
+/** Abaixa a trilha por `ms` (os efeitos continuam). */
+export function duck(ms: number, depth = 0.4) {
+  if (graph) duckGraph(graph, ms, clamp(depth, 0, 1))
+}
+
+/** Hit-stop sonoro: corta a trilha quase toda por um instante. */
+export function hitstop(ms: number) {
+  if (graph) duckGraph(graph, ms, 0.1, 0.004)
+}
+
+// ---------------------------------------------------------------- efeitos
+
+/** Dispara uma receita num grafo qualquer (ao vivo ou offline). */
+export function trigger(g: Graph, r: Recipe, t: number, o: SfxOpts = {}, rnd: () => number = Math.random) {
+  const combo = Math.max(0, Math.floor(o.combo ?? 0))
+  const ladder = Math.min(combo, r.ladderMax ?? 12) * r.ladder
+  // ±3–5% a cada disparo (em semitons = log-uniforme); em degraus, menos de meio tom para a escada só subir
+  const vary = r.stepped && combo > 0 ? Math.min(r.vary, 0.45) : r.vary
+  const semis = (o.pitch ?? 0) + ladder + (rnd() * 2 - 1) * vary
+  const db = (rnd() * 2 - 1) * (r.vary ? 2 : 0.5)
+  const v = new Voice(g, g.sfx, {
+    gain: (r.gain ?? 1) * clamp(o.volume ?? 1, 0, 2) * 10 ** (db / 20),
+    pan: o.x === undefined ? 0 : (clamp(o.x, 0, 1) * 2 - 1) * 0.7,
+    room: r.room,
+    hall: r.hall,
+    prio: r.prio,
+  })
+  r.play(v, t, { k: 2 ** (semis / 12), ladder, combo, rnd })
+  if (r.duck) duckGraph(g, r.duck[0], r.duck[1])
+  return v
+}
+
+function fire(key: string, r: Recipe, o?: SfxOpts) {
+  if (!unlocked || muted || hidden) return
+  const c = ctx
+  const g = graph
+  // 'suspended' logo após o gesto também vale: o resume() é assíncrono e o som sai assim que ele termina
+  if (!c || !g || c.state === 'closed') return
+  const now = c.currentTime
+  const last = lastAt.get(key) ?? -1
+  if (r.gap && now - last < r.gap / 1000) return
+  lastAt.set(key, now)
+  // limite de vozes: rouba a de menor prioridade (e mais velha); se todas valem mais, este som cede
+  for (let i = voices.length - 1; i >= 0; i--) if ((voices[i]?.end ?? 0) < now) voices.splice(i, 1)
+  if (voices.length >= MAX_VOICES) {
+    let vi = 0
+    for (let i = 1; i < voices.length; i++) {
+      const a = voices[i]
+      const b = voices[vi]
+      if (a && b && (a.prio < b.prio || (a.prio === b.prio && a.born < b.born))) vi = i
+    }
+    const victim = voices[vi]
+    if (!victim || victim.prio > r.prio) return
+    victim.kill()
+    voices.splice(vi, 1)
+  }
+  voices.push(trigger(g, r, now + 0.002, o))
+}
+
+export function sfx(name: Sfx, opts?: SfxOpts) {
+  const r = SFX[name]
+  if (r) fire(name, r, opts)
+}
+
+/** Frase curta por cima da trilha (abaixa a música enquanto toca). */
+export function stinger(name: Stinger, opts?: SfxOpts) {
+  const r = STINGERS[name]
+  if (r) fire(`stinger:${name}`, r, opts)
+}
+
+export const SFX_NAMES = Object.keys(SFX) as Sfx[]
+export const STINGER_NAMES = Object.keys(STINGERS) as Stinger[]
+
+/** Estado para depuração (página de audição em dev). */
+export function audioState() {
+  return {
+    state: ctx?.state ?? 'none',
+    unlocked,
+    muted,
+    hidden,
+    track: current,
+    intensity: intensity ?? (current === 'none' ? 0 : DEFAULT_INTENSITY[current]),
+    voices: voices.length,
+    sequences: seqs.length,
+    sampleRate: ctx?.sampleRate ?? 0,
+    baseLatency: ctx?.baseLatency ?? 0,
   }
 }
 
-document.addEventListener('visibilitychange', () => {
-  if (!ctx) return
-  if (document.hidden) void ctx.suspend()
-  else void ctx.resume()
-})
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    hidden = document.hidden
+    syncRun()
+  })
+  addEventListener('pagehide', () => {
+    hidden = true
+    syncRun()
+  })
+  addEventListener('pageshow', () => {
+    hidden = document.hidden
+    syncRun()
+  })
+}
+
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  void import('./dev').then((m) => m.install())
+}

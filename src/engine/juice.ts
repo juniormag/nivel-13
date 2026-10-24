@@ -21,8 +21,10 @@ export class JuiceLayer implements Juice {
   private flashLife = 0
   private flashMax = 1
   private flashAlpha = 0.5
-  shakeAmp = 0
-  private shakeDecay = 0
+  /** modelo trauma² (Eiserloh): 0..1, decai 1,5/s; deslocamento = trauma² × 4 px */
+  trauma = 0
+  /** direção do tremor: dano treme na direção do golpe, evento bom treme só na vertical */
+  private dir = { x: 1, y: 1 }
   freeze = 0
 
   constructor(
@@ -62,14 +64,30 @@ export class JuiceLayer implements Juice {
     this.floats.push({ t, life: 0 })
   }
 
-  shake(amount: number, ms = 160) {
+  shake(amount: number, _ms = 160, dir?: { x: number; y: number }) {
     if (this.reduced) return
-    this.shakeAmp = Math.max(this.shakeAmp, amount)
-    this.shakeDecay = amount / (ms / 1000)
+    // compatível com a API antiga em px: 4 px ≈ trauma 1
+    this.trauma = Math.min(1, this.trauma + Math.min(1, amount / 4) * 0.6)
+    this.dir = dir ?? { x: 1, y: 1 }
+  }
+
+  /** deslocamento inteiro do mundo neste quadro (ruído suave, não branco) */
+  offset(t: number) {
+    if (this.trauma <= 0) return { x: 0, y: 0 }
+    const k = this.trauma * this.trauma * 4
+    const nx = Math.sin(t * 47.3) * 0.6 + Math.sin(t * 91.7 + 1.3) * 0.4
+    const ny = Math.sin(t * 53.9 + 2.1) * 0.6 + Math.sin(t * 87.1 + 0.7) * 0.4
+    return { x: Math.round(nx * k * this.dir.x), y: Math.round(ny * k * this.dir.y) }
   }
 
   hitstop(ms: number) {
     this.freeze = Math.max(this.freeze, ms / 1000)
+  }
+
+  /** clarão de impacto: 1 quadro branco e depois a cor (regra 30) */
+  impact(color: number | string = 0xff4a3d) {
+    this.flash(0xffffff, 33, 0.6)
+    window.setTimeout(() => this.flash(color, 140, 0.4), 34)
   }
 
   flash(color: number | string, ms = 160, alpha = 0.45) {
@@ -126,7 +144,7 @@ export class JuiceLayer implements Juice {
       this.flashSprite.alpha = (this.flashLife / this.flashMax) * this.flashAlpha
     } else this.flashSprite.alpha = 0
 
-    this.shakeAmp = Math.max(0, this.shakeAmp - this.shakeDecay * dt)
+    this.trauma = Math.max(0, this.trauma - 1.5 * dt)
     this.freeze = Math.max(0, this.freeze - dt)
   }
 }

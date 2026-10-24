@@ -1,6 +1,7 @@
-// Cliente do placar. Se o backend não responder, o jogo segue funcionando só no aparelho.
+// Cliente do placar (API em worker/src/index.ts). Se o backend não responder, o jogo segue funcionando só no aparelho.
+// Toda chamada devolve null em caso de falha, sem lançar erro.
 import { CONFIG } from '../config'
-import { type Movimento, getSave } from '../state/save'
+import { getSave, type Movimento } from '../state/save'
 
 export interface Stats {
   players: number
@@ -40,8 +41,11 @@ const who = () => {
 export const api = {
   hello: () => req<{ ok: boolean }>('/hello', who()),
   complete: () => req<{ ok: boolean }>('/complete', who()),
-  like: (fact: string) => req<{ likes: number }>('/like', { id: getSave().id, fact }),
-  movimento: (escolha: Movimento) => req<{ ok: boolean }>('/movimento', { ...who(), escolha }),
+  /** Devolve o total de curtidas do fato depois da sua. */
+  like: (fact: string) => req<{ ok: boolean; likes: number }>('/like', { id: getSave().id, fact }),
+  /** Anônimo: só id do aparelho (vira HMAC no servidor), UF e escolha. O apelido não vai junto. */
+  movimento: (escolha: Movimento) =>
+    req<{ ok: boolean }>('/movimento', { id: getSave().id, uf: getSave().uf, escolha }),
   daily: (date: string, score: number) => req<{ ok: boolean }>('/daily', { id: getSave().id, date, score }),
   stats: () => req<Stats>(`/stats?id=${encodeURIComponent(getSave().id)}`),
 }

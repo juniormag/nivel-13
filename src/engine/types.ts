@@ -7,8 +7,10 @@ export interface Juice {
   burst(x: number, y: number, color: number | string, n?: number, speed?: number): void
   /** texto subindo e sumindo (pontos, "PERFEITO") */
   float(text: string, x: number, y: number, color?: number | string): void
-  /** tremor de tela em px lógicos, decai em ~ms */
-  shake(px: number, ms?: number): void
+  /** tremor (modelo trauma²); `dir` {x:0,y:1} = só vertical (evento bom) */
+  shake(px: number, ms?: number, dir?: { x: number; y: number }): void
+  /** clarão de impacto: 1 quadro branco e depois a cor */
+  impact(color?: number | string): void
   /** congela a simulação por ms (impacto) */
   hitstop(ms: number): void
   /** clarão de tela inteira */

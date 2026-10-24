@@ -13,6 +13,11 @@ export type Screen =
   | 'colecao'
   | 'votar'
   | 'sobre'
+  | 'chuta'
+  | 'papo'
+  | 'duelo'
+  | 'grupo'
+  | 'plano'
 
 export interface NavState {
   screen: Screen

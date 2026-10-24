@@ -1,0 +1,15 @@
+# Cloudflare Worker da API do Nível 13. Deploy: cd worker && npx wrangler deploy (ver docs/DEPLOY.md)
+name = "nivel13-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[vars]
+# URL pública do site (sem barra no fim). Aceita lista separada por vírgula.
+ALLOWED_ORIGIN = "https://SEU-SITE.pages.dev"
+RATE_PER_MIN = "40"
+# SALT é segredo: npx wrangler secret put SALT
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nivel13"
+database_id = "00000000-0000-0000-0000-000000000000" # troque pelo id de `npx wrangler d1 create nivel13`

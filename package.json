@@ -12,11 +12,14 @@
     "dev:api": "node server/dev-api.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview --port 4313",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && tsc -p worker && tsc -p tests",
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "db:init:remote": "npx wrangler@4 d1 execute nivel13 --remote --file=worker/schema.sql --config worker/wrangler.toml",
+    "deploy:api": "npx wrangler@4 deploy --config worker/wrangler.toml"
   },
   "dependencies": {
     "@fontsource/pixelify-sans": "^5.3.0",

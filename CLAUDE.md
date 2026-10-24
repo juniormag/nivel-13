@@ -1,7 +1,7 @@
 # Nível 13 · regras do repositório
 
 Jogo web casual em pixel art moderna. Público: eleitor brasileiro indeciso, no celular, abrindo pelo WhatsApp.
-Leia antes de mexer: `docs/GAME-DESIGN.md`, `docs/ART-DIRECTION.md` e `docs/research/` (se existir).
+Leia antes de mexer: `docs/GAME-DESIGN.md`, `docs/ART-DIRECTION.md`, `docs/PROMPTS.md` (prompts mestres e rubrica de taste), `docs/reference/` (imagem de referência) e `docs/research/`.
 
 ## Stack
 Vite 8 · React 19 (telas, HUD, overlays) · PixiJS 8 (minijogos, pixel perfeito em resolução lógica) · three / React Three Fiber (mundo do título) · Zustand (estado) · Hono + Cloudflare D1 (API em `worker/`) · Vitest + Playwright · Biome.

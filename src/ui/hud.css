@@ -1,0 +1,1038 @@
+/* Componentes pixel do HUD (src/ui/*.tsx). Valores da paleta; contorno em degrau por box-shadow. */
+
+/* ---------- PixelFrame ---------- */
+.pf {
+  --pf-line: var(--stone-2);
+  --pf-hi: var(--stone-1);
+  --pf-lo: var(--void);
+  --pf-fill: var(--night);
+  --pf-w: var(--hair, 2px);
+  position: relative;
+  background: var(--pf-fill);
+  box-shadow:
+    0 calc(var(--pf-w) * -1) 0 0 var(--pf-line),
+    0 var(--pf-w) 0 0 var(--pf-line),
+    calc(var(--pf-w) * -1) 0 0 0 var(--pf-line),
+    var(--pf-w) 0 0 0 var(--pf-line),
+    inset var(--pf-w) var(--pf-w) 0 0 var(--pf-hi),
+    inset calc(var(--pf-w) * -1) calc(var(--pf-w) * -1) 0 0 var(--pf-lo);
+}
+.pf--lift {
+  box-shadow:
+    0 calc(var(--pf-w) * -1) 0 0 var(--pf-line),
+    0 var(--pf-w) 0 0 var(--pf-line),
+    calc(var(--pf-w) * -1) 0 0 0 var(--pf-line),
+    var(--pf-w) 0 0 0 var(--pf-line),
+    inset var(--pf-w) var(--pf-w) 0 0 var(--pf-hi),
+    inset calc(var(--pf-w) * -1) calc(var(--pf-w) * -1) 0 0 var(--pf-lo),
+    0 calc(var(--px) * 3) 0 calc(var(--pf-w) * -1) var(--void);
+}
+/* moldura fina e clara da referência (retrato, habilidades, minimapa) */
+.pf--hud {
+  --pf-line: var(--stone-3);
+  --pf-hi: var(--void);
+  --pf-lo: var(--void);
+}
+.pf--stone {
+  --pf-line: var(--stone-2);
+  --pf-hi: var(--stone-1);
+}
+.pf--red {
+  --pf-line: var(--red);
+  --pf-hi: var(--crimson-deep);
+  --pf-lo: var(--blood-0);
+}
+.pf--gold {
+  --pf-line: var(--gold);
+  --pf-hi: var(--gold-0);
+}
+.pf--ghost {
+  --pf-line: var(--stone-1);
+  --pf-hi: transparent;
+  --pf-lo: transparent;
+}
+/* cantoneira: um "L" claro de 3 px lógicos no canto de cima à esquerda */
+.pf--bracket::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--pf-w) * 2);
+  top: calc(var(--pf-w) * 2);
+  width: calc(var(--pf-w) * 3);
+  height: calc(var(--pf-w) * 3);
+  border-left: var(--pf-w) solid var(--stone-hi);
+  border-top: var(--pf-w) solid var(--stone-hi);
+  pointer-events: none;
+  z-index: 1;
+}
+.pf--bracket::after {
+  content: "";
+  position: absolute;
+  right: calc(var(--pf-w) * 2);
+  bottom: calc(var(--pf-w) * 2);
+  width: calc(var(--pf-w) * 3);
+  height: calc(var(--pf-w) * 3);
+  border-right: var(--pf-w) solid var(--stone-1);
+  border-bottom: var(--pf-w) solid var(--stone-1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.btn--sm {
+  font-size: 12px;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+/* ---------- PixelIcon ---------- */
+canvas {
+  image-rendering: pixelated;
+}
+
+/* ---------- Hearts ---------- */
+.hearts {
+  display: flex;
+  gap: calc(var(--px) * 2);
+  align-items: center;
+}
+.heart-slot {
+  display: block;
+  line-height: 0;
+}
+.heart {
+  display: block;
+  width: 22px;
+  height: 20px;
+}
+.heart-slot.is-full .heart {
+  filter: drop-shadow(0 0 0 transparent);
+}
+.heart-slot.is-lost {
+  animation: heartlost 0.36s steps(1) both;
+}
+@keyframes heartlost {
+  0% {
+    filter: brightness(0) invert(1);
+    transform: translateX(0);
+  }
+  10% {
+    filter: brightness(0) invert(1);
+  }
+  15% {
+    filter: none;
+    transform: translateX(-2px);
+  }
+  30% {
+    transform: translateX(2px);
+  }
+  45% {
+    transform: translateX(-2px) scale(1.15);
+  }
+  60% {
+    transform: translateX(0) scale(1.25);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ---------- XPBar ---------- */
+.xp-bar {
+  --w: var(--hair, 2px);
+  position: relative;
+  width: var(--xp-w, 270px);
+  height: var(--xp-h, 12px);
+  background: var(--void);
+  box-shadow:
+    0 calc(var(--w) * -1) 0 0 var(--stone-3),
+    0 var(--w) 0 0 var(--stone-3),
+    calc(var(--w) * -1) 0 0 0 var(--stone-3),
+    var(--w) 0 0 0 var(--stone-3);
+}
+.xp-bar > i {
+  position: absolute;
+  left: var(--w);
+  top: var(--w);
+  bottom: var(--w);
+  max-width: calc(100% - var(--w) * 2);
+  background: var(--red);
+  box-shadow:
+    inset 0 var(--w) 0 0 var(--red-glow),
+    inset 0 calc(var(--w) * -1) 0 0 var(--crimson);
+}
+.xp-text {
+  margin-top: 8px;
+  font-family: var(--f-hud);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--stone-3);
+  text-shadow: var(--shadow-text);
+}
+
+/* ---------- StatBars ---------- */
+.stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: auto var(--stat-w, 112px) auto;
+  gap: 12px 18px;
+  align-items: center;
+}
+.stat {
+  display: contents;
+}
+.stat-label {
+  font-family: var(--f-hud);
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--stone-3);
+  text-shadow: var(--shadow-text);
+}
+.stat-bar {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: var(--hair, 2px);
+  height: var(--stat-h, 8px);
+}
+.stat-bar i {
+  display: block;
+  background: var(--stone-0);
+  box-shadow: inset 0 calc(var(--hair, 2px) * -1) 0 0 var(--night);
+}
+.stat-bar b {
+  display: block;
+  height: 100%;
+  background: var(--red);
+  box-shadow: inset 0 var(--hair, 2px) 0 0 var(--red-glow);
+}
+.stat-num {
+  font-family: var(--f-hud);
+  font-size: 16px;
+  color: var(--stone-hi);
+  text-align: right;
+  min-width: 2ch;
+  text-shadow: var(--shadow-text);
+}
+
+/* ---------- CommandMenu ---------- */
+.cmd ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cmd-item {
+  --ink: var(--stone-3);
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 18px 0 30px;
+  font-family: var(--f-hud);
+  font-size: var(--cmd-fs, 18px);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--ink);
+  text-shadow: var(--shadow-text);
+  white-space: nowrap;
+}
+/* ponto dos itens inativos */
+.cmd-item::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: var(--px);
+  height: var(--px);
+  margin-top: calc(var(--px) / -2);
+  background: var(--stone-2);
+}
+.cmd-item.is-active {
+  --ink: var(--white);
+  text-shadow: none;
+  background:
+    linear-gradient(90deg, transparent 0 calc(100% - var(--px) * 6), var(--crimson-deep) 0),
+    linear-gradient(90deg, var(--red) 0 calc(100% - var(--px) * 18), var(--crimson) 0);
+  box-shadow:
+    inset 0 var(--hair, 2px) 0 0 var(--red-hot),
+    inset 0 calc(var(--hair, 2px) * -1) 0 0 var(--crimson-deep);
+}
+.cmd-item.is-active::before {
+  display: none;
+}
+/* 1 quadro branco ao trocar o item ativo (regra 32) */
+.cmd-item.is-active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--white);
+  opacity: 0;
+  animation: cmdflash 0.05s steps(1);
+  pointer-events: none;
+}
+@keyframes cmdflash {
+  0% {
+    opacity: 0.85;
+  }
+}
+.cmd-cursor {
+  position: absolute;
+  left: calc(var(--px) * -8);
+  top: 50%;
+  width: calc(var(--px) * 5);
+  height: calc(var(--px) * 9);
+  margin-top: calc(var(--px) * -4.5);
+  display: none;
+  color: var(--red-hot);
+}
+.cmd-cursor svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+.cmd-item.is-active .cmd-cursor {
+  display: block;
+  animation: cmdbob 0.8s steps(1) infinite;
+}
+@keyframes cmdbob {
+  50% {
+    transform: translateX(var(--px));
+  }
+}
+.cmd-label {
+  flex: 0 1 auto;
+}
+.cmd-hint {
+  margin-left: auto;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 3px 6px;
+  color: var(--stone-3);
+  background: var(--night);
+  box-shadow: 0 0 0 1px var(--stone-1);
+  text-shadow: none;
+}
+.cmd-item.is-active .cmd-hint {
+  color: var(--gold-hi);
+  box-shadow: 0 0 0 1px var(--blood-0);
+}
+.cmd-item:focus-visible {
+  outline: var(--hair, 2px) solid var(--gold-hi);
+  outline-offset: 2px;
+}
+
+/* ---------- SkillBar ---------- */
+.skills {
+  display: flex;
+  gap: var(--skill-gap, 26px);
+  align-items: flex-start;
+}
+.skill {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--stone-hi);
+  font-family: var(--f-hud);
+  text-transform: uppercase;
+}
+.skill[aria-disabled="true"] {
+  cursor: default;
+}
+.skill-tile {
+  --pf-w: var(--hair, 2px);
+  position: relative;
+  display: block;
+  padding: var(--skill-pad, 10px);
+  background: var(--night);
+  box-shadow:
+    0 calc(var(--pf-w) * -1) 0 0 var(--stone-3),
+    0 var(--pf-w) 0 0 var(--stone-3),
+    calc(var(--pf-w) * -1) 0 0 0 var(--stone-3),
+    var(--pf-w) 0 0 0 var(--stone-3),
+    inset 0 0 0 var(--pf-w) var(--void),
+    0 calc(var(--px) * 3) 0 calc(var(--pf-w) * -1) var(--void);
+}
+.skill-tile::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--pf-w) * 3);
+  top: calc(var(--pf-w) * 3);
+  width: calc(var(--pf-w) * 3);
+  height: calc(var(--pf-w) * 3);
+  border-left: var(--pf-w) solid var(--stone-3);
+  border-top: var(--pf-w) solid var(--stone-3);
+  z-index: 1;
+}
+.skill-icon {
+  display: block;
+  width: var(--skill-icon, 64px);
+  height: var(--skill-icon, 64px);
+}
+.skill-name {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-shadow: var(--shadow-text);
+}
+.skill-key {
+  min-width: 22px;
+  height: 22px;
+  font-size: 11px;
+}
+.skill-corner {
+  display: none;
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 3px;
+  background: var(--void);
+  color: var(--stone-3);
+}
+.skill.is-ready .skill-icon {
+  animation: skillpulse 2.4s steps(1) infinite;
+}
+@keyframes skillpulse {
+  0%,
+  92% {
+    filter: none;
+  }
+  94% {
+    filter: brightness(1.6);
+  }
+}
+.skill.is-locked .skill-icon,
+.skill.is-used .skill-icon {
+  filter: grayscale(1) brightness(0.32);
+  animation: none;
+}
+.skill.is-locked .skill-name,
+.skill.is-used .skill-name {
+  color: var(--stone-2);
+}
+.skill-lock {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--stone-3);
+  text-shadow: var(--shadow-text);
+}
+.skill:hover:not([aria-disabled="true"]) .skill-tile {
+  box-shadow:
+    0 calc(var(--pf-w) * -1) 0 0 var(--stone-hi),
+    0 var(--pf-w) 0 0 var(--stone-hi),
+    calc(var(--pf-w) * -1) 0 0 0 var(--stone-hi),
+    var(--pf-w) 0 0 0 var(--stone-hi),
+    inset 0 0 0 var(--pf-w) var(--void),
+    0 calc(var(--px) * 3) 0 calc(var(--pf-w) * -1) var(--void);
+}
+.skill:focus-visible {
+  outline: none;
+}
+.skill:focus-visible .skill-tile {
+  outline: var(--hair, 2px) solid var(--gold-hi);
+  outline-offset: 4px;
+}
+@media (pointer: coarse) {
+  .skill-corner {
+    display: block;
+  }
+  .skill-key {
+    display: none;
+  }
+}
+
+/* ---------- Minimap ---------- */
+.minimap {
+  margin: 0;
+  padding: var(--mm-pad, 6px);
+  display: inline-block;
+  line-height: 0;
+  --pf-fill: var(--night);
+}
+.minimap canvas {
+  display: block;
+  width: var(--mm-size, 192px);
+  height: var(--mm-size, 192px);
+}
+.mm-north {
+  position: absolute;
+  right: 12px;
+  top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--f-hud);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--stone-hi);
+}
+.mm-north b {
+  font-weight: 400;
+}
+.mm-north i {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-bottom: 8px solid var(--stone-hi);
+}
+.mm-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: calc(var(--mm-pad, 6px) - 4px) 0 0 calc(var(--mm-pad, 6px) - 4px);
+  background: var(--red-hot);
+  box-shadow:
+    0 0 0 2px var(--white),
+    0 0 0 4px var(--crimson-deep);
+}
+.mm-dot::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  box-shadow: 0 0 0 2px var(--red-hot);
+  opacity: 0;
+  animation: mmpulse 1.2s steps(1) infinite;
+}
+@keyframes mmpulse {
+  50% {
+    opacity: 0.8;
+  }
+  75% {
+    opacity: 0;
+  }
+}
+.mm-label {
+  position: absolute;
+  margin: calc(var(--mm-pad, 6px) - 22px) 0 0 calc(var(--mm-pad, 6px) + 10px);
+  font-family: var(--f-hud);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--stone-hi);
+  white-space: nowrap;
+  text-shadow:
+    0 1px 0 var(--void),
+    1px 0 0 var(--void),
+    -1px 0 0 var(--void),
+    0 -1px 0 var(--void);
+}
+.mm-label.is-left {
+  transform: translateX(-100%);
+  margin-left: calc(var(--mm-pad, 6px) - 10px);
+}
+
+/* ---------- Dialog ---------- */
+.dlg-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(16px + var(--safe-t)) 16px calc(16px + var(--safe-b));
+  background: color-mix(in srgb, var(--void) 80%, transparent);
+}
+.dlg {
+  width: min(500px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  padding: 24px 20px 20px;
+  outline: none;
+}
+.dlg--wide {
+  width: min(760px, 100%);
+}
+.dlg-title {
+  font-family: var(--f-hud);
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 40px 14px 0;
+}
+.dlg-close {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  z-index: 2;
+}
+/* carta dentro do diálogo: o diálogo já é a moldura */
+.dlg--card {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
+}
+.dlg--card .dlg-close {
+  right: 4px;
+  top: 4px;
+}
+
+/* ---------- Tabs ---------- */
+.tabs {
+  display: flex;
+  gap: calc(var(--hair, 2px) * 3);
+  margin: 4px 0 18px;
+  flex-wrap: wrap;
+}
+.tab {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--f-hud);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  min-height: 44px;
+  flex: 1 1 0;
+  background: var(--night);
+  color: var(--stone-3);
+  box-shadow:
+    0 -2px 0 0 var(--stone-1),
+    0 2px 0 0 var(--stone-1),
+    -2px 0 0 0 var(--stone-1),
+    2px 0 0 0 var(--stone-1);
+}
+.tab:hover {
+  color: var(--stone-hi);
+  background: var(--dusk);
+}
+.tab[aria-selected="true"] {
+  color: var(--white);
+  background: var(--crimson);
+  box-shadow:
+    0 -2px 0 0 var(--red),
+    0 2px 0 0 var(--red),
+    -2px 0 0 0 var(--red),
+    2px 0 0 0 var(--red),
+    inset 0 2px 0 0 var(--red-hot);
+}
+.tabpanel:focus-visible {
+  outline: 2px solid var(--gold-hi);
+  outline-offset: 4px;
+}
+
+/* ---------- Toast ---------- */
+.toasts {
+  position: fixed;
+  left: 50%;
+  top: calc(16px + var(--safe-t));
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  width: min(420px, calc(100vw - 32px));
+}
+.toast {
+  padding: 12px 16px;
+  font-family: var(--f-hud);
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--stone-hi);
+}
+
+/* ---------- FactCard ---------- */
+.factcard {
+  width: min(500px, 100%);
+  padding: 22px 20px 18px;
+  text-align: left;
+}
+.fc-head {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.fc-art {
+  flex: none;
+  padding: 4px;
+  line-height: 0;
+}
+.fc-art canvas {
+  display: block;
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+}
+.fc-kicker {
+  font-family: var(--f-hud);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.factcard h3 {
+  font-family: var(--f-hud);
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 1.25;
+  margin: 6px 0 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--stone-hi);
+}
+.fc-status {
+  display: inline-block;
+  font-family: var(--f-hud);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 8px;
+  margin-bottom: 12px;
+  background: var(--blood-0);
+  color: var(--red-glow);
+  box-shadow:
+    0 -2px 0 0 var(--crimson),
+    0 2px 0 0 var(--crimson),
+    -2px 0 0 0 var(--crimson),
+    2px 0 0 0 var(--crimson);
+}
+.fc-status.is-good {
+  background: var(--vine-0);
+  color: var(--leaf-hi);
+  box-shadow:
+    0 -2px 0 0 var(--vine-1),
+    0 2px 0 0 var(--vine-1),
+    -2px 0 0 0 var(--vine-1),
+    2px 0 0 0 var(--vine-1);
+}
+.fc-body {
+  font-size: 18px;
+  line-height: 1.45;
+  margin: 0 0 14px;
+  color: var(--stone-hi);
+  user-select: text;
+  -webkit-user-select: text;
+}
+.fc-src-title {
+  font-family: var(--f-hud);
+  font-weight: 400;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--stone-3);
+  margin: 0 0 6px;
+}
+.fc-sources {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fc-sources li {
+  padding-left: 14px;
+  position: relative;
+}
+.fc-sources li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.6em;
+  width: 4px;
+  height: 4px;
+  background: var(--gold-1);
+}
+.fc-sources a {
+  color: var(--gold-hi);
+}
+.fc-date {
+  color: var(--stone-3);
+}
+.fc-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.like.is-on {
+  --b-fill: var(--vine-1);
+  --b-line: var(--vine-0);
+  --b-hi: var(--green);
+  --b-lo: var(--vine-0);
+  --b-ink: var(--white);
+}
+
+/* ---------- Countdown ---------- */
+.cd-blocks {
+  display: flex;
+  gap: 14px;
+}
+.cd-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 6px 8px;
+}
+.cd-block b {
+  font-family: var(--f-hud);
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--gold-hi);
+}
+.cd-block small {
+  font-family: var(--f-hud);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--stone-3);
+  margin-top: 6px;
+}
+
+/* ---------- HUD de fase (Play.tsx) ---------- */
+.play-top {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  padding: calc(10px + var(--safe-t)) calc(12px + var(--safe-r)) 14px calc(14px + var(--safe-l));
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(color-mix(in srgb, var(--void) 88%, transparent), transparent);
+}
+.play-top .hearts {
+  gap: 4px;
+}
+.play-mid {
+  min-width: 0;
+}
+.play-title {
+  font-family: var(--f-hud);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--stone-3);
+  text-transform: uppercase;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-shadow: var(--shadow-text);
+}
+.play-title b {
+  color: var(--stone-hi);
+  font-weight: 400;
+}
+.timer {
+  position: relative;
+  height: 10px;
+  margin-top: 8px;
+  background: var(--void);
+  box-shadow:
+    0 -2px 0 0 var(--stone-3),
+    0 2px 0 0 var(--stone-3),
+    -2px 0 0 0 var(--stone-3),
+    2px 0 0 0 var(--stone-3);
+}
+.timer > i {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  bottom: 2px;
+  max-width: calc(100% - 4px);
+  background: var(--gold);
+  box-shadow: inset 0 2px 0 0 var(--gold-hi);
+}
+.timer.low > i {
+  background: var(--red);
+  box-shadow: inset 0 2px 0 0 var(--red-glow);
+  animation: timerlow 0.5s steps(1) infinite;
+}
+@keyframes timerlow {
+  50% {
+    background: var(--red-hot);
+  }
+}
+.play-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.score {
+  font-family: var(--f-hud);
+  font-size: 18px;
+  color: var(--gold-hi);
+  text-shadow: var(--shadow-text);
+  min-width: 64px;
+  text-align: right;
+}
+.pause-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+}
+.pause-btn i {
+  width: 4px;
+  height: 14px;
+  background: var(--stone-hi);
+  box-shadow: 0 2px 0 var(--void);
+}
+.pause-btn:hover i {
+  background: var(--gold-hi);
+}
+.play-skills {
+  position: absolute;
+  left: 50%;
+  bottom: calc(10px + var(--safe-b));
+  transform: translateX(-50%);
+  flex-direction: row;
+  --skill-gap: 14px;
+  --skill-icon: 32px;
+  --skill-pad: 6px;
+  --hair: 2px;
+}
+.play-skills .skill {
+  gap: 4px;
+}
+.play-skills .skill-name {
+  font-size: 9px;
+}
+.play-skills .skill-key {
+  display: none;
+}
+.play-skills .skill-corner {
+  display: block;
+  font-size: 8px;
+}
+.play-skills .skill-lock {
+  font-size: 7px;
+}
+.skill.is-na .skill-icon {
+  filter: grayscale(1) brightness(0.45);
+  animation: none;
+}
+.skill.is-na .skill-name {
+  color: var(--stone-2);
+}
+@media (min-width: 1000px) and (min-height: 640px) {
+  .play-top {
+    padding: calc(16px + var(--safe-t)) calc(24px + var(--safe-r)) 18px calc(24px + var(--safe-l));
+    gap: 24px;
+  }
+  .play-top .heart {
+    width: 33px;
+    height: 30px;
+  }
+  .play-title {
+    font-size: 14px;
+  }
+  .timer {
+    height: 12px;
+  }
+  .score {
+    font-size: 24px;
+  }
+  .play-skills {
+    --skill-icon: 64px;
+    --skill-pad: 8px;
+    --skill-gap: 22px;
+    bottom: calc(16px + var(--safe-b));
+  }
+  .play-skills .skill-name {
+    font-size: 11px;
+  }
+  .play-skills .skill-corner {
+    font-size: 10px;
+  }
+  .play-skills .skill-lock {
+    font-size: 9px;
+  }
+}
+
+/* ---------- toque em pixel nativo (x-craft §2, regra 2) ----------
+   pressionar: desce 1 px lógico e troca o bisel num quadro; soltar: volta em 120 ms */
+.btn,
+.skill-tile,
+.cmd-item,
+.tab,
+.av,
+.vopt,
+.ccard,
+.chip,
+.dots,
+.pause-btn,
+.page-close,
+.dlg-close {
+  transition: transform 0.12s steps(2);
+}
+[data-pressed] {
+  transition: none !important;
+}
+.btn[data-pressed] {
+  transform: translateY(var(--px));
+  box-shadow:
+    0 calc(var(--px) * -1) 0 0 var(--b-line),
+    0 var(--px) 0 0 var(--b-line),
+    calc(var(--px) * -1) 0 0 0 var(--b-line),
+    var(--px) 0 0 0 var(--b-line),
+    inset 0 calc(var(--px) * 2) 0 0 var(--b-lo),
+    inset 0 calc(var(--px) * -1) 0 0 var(--b-hi),
+    0 calc(var(--px) * 2) 0 0 var(--void);
+}
+.btn--ghost[data-pressed] {
+  box-shadow: none;
+  background: var(--dusk);
+}
+.skill[data-pressed] .skill-tile,
+.cmd-item[data-pressed],
+.tab[data-pressed],
+.av[data-pressed],
+.vopt[data-pressed],
+.ccard[data-pressed],
+.chip[data-pressed],
+.dots[data-pressed],
+.pause-btn[data-pressed] {
+  transform: translateY(var(--hair, 2px));
+}
+.skill[data-pressed] .skill-tile {
+  background: var(--dusk);
+}

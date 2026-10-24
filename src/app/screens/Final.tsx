@@ -1,15 +1,100 @@
-// TODO(agente): tela Final. Substituir este placeholder.
+// Nível 13: o monumento se completa, a coroa desce e a conquista vira card.
+import { motion } from 'motion/react'
+import { useEffect, useState } from 'react'
+import { playMusic, sfx } from '../../audio/audio'
+import { api } from '../../lib/api'
+import { ShareSheet, shareText } from '../../share/ShareSheet'
+import { getSave, useSave, XP_MAX, xpTotal } from '../../state/save'
+import { rise, stagger } from '../../ui/motion'
+import { PixelButton } from '../../ui/PixelButton'
+import { Legal, PortraitFrame, Screen } from '../../ui/Shell'
+import { XPBar } from '../../ui/XPBar'
 import { go } from '../nav'
 
 export default function Final() {
+  const save = useSave()
+  const [celebrate, setCelebrate] = useState(false)
+  const [share, setShare] = useState(false)
+
+  useEffect(() => {
+    playMusic('title')
+    if (!getSave().finishedAt) {
+      getSave().patch({ finishedAt: Date.now() })
+      void api.complete()
+    }
+    const t = window.setTimeout(() => {
+      setCelebrate(true)
+      sfx('fanfare')
+    }, 1400)
+    return () => clearTimeout(t)
+  }, [])
+
   return (
-    <main className="screen">
-      <div className="sheet px-frame stack">
-        <h2>Final</h2>
-        <button type="button" className="btn btn--red" onClick={() => go('play', { level: 1 })}>
-          Jogar fase 1
-        </button>
+    <Screen world={1} celebrate={celebrate} dim={false} className="title">
+      <div className="t-vignette" aria-hidden="true" />
+      <div className="fin">
+        <motion.header className="fin-head" variants={stagger(0.12, 0.2)} initial="hidden" animate="show">
+          <motion.div className="eyebrow" variants={rise}>
+            Você chegou ao
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, scale: 1.4 }}
+            animate={{
+              opacity: 1,
+              scale: 1,
+              transition: { delay: 0.35, duration: 0.22, ease: (t: number) => Math.floor(t * 5) / 5 },
+            }}
+          >
+            NÍVEL 13
+          </motion.h1>
+        </motion.header>
+
+        <motion.section
+          className="fin-card pf pf--gold pf--lift"
+          aria-label="Conquista"
+          variants={stagger(0.06, 1.6)}
+          initial="hidden"
+          animate="show"
+        >
+          <motion.div className="fin-player" variants={rise}>
+            <PortraitFrame avatar={save.avatar} />
+            <div className="res-xp">
+              <XPBar value={xpTotal(save)} max={XP_MAX} />
+            </div>
+          </motion.div>
+          <motion.p variants={rise}>
+            Você derrubou a Grande Fake com fatos. Agora a fase mais importante é fora do jogo: levar isso
+            para quem você conhece e votar.
+          </motion.p>
+          <motion.div variants={rise}>
+            <PixelButton tone="red" wide size="big" onClick={() => setShare(true)}>
+              Compartilhar minha conquista
+            </PixelButton>
+          </motion.div>
+          <motion.div variants={rise}>
+            <PixelButton
+              wide
+              onClick={() =>
+                void shareText('Joguei o Nível 13: 13 fases curtas, tudo com fonte. Duvido você terminar:')
+              }
+            >
+              Desafiar amigos no WhatsApp
+            </PixelButton>
+          </motion.div>
+          <motion.div variants={rise}>
+            <PixelButton tone="gold" wide onClick={() => go('votar')}>
+              Entrar no movimento
+            </PixelButton>
+          </motion.div>
+          <motion.div variants={rise}>
+            <PixelButton tone="ghost" wide onClick={() => go('title')}>
+              Início
+            </PixelButton>
+          </motion.div>
+        </motion.section>
+        <Legal />
       </div>
-    </main>
+      {share && <ShareSheet moment={{ kind: 'nivel13' }} onClose={() => setShare(false)} />}
+    </Screen>
   )
 }
