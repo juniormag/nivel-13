@@ -1551,3 +1551,14 @@ body.playing #fx {
 .status-glow.shield {
   box-shadow: inset 0 0 0 3px rgba(79, 174, 63, 0.7);
 }
+.world-stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+.world-stage canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: pixelated;
+}
