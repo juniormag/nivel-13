@@ -10,7 +10,17 @@ import { getSave } from '../../state/save'
 import { CountUp } from '../../ui/CountUp'
 import { Hearts } from '../../ui/Hearts'
 import { fmt, useCountUp } from '../../ui/hooks'
-import { Banner, Corners, IconTile, LevelCard, SegBar, StarRow, tipIcon, useBeats } from '../../ui/LevelCard'
+import {
+  Banner,
+  Corners,
+  IconTile,
+  LevelCard,
+  SegBar,
+  StarRow,
+  tipIcon,
+  touchTips,
+  useBeats,
+} from '../../ui/LevelCard'
 import { PixelButton, Tap } from '../../ui/PixelButton'
 import { go, useNav } from '../nav'
 
@@ -172,7 +182,7 @@ export default function Play() {
           <Hearts n={hearts} max={maxHearts} />
           <div className="play-mid">
             <div className="play-title">
-              {custom ? `${custom.sub} · ` : `Fase ${level?.n} · `}
+              <span className="play-title-n">{custom ? `${custom.sub} · ` : `Fase ${level?.n} · `}</span>
               <b>{title}</b>
             </div>
             <div
@@ -231,7 +241,7 @@ export default function Play() {
               Pausa
             </h2>
             <ul className="mt-tips mt-tips--still">
-              {(custom?.how ?? level?.how ?? []).slice(0, 2).map((h, i) => (
+              {touchTips(custom?.how ?? level?.how ?? []).map((h, i) => (
                 <li key={h}>
                   <IconTile name={tipIcon(h, i)} tone={i === 0 ? 'red' : 'gold'} />
                   <span>{h}</span>
@@ -376,6 +386,7 @@ function LoseCard({ level, end, retry }: { level: Level; end: EndInfo; retry: ()
               go(level.n === 13 && firstTime ? 'final' : 'result', {
                 level: level.n,
                 xp: firstTime ? xpFor(1) : 0,
+                lost: 1,
               })
             }}
           >

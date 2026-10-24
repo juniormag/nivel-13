@@ -300,9 +300,22 @@ export default function ir(): MicroGame {
       const salary = h('div', {
         style: 'font-family:var(--f-hud);font-size:20px;text-align:center;margin:6px 0 2px',
       })
-      // contador sobe com ease-out em 400 ms (regra 33), nunca pula
+      // contador sobe com ease-out em 400 ms (regra 33). Ao zerar (acima de R$ 7.350) o número
+      // vai direto para R$ 0,00: contar para baixo deixava valores intermediários (ex.: R$ 48,25
+      // por ano) na tela ao lado de "não há redução". Um timer garante o valor final mesmo se o
+      // navegador segurar os quadros (aba em segundo plano, aparelho lento).
+      let settle = 0
       const countTo = (to: number) => {
         cancelAnimationFrame(tween)
+        clearTimeout(settle)
+        const done = () => {
+          shownAno = to
+          big.textContent = `${fmtBRL(to)} por ano`
+        }
+        if (to === 0 || c.reduced) {
+          done()
+          return
+        }
         const from = shownAno
         const t0 = performance.now()
         const step = () => {
@@ -312,11 +325,16 @@ export default function ir(): MicroGame {
           if (k < 1) tween = requestAnimationFrame(step)
         }
         step()
+        settle = window.setTimeout(done, 450)
       }
       const update = () => {
         const e = economiaIR(val)
+        // mês e ano saem do mesmo valor em centavos: ano = mês arredondado × 13 (12 salários + 13º).
+        // Sem isso, em R$ 7.350 a redução de R$ 0,004/mês aparecia como R$ 0,00 por mês e R$ 0,06 por ano.
+        const mes = Math.round(e.mes * 100) / 100
+        const ano = Math.round(mes * 13 * 100) / 100
         salary.textContent = fmtBRL(val, 0)
-        countTo(e.ano)
+        countTo(ano)
         lines.replaceChildren(
           h('div', { class: 'line' }, h('span', null, 'IR por mês antes'), h('b', null, fmtBRL(e.antes))),
           h('div', { class: 'line' }, h('span', null, 'IR por mês em 2026'), h('b', null, fmtBRL(e.agora))),
@@ -324,7 +342,7 @@ export default function ir(): MicroGame {
             'div',
             { class: 'line' },
             h('span', null, 'Fica no seu bolso por mês'),
-            h('b', { style: 'color:var(--leaf)' }, fmtBRL(e.mes)),
+            h('b', { style: 'color:var(--leaf)' }, fmtBRL(mes)),
           ),
         )
         note.textContent =
@@ -443,6 +461,7 @@ export default function ir(): MicroGame {
       update()
       dispose = () => {
         hideHand()
+        clearTimeout(settle)
         cancelAnimationFrame(tween)
         panel.remove()
       }

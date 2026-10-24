@@ -277,6 +277,13 @@ export default function defesa(): MicroGame {
   const flash = new HitFlash(4)
   const last = new LastFrame(30)
   let hand: HandHint
+  /** dedo apertado: arrastar por cima de uma minuta também rasga (mesmo raio de 15 px do toque) */
+  let pressed = false
+  // soltar o dedo fora do canvas também solta (senão o mouse passando por cima rasgaria sem clique)
+  const release = () => {
+    pressed = false
+    if (field) field.trail = PAPER
+  }
   let lastX = 0
   let lastY = 0
   /** o erro ensina: o toque que não pegou nada acende a minuta mais perto */
@@ -373,6 +380,8 @@ export default function defesa(): MicroGame {
     init(ctx) {
       c = ctx
       c.stage.addChild(root)
+      addEventListener('pointerup', release)
+      addEventListener('pointercancel', release)
       field = new Field(c)
       field.trail = PAPER
       booms = new Booms(4)
@@ -570,8 +579,15 @@ export default function defesa(): MicroGame {
     },
     move(x, y) {
       field.pointer(x, y)
+      if (pressed) hitAt(x, y)
+    },
+    up() {
+      release()
     },
     down(x, y) {
+      pressed = true
+      // enquanto o dedo está apertado o rastro vira faísca (mostra que arrastar corta)
+      field.trail = ENERGY
       field.pointer(x, y, true)
       hand.dismiss()
       lastX = x
@@ -595,6 +611,8 @@ export default function defesa(): MicroGame {
       return true
     },
     dispose() {
+      removeEventListener('pointerup', release)
+      removeEventListener('pointercancel', release)
       root.destroy({ children: true })
     },
   }

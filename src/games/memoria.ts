@@ -31,12 +31,12 @@ import {
 // Foco 2021) e 'mansao' (Diario de Pernambuco out/2026, Poder360 2021). Sem associação com milícia (TSE,
 // 15 e 20/10/2026). Os rótulos são únicos: 4 anos, o status de hoje e o valor financiado.
 const PAIRS = [
-  { year: '2018', text: 'Coaf aponta R$ 1,2 mi atípicos na conta de Queiroz, ex-assessor de Flávio' },
+  { year: '2018', text: 'Coaf: R$ 1,2 mi atípicos na conta de Queiroz, ex-assessor de Flávio' },
   { year: '2020', text: 'MP-RJ denuncia Flávio por peculato, lavagem e organização criminosa' },
   { year: '2021', text: 'STJ anula a quebra de sigilo e as provas caem' },
-  { year: 'Hoje', text: 'Denúncia arquivada: Flávio nunca virou réu e nega irregularidades' },
-  { year: 'R$ 3,1 mi', text: 'Parte da casa de R$ 6 mi de Flávio financiada pelo BRB' },
-  { year: 'out/2026', text: 'PF apura o financiamento da casa; Flávio nega irregularidades' },
+  { year: 'Hoje', text: 'Denúncia arquivada; Flávio nunca foi réu e nega irregularidades' },
+  { year: 'R$ 3,1 mi', text: 'Financiados pelo BRB na casa de R$ 6 mi de Flávio' },
+  { year: 'out/2026', text: 'PF apura o financiamento; Flávio nega irregularidades' },
 ]
 
 interface Card {

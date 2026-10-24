@@ -272,7 +272,8 @@ export default function raiox(): MicroGame {
     for (const b of bags) {
       if (b.seized !== -1 || c.time - b.checked < 0.6) continue
       if (x < b.x - 6 || x > b.x + b.w + 6) continue
-      if (y < top - 12 || y > beltY + 16) continue
+      // área de toque: toda a altura do scanner e 30 px abaixo da esteira (polegar)
+      if (y < top - 12 || y > beltY + 30) continue
       const d = Math.abs(x - (b.x + b.w / 2))
       if (d < bd) {
         bd = d
@@ -403,7 +404,8 @@ export default function raiox(): MicroGame {
     init(ctx) {
       c = ctx
       c.stage.addChild(root)
-      beltY = Math.round(c.top + (c.bottom - c.top) * 0.58)
+      // celular em pé: esteira na zona do polegar (68% da área de jogo); desktop como antes
+      beltY = Math.round(c.top + (c.bottom - c.top) * (c.W < c.H ? 0.68 : 0.58))
       const sw = Math.round(Math.min(90, c.W * 0.4))
       sx0 = Math.round(c.W / 2 - sw / 2)
       sx1 = sx0 + sw

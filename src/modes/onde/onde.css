@@ -777,7 +777,7 @@
 .onde-wrap.is-wide .onde-play {
   display: grid;
   grid-template-columns: auto 440px;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: max-content minmax(0, 1fr);
   grid-template-areas:
     "stage clue"
     "stage dock";
@@ -792,11 +792,12 @@
 }
 .onde-wrap.is-wide .onde-clue {
   grid-area: clue;
-  width: 100%;
+  width: auto;
   margin: 0;
 }
 .onde-wrap.is-wide .onde-dock {
   grid-area: dock;
+  width: auto;
   height: 100%;
   justify-content: flex-start;
   padding: 18px 0 0;

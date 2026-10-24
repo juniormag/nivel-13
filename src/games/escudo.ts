@@ -74,6 +74,9 @@ export default function escudo(): MicroGame {
   let hand: TutorialHand
   /** o erro ensina: onde o escudo devia estar quando a última seta passou */
   let miss = { a: 0, t: -10 }
+  /** primeiro golpe só ensina; o arco fantasma dele fica 1,6 s */
+  let taught = false
+  let missLong = false
   const MAP_T = 3
   /** bloqueios seguidos (bônus +2 por passo, até +20) */
   let streak = 0
@@ -215,7 +218,8 @@ export default function escudo(): MicroGame {
   /** arco fantasma dourado onde o escudo devia estar (0,7 s depois do dano), pontilhado e piscando */
   function drawMiss() {
     const t = c.time - miss.t
-    if (t > 0.7 || (Math.floor(t * 10) % 2 === 1 && t > 0.3)) return
+    const life = missLong ? 1.6 : 0.7
+    if (t > life || (Math.floor(t * 10) % 2 === 1 && t > life - 0.4)) return
     const g = shieldGlow
     const half = ARC / 2
     for (let a = -half; a <= half; a += 2 / (R + 3)) {
@@ -365,7 +369,14 @@ export default function escudo(): MicroGame {
           c.fx.ring(x, y, P.red, 16)
           hurt.push({ x, y, t: c.time })
           miss = { a: s.a, t: c.time }
-          c.hit(x, y)
+          // o primeiro golpe da fase ensina sem tirar vida: arco fantasma + dica (exceção autorizada pelo diretor)
+          if (!taught) {
+            taught = true
+            miss = { a: s.a, t: c.time - 0.2 }
+            missLong = true
+            c.sfx('error', { x })
+            c.fx.float('BLOQUEIE AQUI', Math.round(cx + Math.cos(s.a) * (R + 16)), Math.round(cy + Math.sin(s.a) * (R + 16)), P.goldHi)
+          } else c.hit(x, y)
           continue
         }
         s.s.x = Math.round(cx + ca * s.r)
@@ -379,14 +390,24 @@ export default function escudo(): MicroGame {
           if (i > 4 && (i + Math.floor(c.time * 15)) % 2 === 0) continue
           trails.rect(x, y, 1, 1).fill({ color: col, alpha: 0.7 - i * 0.05 })
         }
-        // aviso na borda da arena enquanto a seta ainda está longe
-        if (s.r > Ro + 4 && Math.floor(c.time * 8) % 2 === 0) {
-          const x = Math.round(cx + ca * Ro)
-          const y = Math.round(cy + sa * Ro)
-          warn.rect(x - 2, y - 2, 5, 5).fill(P.blood0)
-          warn.rect(x - 1, y - 1, 3, 3).fill(P.red)
-          warn.rect(x, y, 1, 1).fill(P.white)
-          warn.rect(Math.round(x - ca * 4), Math.round(y - sa * 4), 1, 1).fill(P.redHot)
+        // aviso: seta piscando na borda da arena do lado de onde vem; nos últimos 0,5 s antes do escudo
+        // ela fica fixa, maior e com núcleo branco (telegrafia de 0,5 s)
+        const eta = (s.r - R) / Math.max(1, s.sp)
+        if (s.r > Ro + 4 || eta < 0.5) {
+          const urgent = eta < 0.5
+          if (urgent || Math.floor(c.time * 8) % 2 === 0) {
+            const x = Math.round(cx + ca * Ro)
+            const y = Math.round(cy + sa * Ro)
+            const n = urgent ? 4 : 3
+            // chevron apontando para o centro
+            for (let k = 0; k < n; k++)
+              for (let q = -k; q <= k; q++) {
+                const px = Math.round(x - ca * k + -sa * q)
+                const py = Math.round(y - sa * k + ca * q)
+                warn.rect(px, py, 1, 1).fill(k === 0 ? (urgent ? P.white : P.redHot) : urgent ? P.redHot : P.red)
+              }
+            warn.rect(Math.round(x + ca * 2), Math.round(y + sa * 2), 1, 1).fill(P.blood0)
+          }
         }
       }
       const dead = shots.filter((s) => s.sp === 0)

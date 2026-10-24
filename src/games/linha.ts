@@ -488,6 +488,8 @@ export default function linha(): MicroGame {
           sl.style.minHeight = '34px'
         }
       }
+      // etiquetas legíveis no celular (11 px); a grade das cartas é posicionada logo abaixo do trilho
+      for (const sl of slots) sl.style.fontSize = '11px'
       c.layer.append(rail, grid)
       grid.style.top = `${Math.round(rail.getBoundingClientRect().bottom + 10)}px`
 

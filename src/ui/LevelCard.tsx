@@ -367,6 +367,13 @@ export function tipIcon(text: string, i: number): IconName {
   return i === 0 ? 'tap' : 'goal'
 }
 
+/** No toque (pointer: coarse), some a dica que só vale para teclado ("ou use ← →"). No máximo 2. */
+export function touchTips(how: readonly string[]): string[] {
+  const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+  const list = coarse ? how.filter((h) => !/\bou use\b|\btecla/i.test(h)) : [...how]
+  return list.slice(0, 2)
+}
+
 /** Ícone em ladrilho escuro com moldura fina e cantos marcados (lição 13 da ref v2). */
 export function IconTile({ name, tone = 'stone' }: { name: IconName; tone?: 'stone' | 'red' | 'gold' }) {
   return (
@@ -688,7 +695,7 @@ export function LevelCard({
           </h2>
           <p className="mt-lead">{intro}</p>
           <ul className="mt-tips">
-            {how.slice(0, 2).map((h, i) => (
+            {touchTips(how).map((h, i) => (
               <li key={h} style={{ ['--i' as string]: i }}>
                 <IconTile name={tipIcon(h, i)} tone={i === 0 ? 'red' : 'gold'} />
                 <span>{h}</span>
