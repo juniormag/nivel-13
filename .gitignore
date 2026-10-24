@@ -10,3 +10,4 @@ playwright-report
 
 # logs de agentes
 log-*.txt
+/0/
