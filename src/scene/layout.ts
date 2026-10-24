@@ -39,8 +39,8 @@ export interface Layout {
 export function layoutFor(W: number, H: number): Layout {
   const portrait = W / H < 0.8
   if (portrait) {
-    // o 13 ocupa ~85% da largura; pé a 55% da altura (o menu começa em ~57%)
-    const ppu = Math.max(10, Math.floor((W * 0.85) / 9.9))
+    // o 13 em três quartos (com as laterais) ocupa ~80% da largura; pé a 55% da altura (o menu começa em ~57%)
+    const ppu = Math.max(10, Math.floor((W * 0.8) / 10.4))
     const baseY = Math.round(H * 0.55)
     const horizon = Math.round(baseY - ppu * 3.4)
     return {
