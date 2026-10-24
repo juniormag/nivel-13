@@ -5,7 +5,7 @@ import { mulberry32 } from '../lib/rng'
 import { bank, cloudLayer, drawBush, drawRock, moonBuf, type Puff } from './backdrop'
 import { Buf, bayer, clamp01, DARKER, dith, type K, KEYS, makeNoise, RGB, U32, vgrad } from './pal'
 
-type Ctx = {
+export type Ctx = {
   b: Buf
   W: number
   H: number
@@ -25,7 +25,7 @@ const FROM_U32 = new Map<number, K>(KEYS.map((k) => [U32[k], k]))
 
 // ---------- peças de cenário ----------
 
-function sky(c: Ctx, glow: K = 'blood1', stars = 1) {
+export function sky(c: Ctx, glow: K = 'blood1', stars = 1) {
   const { b, W, hz, rnd } = c
   vgrad(b, 0, 0, W, hz + 2, [
     [0, 'void'],
@@ -44,12 +44,12 @@ function sky(c: Ctx, glow: K = 'blood1', stars = 1) {
   }
 }
 
-function moon(c: Ctx, x: number, y: number, r: number) {
+export function moon(c: Ctx, x: number, y: number, r: number) {
   const m = moonBuf(Math.max(6, Math.round(r)), 1)
   c.b.blit(m, Math.round(x - m.w / 2), Math.round(y - m.h / 2))
 }
 
-function clouds(
+export function clouds(
   c: Ctx,
   y: number,
   h: number,
@@ -68,7 +68,7 @@ function clouds(
 }
 
 /** serra/morro: perfil `top(x)`, corpo escuro com borda acesa e névoa no pé */
-function ridge(c: Ctx, top: (x: number) => number, body: K, rim: K, fog: K | null, bottom = c.hz) {
+export function ridge(c: Ctx, top: (x: number) => number, body: K, rim: K, fog: K | null, bottom = c.hz) {
   const { b, W } = c
   for (let x = 0; x < W; x++) {
     const t = Math.round(top(x))
@@ -87,7 +87,7 @@ function ridge(c: Ctx, top: (x: number) => number, body: K, rim: K, fog: K | nul
   }
 }
 
-function windows(c: Ctx, x: number, y: number, w: number, h: number, rate: number, step = 2) {
+export function windows(c: Ctx, x: number, y: number, w: number, h: number, rate: number, step = 2) {
   for (let wy = y + 2; wy < y + h - 1; wy += step + 1)
     for (let wx = x + 1; wx < x + w - 1; wx += step) {
       if (c.rnd() < rate) {
@@ -101,7 +101,7 @@ function windows(c: Ctx, x: number, y: number, w: number, h: number, rate: numbe
     }
 }
 
-function building(c: Ctx, x: number, base: number, w: number, h: number, body: K, edge: K, rate = 0.35) {
+export function building(c: Ctx, x: number, base: number, w: number, h: number, body: K, edge: K, rate = 0.35) {
   const top = base - h
   c.b.rect(x, top, w, h, body)
   c.b.rect(x, top, w, 1, edge)
@@ -109,7 +109,7 @@ function building(c: Ctx, x: number, base: number, w: number, h: number, body: K
   windows(c, x, top, w, h, rate)
 }
 
-function skyline(c: Ctx, x0: number, x1: number, base: number, hMin: number, hMax: number, back: boolean) {
+export function skyline(c: Ctx, x0: number, x1: number, base: number, hMin: number, hMax: number, back: boolean) {
   let x = x0
   while (x < x1) {
     const w = Math.round(c.s * (3 + c.rnd() * 6))
@@ -120,7 +120,7 @@ function skyline(c: Ctx, x0: number, x1: number, base: number, hMin: number, hMa
 }
 
 /** água com faixas de reflexo e colunas de luz partidas embaixo de cada luz */
-function water(c: Ctx, y0: number, y1: number, lights: { x: number; k: K }[], tint: K = 'blood1') {
+export function water(c: Ctx, y0: number, y1: number, lights: { x: number; k: K }[], tint: K = 'blood1') {
   const { b, W, nz } = c
   for (let y = y0; y < y1; y++) {
     const t = (y - y0) / Math.max(1, y1 - y0)
@@ -144,7 +144,7 @@ function water(c: Ctx, y0: number, y1: number, lights: { x: number; k: K }[], ti
   }
 }
 
-function palm(c: Ctx, x: number, base: number, h: number, dark: boolean) {
+export function palm(c: Ctx, x: number, base: number, h: number, dark: boolean) {
   const { b, rnd } = c
   const lean = (rnd() - 0.5) * 0.6
   let px = x
@@ -169,7 +169,7 @@ function palm(c: Ctx, x: number, base: number, h: number, dark: boolean) {
   }
 }
 
-function cactus(c: Ctx, x: number, base: number, h: number) {
+export function cactus(c: Ctx, x: number, base: number, h: number) {
   const { b } = c
   const w = Math.max(2, Math.round(h / 7))
   const col = (cx: number, top: number, bot: number) => {
@@ -189,13 +189,13 @@ function cactus(c: Ctx, x: number, base: number, h: number) {
   arm(-1, 0.6, Math.round(h * 0.14))
 }
 
-function ground(c: Ctx, y0: number, a: K, b2: K) {
+export function ground(c: Ctx, y0: number, a: K, b2: K) {
   const { b, W, H, nz } = c
   for (let y = y0; y < H; y++) for (let x = 0; x < W; x++) b.set(x, y, nz.n2(x / 4, y / 2) > 0.76 ? b2 : a)
 }
 
 /** primeiro plano escuro emoldurando os cantos de baixo */
-function frame(c: Ctx, seed: number, glow = false) {
+export function frame(c: Ctx, seed: number, glow = false) {
   const r = mulberry32(seed)
   const g = glow ? { x: c.W / 2, y: c.H * 0.4, r: c.W * 0.6 } : null
   for (const side of [0, 1]) {
@@ -210,7 +210,7 @@ function frame(c: Ctx, seed: number, glow = false) {
 }
 
 /** área de jogo calma: valor ≤ 30% no miolo, subindo suave até as bordas */
-function calm(c: Ctx, cy = 0.42, rx = 0.34, ry = 0.24) {
+export function calm(c: Ctx, cy = 0.42, rx = 0.34, ry = 0.24) {
   const { b, W, H } = c
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) {
@@ -233,9 +233,9 @@ function calm(c: Ctx, cy = 0.42, rx = 0.34, ry = 0.24) {
 
 // ---------- as 13 fases ----------
 
-type Painter = (c: Ctx) => void
+export type Painter = (c: Ctx) => void
 
-const SCENES: Record<number, Painter> = {
+export const SCENES: Record<number, Painter> = {
   // 1 · Sertão de Pernambuco: chão rachado, mandacarus, casinha de taipa com a janela acesa
   1(c) {
     const { W, H, hz, s } = c
@@ -676,7 +676,7 @@ const SCENES: Record<number, Painter> = {
 }
 
 /** Congresso Nacional (torres gêmeas + cúpula + cuia) com espelho d'água; `esplanada` põe os ministérios. */
-function congresso(c: Ctx, cxF: number, scale: number, glow: K, esplanada = false) {
+export function congresso(c: Ctx, cxF: number, scale: number, glow: K, esplanada = false) {
   const { W, H, hz, s } = c
   sky(c, glow)
   moon(c, W * 0.18, H * 0.14, s * 5.4)
@@ -744,6 +744,12 @@ function congresso(c: Ctx, cxF: number, scale: number, glow: K, esplanada = fals
   calm(c)
 }
 
+// Cenários dedicados por fase (src/scene/levels/lNN.ts, export default Painter) substituem o da tabela acima.
+// Cada arquivo pode ter um dono diferente (docs/OWNERSHIP.md); os ajudantes deste arquivo são públicos.
+const OVERRIDES = import.meta.glob<{ default: Painter }>('./levels/l*.ts', { eager: true })
+const painterFor = (n: number): Painter | undefined =>
+  OVERRIDES[`./levels/l${String(n).padStart(2, '0')}.ts`]?.default ?? SCENES[n]
+
 /**
  * Cenário pixel de cada fase (1..13), em W×H pixels lógicos, só com a paleta.
  * Síncrono e determinístico; o meio fica escuro para o jogo ler por cima.
@@ -763,6 +769,6 @@ export function renderLevelBackdrop(level: number, W: number, H: number): HTMLCa
     rnd: mulberry32(1000 + n * 97),
     nz: makeNoise(500 + n),
   }
-  SCENES[n]?.(ctx)
+  painterFor(n)?.(ctx)
   return b.canvas()
 }

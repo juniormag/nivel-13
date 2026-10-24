@@ -10,6 +10,8 @@
 | Compartilhar | growth-share-engineer | `src/share/*` |
 | API e infraestrutura | backend-engineer | `worker/*`, `server/*`, `src/lib/api.ts`, `tests/*`, `.github/*`, `README*.md`, `docs/DEPLOY*.md` |
 | Som | sound-designer | `src/audio/*`, `public/audio/*` |
+| Arte de fase (passe Wildlife) | level-art-lead A e B | jogos da sua metade + `src/scene/levels/lNN.ts` das suas fases (o `src/scene/levels.ts` fica congelado: só ajudantes) |
+| Meta de fase | level-art-lead C | `src/app/screens/Result.tsx`, overlays de `Play.tsx`, `src/ui/LevelCard.tsx`, `src/ui/hud.css` |
 | Conteúdo | fact-checker | `src/content/*` (só com fonte) |
 
 Precisa de algo fora da sua área? Não edite: descreva no relatório final o que precisa e por quê.

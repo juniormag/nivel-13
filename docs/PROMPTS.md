@@ -183,6 +183,23 @@ Redesenhe os primeiros 30 s: 0–3 s, o mundo já está vivo e há um único bot
 Corte toda tela, campo e texto que não sirva a isso. Meça com Playwright quantos toques e segundos leva até a primeira vitória.
 ```
 
+### P16 · Passe de arte e polimento de fase (sem mudar a dinâmica)
+```
+Você é líder de arte de fase (.claude/agents/level-art-lead.md). Na fase {{n}} ({{arquivo do jogo}} + src/scene/levels/l{{nn}}.ts):
+NÃO mude regras, tempos, pontuação, textos factuais nem controles. Mude só arte, animação, VFX, composição e feedback.
+1. Herói da tela: redesenhe {{objeto principal}} em 24–48 px com 3–5 tons por material, hue shift, rim red-hot, contorno seletivo e idle de 2–4 quadros a 8 fps.
+2. Cenário l{{nn}}: {{local}} em 4–5 planos, marco reconhecível, luz do lugar + rim vermelho; centro calmo; 1 elemento vivo (água, bandeira, luzes).
+3. Feedback Wildlife: telegrafar ameaça 300 ms; acerto = hit-stop 60–90 ms + flash branco 1 quadro + anel + faíscas da rampa; recompensa voando até o contador do HUD.
+4. Profundidade: primeiro plano escuro emoldurando, sombras de contato, partículas de ambiente reagindo ao dedo.
+5. Final da fase: câmera lenta de 300 ms no último acerto e explosão de partículas.
+Screenshots 390×844 e 1440×900 (início, pico, acerto, fim), lado a lado com docs/reference/referencia.png, rubrica §1 com nada abaixo de 4, 3 rodadas no mínimo.
+```
+
+### P17 · Meta de jogo mobile (intro, resultado, recompensa)
+```
+Polimento de meta no padrão de jogo mobile de ponta, em pixel art: card de introdução da fase com arte-chave do lugar (pixel, 1 frase, 2 dicas com ícone), contagem 3-2-1 com escala em degraus, tela de vitória com estrelas que batem uma a uma (hit-stop + som em escada), XP voando para a barra, banner "FASE CONCLUÍDA" com brilho, e derrota gentil ("Quase!") que mostra o que faltou. Tudo interrompível, com movimento reduzido respeitado.
+```
+
 ---
 
 ## 3. Referências premiadas e o que copiar de cada uma
