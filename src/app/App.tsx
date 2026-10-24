@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { lazy, Suspense } from 'react'
 import { useNav } from './nav'
 
 // Cada tela é um chunk próprio: a primeira tela abre rápido.
@@ -19,6 +19,8 @@ const screens = {
   duelo: lazy(() => import('./screens/Duelo')),
   grupo: lazy(() => import('./screens/Grupo')),
   plano: lazy(() => import('./screens/Plano')),
+  tio: lazy(() => import('./screens/Tio')),
+  onde: lazy(() => import('./screens/Onde')),
 }
 
 export function App() {

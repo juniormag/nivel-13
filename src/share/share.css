@@ -182,7 +182,11 @@
 }
 .share-note {
   margin: 0;
-  font-size: 14px;
+  /* instrução para ler: fonte de texto, sem caixa alta (a da HUD em maiúsculas cansa em 3 linhas) */
+  font-family: var(--f-text, system-ui, sans-serif);
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 15px;
   line-height: 1.35;
   color: var(--ink-2, #bdb4b6);
 }

@@ -7,6 +7,7 @@
 // stretch 0,87 × 1,15; joia voa ao painel em 380 ms. Sequência de joias: +5 por passo (até +30). Mala limpa: −30.
 import { Container, Graphics, Sprite, type Text } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
+import { FlyToHud, graniteAt, TutorialHand } from './fx-c'
 import {
   bake,
   block,
@@ -57,40 +58,56 @@ const BAGS: [number, number, number][] = [
   [P.vine1, P.vine0, P.green],
 ]
 
+/**
+ * Mala em três quartos dentro de 30×22 (a área de toque não muda): alça, tampa em paralelogramo mais
+ * clara, frente com chanfro de 1 px e tiras, lateral direita grossa escura e saturada (granito) e rim
+ * vermelho na aresta de fora (ref v2, lição 2).
+ */
 function bagTex(i: number) {
   const [base, dark, hi] = BAGS[i] ?? BAGS[0] ?? [P.haze, P.hazeDark, P.stone1]
-  return bake(`bag${i}`, BAG_W, BAG_H, (p) => {
+  return bake(`bag3q${i}`, BAG_W, BAG_H, (p) => {
+    const FW = 24
     // alça
-    p.rect(11, 0, 8, 2, P.stone0)
-    p.rect(11, 0, 2, 4, P.stone0)
-    p.rect(17, 0, 2, 4, P.stone0)
-    p.rect(12, 0, 6, 1, P.stone2)
-    // corpo
-    p.rect(1, 4, BAG_W - 2, BAG_H - 5, base)
-    p.rect(1, 4, BAG_W - 2, 1, hi)
-    p.rect(1, 4, 1, BAG_H - 6, hi)
-    p.rect(1, BAG_H - 3, BAG_W - 2, 2, dark)
-    p.rect(BAG_W - 3, 5, 2, BAG_H - 7, dark)
-    // tiras e cantoneiras
-    p.rect(8, 4, 2, BAG_H - 5, dark)
-    p.rect(BAG_W - 10, 4, 2, BAG_H - 5, dark)
-    p.dot(8, 5, hi)
-    p.dot(BAG_W - 10, 5, hi)
+    p.rect(9, 0, 8, 2, P.stone0)
+    p.rect(9, 0, 2, 5, P.stone0)
+    p.rect(15, 0, 2, 5, P.stone0)
+    p.rect(10, 0, 6, 1, P.stone2)
+    // lateral direita (sobe 2 px para o fundo)
+    for (let x = FW + 1; x < BAG_W - 1; x++) {
+      const lift = Math.round(((x - FW) / (BAG_W - FW)) * 2)
+      for (let y = 6 - lift; y < BAG_H - 1 - lift; y++)
+        p.dot(x, y, ((x * 7 + y * 3) % 5 === 0 ? P.blood1 : (x + y) % 3 === 0 ? P.blood0 : dark) as number)
+    }
+    // tampa
+    for (let k = 0; k < 2; k++) p.rect(2 + k, 4 + k - 1, FW, 1, k === 0 ? hi : base)
+    // frente
+    p.rect(1, 5, FW, BAG_H - 6, base)
+    p.rect(1, 5, FW, 1, hi)
+    p.rect(1, 5, 1, BAG_H - 7, hi)
+    p.rect(1, BAG_H - 3, FW, 2, dark)
+    p.rect(FW, 5, 1, BAG_H - 6, P.stoneHi)
+    // tiras, fecho e cantoneiras
+    p.rect(7, 4, 2, BAG_H - 5, dark)
+    p.rect(FW - 8, 4, 2, BAG_H - 5, dark)
+    p.dot(7, 5, hi)
+    p.dot(FW - 8, 5, hi)
+    p.rect(11, 9, 4, 2, P.stone2)
+    p.dot(11, 9, P.stone3)
     for (const [x, y] of [
-      [1, 4],
-      [BAG_W - 4, 4],
+      [1, 5],
+      [FW - 2, 5],
       [1, BAG_H - 4],
-      [BAG_W - 4, BAG_H - 4],
+      [FW - 2, BAG_H - 4],
     ] as const) {
       p.rect(x, y, 3, 3, P.stone2)
       p.dot(x, y, P.stone3)
     }
-    // etiqueta
     if (i % 2 === 0) {
-      p.rect(12, 9, 5, 4, P.stoneHi)
-      p.rect(12, 12, 5, 1, P.stone3)
+      p.rect(12, 13, 5, 4, P.stoneHi)
+      p.rect(12, 16, 5, 1, P.stone3)
     }
     p.outline(P.void, P.stone0)
+    p.rim(P.redHot, 'r')
   })
 }
 
@@ -137,6 +154,8 @@ export default function raiox(): MicroGame {
   let embers: Embers
   let sparkles: Sparkles
   let scores: ScorePops
+  let fly: FlyToHud
+  let hand: TutorialHand
   /** joias retidas em sequência (bônus de +5 por passo, até +30) */
   let streak = 0
   let rayLabel: Text
@@ -213,6 +232,7 @@ export default function raiox(): MicroGame {
       b.seized = c.time
       streak++
       scores.score(70 + Math.min(30, (streak - 1) * 5), cx, y - 14, streak, embers)
+      fly.send(cx, y, 4)
       c.sfx('coin', { x: cx, combo: streak })
       // carimbo bate 80 ms depois do toque (antecipação), com hit-stop no contato
       timers.after(0.08, () => {
@@ -252,7 +272,8 @@ export default function raiox(): MicroGame {
     for (const b of bags) {
       if (b.seized !== -1 || c.time - b.checked < 0.6) continue
       if (x < b.x - 6 || x > b.x + b.w + 6) continue
-      if (y < top - 12 || y > beltY + 16) continue
+      // área de toque: toda a altura do scanner e 30 px abaixo da esteira (polegar)
+      if (y < top - 12 || y > beltY + 30) continue
       const d = Math.abs(x - (b.x + b.w / 2))
       if (d < bd) {
         bd = d
@@ -278,6 +299,15 @@ export default function raiox(): MicroGame {
     g.rect(sx1 + 1, top, 5, h).fill(P.stone1)
     g.rect(sx1 + 1, top, 1, h).fill(P.stone0)
     g.rect(sx1 + 5, top, 1, h).fill(P.redHot)
+    // três quartos: tampa do capô em paralelogramo e lateral direita grossa em granito carmim
+    for (let k = 0; k < 3; k++)
+      g.rect(sx0 - 5 + k, top - 13 + k, sx1 - sx0 + 12, 1).fill(k === 0 ? P.stoneHi : P.stone3)
+    for (let x = 0; x < 5; x++)
+      for (let y = top - 12 + Math.round((5 - x) * 0.4); y < beltY - 1; y += 1)
+        if ((x + y) % 2 === 0 || x === 4)
+          g.rect(sx1 + 7 + x, y, 1, 1).fill(
+            x === 4 ? P.redHot : graniteAt(x, y, P.crimsonDeep, P.blood1, P.crimson),
+          )
     // contorno
     g.rect(sx0 - 7, top - 11, sx1 - sx0 + 14, 1).fill(P.void)
     g.rect(sx0 - 7, top - 11, 1, h + 11).fill(P.void)
@@ -374,7 +404,8 @@ export default function raiox(): MicroGame {
     init(ctx) {
       c = ctx
       c.stage.addChild(root)
-      beltY = Math.round(c.top + (c.bottom - c.top) * 0.58)
+      // celular em pé: esteira na zona do polegar (68% da área de jogo); desktop como antes
+      beltY = Math.round(c.top + (c.bottom - c.top) * (c.W < c.H ? 0.68 : 0.58))
       const sw = Math.round(Math.min(90, c.W * 0.4))
       sx0 = Math.round(c.W / 2 - sw / 2)
       sx1 = sx0 + sw
@@ -401,6 +432,13 @@ export default function raiox(): MicroGame {
       ).listen()
       sparkles = new Sparkles(c.reduced)
       scores = new ScorePops(c)
+      fly = new FlyToHud(c)
+      // demonstração: a mão toca a janela do scanner nos 3 primeiros segundos
+      hand = new TutorialHand(c, {
+        kind: 'tap',
+        x: Math.round((sx0 + sx1) / 2),
+        y: beltY - Math.round(BAG_H / 2),
+      })
       // pista do toque: faixa escura sob a área de toque
       const lane = block(P.void, c.W, 1, 0.5)
       lane.y = beltY + 22
@@ -422,6 +460,8 @@ export default function raiox(): MicroGame {
         embers.root,
         sparkles.root,
         scores.root,
+        fly.root,
+        hand.root,
       )
     },
     update(dt) {
@@ -456,6 +496,19 @@ export default function raiox(): MicroGame {
               c.fx.burst(c.W - 4, beltY - 10, P.redHot, 10, 50)
               streak = 0
               c.hit(c.W - 6, beltY - 10)
+              // o erro ensina: mostra que a mala que passou levava joia
+              const t = stamp('ERA JOIA', P.redHot)
+              t.x = c.W - 30
+              t.y = beltY - BAG_H - 10
+              const gem = new Sprite(ptex(b.items.includes('joia') ? 'joia' : 'colar', JEWEL_REAL))
+              gem.x = c.W - 36
+              gem.y = beltY - BAG_H + 2
+              fxLayer.addChild(gem)
+              sparkles.spawn(c.W - 30, beltY - BAG_H + 6, 8)
+              timers.after(1.1, () => {
+                t.destroy({ children: true })
+                gem.destroy()
+              })
             }
           }
         }
@@ -575,6 +628,8 @@ export default function raiox(): MicroGame {
       sparkles.update(dt)
       scores.update(dt)
       debris.update(dt)
+      fly.update(dt)
+      hand.update(dt)
     },
     down(x, y) {
       const b = pickAt(x, y)
@@ -617,6 +672,7 @@ export default function raiox(): MicroGame {
     },
     dispose() {
       timers.clear()
+      hand?.destroy()
       embers?.destroy()
       root.destroy({ children: true })
       bags = []

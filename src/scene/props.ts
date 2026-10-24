@@ -22,44 +22,6 @@ export function haloAround(b: Buf, inner: K, outer: K, density = 0.5) {
     }
 }
 
-/** Cristo Redentor iluminado de frente-esquerda, com halo dourado. Altura `h` em px (≥ 10). */
-export function christ(h: number) {
-  const pad = 3
-  const span = Math.round(h * 0.86) | 1
-  const W = span + pad * 2
-  const H = h + pad * 2
-  const b = new Buf(W, H)
-  const cx = Math.floor(W / 2)
-  const top = pad
-  const armY = top + Math.round(h * 0.2)
-  const armT = h >= 16 ? 2 : 1
-  // cabeça
-  b.rect(cx - 1, top, 2, 2, 'sparkle')
-  b.set(cx, top + 1, 'stone3')
-  // braços abertos
-  b.rect(cx - (span >> 1), armY, span, armT, 'sparkle')
-  b.rect(cx + 1, armY, span >> 1, armT, 'stone3')
-  b.set(cx - (span >> 1), armY + armT, 'gold1')
-  b.set(cx + (span >> 1), armY + armT, 'gold1')
-  if (armT > 1) b.rect(cx - (span >> 1) + 1, armY + armT, span - 2, 1, 'gold1')
-  // manto, alargando para baixo
-  const bodyTop = top + 2
-  const bodyBot = top + h - 2
-  for (let y = bodyTop; y < bodyBot; y++) {
-    const t = (y - bodyTop) / (bodyBot - bodyTop)
-    const half = 1 + Math.round(t * (h >= 16 ? 1.6 : 1))
-    for (let x = cx - half; x <= cx + half - 1; x++) {
-      const k: K = x < cx - 1 ? 'sparkle' : x < cx ? 'stoneHi' : x < cx + 1 ? 'stone3' : 'stone2'
-      b.set(x, y, k)
-    }
-  }
-  // pedestal
-  b.rect(cx - 2, bodyBot, 4, 2, 'stone2')
-  b.rect(cx - 2, bodyBot, 2, 1, 'goldHi')
-  haloAround(b, 'gold1', 'gold0', 0.6)
-  return { c: b.canvas(), ax: cx, ay: H - pad }
-}
-
 /**
  * Bandeira do Brasil em pano, `n` quadros de ondulação (regra: 4–6 quadros a 10 fps).
  * Desenhada já deformada, coluna a coluna, com faixas de sombra na dobra.

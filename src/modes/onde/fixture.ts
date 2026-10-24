@@ -1,0 +1,68 @@
+// Pinos de EXEMPLO para desenvolver o Onde Foi? sem conteúdo. Só entram em dev (import.meta.env.DEV) e
+// só quando src/content/onde.ts não tem nenhum pino revisado. Nada aqui é fato: todo texto diz "Exemplo".
+import type { Pin } from '../../content/onde'
+
+const SRC = [{ name: 'Exemplo de fonte (não publicar)', url: 'https://example.com/', date: '01/01/2026' }]
+
+export const FIXTURE_PINS: Pin[] = [
+  {
+    id: 'exemplo-avanco-1',
+    side: 'avanco',
+    clue: 'Exemplo: pista de um avanço numa capital do Norte.',
+    place: 'Exemplo · Belém',
+    uf: 'PA',
+    lat: -1.456,
+    lng: -48.49,
+    title: 'Exemplo de avanço',
+    body: 'Texto de exemplo com até duas linhas. Não é um fato.',
+    status: { label: 'Exemplo · dado oficial', kind: 'good' },
+    who: 'brasil',
+    sources: SRC,
+    review: 'ok',
+  },
+  {
+    id: 'exemplo-caso-1',
+    side: 'caso',
+    clue: 'Exemplo: pista de um caso na capital federal.',
+    place: 'Exemplo · Brasília',
+    uf: 'DF',
+    lat: -15.8,
+    lng: -47.86,
+    title: 'Exemplo de caso',
+    body: 'Texto de exemplo com até duas linhas. Não é um fato.',
+    status: { label: 'Exemplo · status jurídico', kind: 'legal' },
+    who: 'brasil',
+    sources: SRC,
+    review: 'ok',
+  },
+  {
+    id: 'exemplo-avanco-2',
+    side: 'avanco',
+    clue: 'Exemplo: pista de um avanço numa capital do Sul.',
+    place: 'Exemplo · Porto Alegre',
+    uf: 'RS',
+    lat: -30.03,
+    lng: -51.22,
+    title: 'Outro avanço de exemplo',
+    body: 'Texto de exemplo com até duas linhas. Não é um fato.',
+    status: { label: 'Exemplo · programa', kind: 'good' },
+    who: 'brasil',
+    sources: SRC,
+    review: 'ok',
+  },
+  {
+    id: 'exemplo-caso-2',
+    side: 'caso',
+    clue: 'Exemplo: pista de um caso numa capital do Norte.',
+    place: 'Exemplo · Manaus',
+    uf: 'AM',
+    lat: -3.119,
+    lng: -60.02,
+    title: 'Outro caso de exemplo',
+    body: 'Texto de exemplo com até duas linhas. Não é um fato.',
+    status: { label: 'Exemplo · investigado', kind: 'legal' },
+    who: 'brasil',
+    sources: SRC,
+    review: 'ok',
+  },
+]

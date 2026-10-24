@@ -1,12 +1,11 @@
 // Tela de título: o HUD da referência sobre o monumento.
 // Retrato, NÍVEL e XP no alto à esquerda; corações e "···" no alto à direita; atributos à direita;
-// menu de comandos embaixo à esquerda; Q W E R ao centro; minimapa embaixo à direita.
+// menu de comandos embaixo à esquerda; minimapa embaixo à direita. O centro é do monumento.
 import { motion } from 'motion/react'
 import { useEffect } from 'react'
 import { playMusic } from '../../audio/audio'
 import { FACTS } from '../../content/facts'
 import { dailyNumber, todayBR } from '../../lib/time'
-import type { SkillKind } from '../../state/play'
 import { currentLevel, levelsDone, stats, useSave, XP_MAX, xpTotal } from '../../state/save'
 import { CommandMenu, type MenuItem } from '../../ui/CommandMenu'
 import { useElectionCountdown } from '../../ui/Countdown'
@@ -15,10 +14,7 @@ import { Minimap } from '../../ui/Minimap'
 import { slideFrom } from '../../ui/motion'
 import { Tap } from '../../ui/PixelButton'
 import { Legal, PortraitFrame, Screen } from '../../ui/Shell'
-import { SkillBar } from '../../ui/SkillBar'
 import { StatBars } from '../../ui/StatBars'
-import { SKILL_INFO } from '../../ui/skills'
-import { toast } from '../../ui/Toast'
 import { XPBar } from '../../ui/XPBar'
 import { go } from '../nav'
 
@@ -34,32 +30,14 @@ export default function Title() {
 
   useEffect(() => playMusic('title'), [])
 
-  const unlocked = (k: SkillKind) => done >= (SKILL_INFO.find((x) => x.kind === k)?.unlock ?? 99)
-  const explain = (k: SkillKind) => {
-    const sk = SKILL_INFO.find((x) => x.kind === k)
-    if (!sk) return
-    toast(unlocked(k) ? `${sk.label} (${sk.key}): ${sk.desc}` : `${sk.label}: libera com ${sk.unlock} fases`)
-  }
-
-  // Q W E R explicam a habilidade na tela de título
-  useEffect(() => {
-    const map: Record<string, SkillKind> = { q: 'checar', w: 'lembrar', e: 'foco', r: 'proteger' }
-    const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return
-      const k = map[e.key.toLowerCase()]
-      if (k) explain(k)
-    }
-    addEventListener('keydown', onKey)
-    return () => removeEventListener('keydown', onKey)
-  })
-
   const items: MenuItem[] = [
     {
       id: 'play',
       label: done === 0 ? 'Jogar' : done < 13 ? 'Continuar' : 'Rejogar',
       hint: done < 13 ? `${lvl}/13` : '13/13',
       hintLabel: done < 13 ? `fase ${lvl} de 13` : 'todas as 13 fases feitas',
-      onSelect: () => go(s.onboarded ? 'map' : 'onboard'),
+      // primeiro acesso: Jogar → Começar (2 toques); o personagem é pedido depois do primeiro fato
+      onSelect: () => (done === 0 ? go('play', { level: 1 }) : go(s.onboarded ? 'map' : 'onboard')),
     },
     {
       id: 'chuta',
@@ -67,6 +45,20 @@ export default function Title() {
       hint: `#${n}`,
       hintLabel: `desafio do dia número ${n}`,
       onSelect: () => go('chuta'),
+    },
+    {
+      id: 'onde',
+      label: 'Onde Foi?',
+      hint: `#${n}`,
+      hintLabel: `mapa do dia número ${n}`,
+      onSelect: () => go('onde'),
+    },
+    {
+      id: 'tio',
+      label: 'Convence o Tio',
+      hint: 'novo',
+      hintLabel: 'modo novo: convença um parente com fato e fonte',
+      onSelect: () => go('tio'),
     },
     { id: 'placar', label: 'Placar da virada', onSelect: () => go('placar') },
     {
@@ -132,14 +124,6 @@ export default function Title() {
       </motion.div>
 
       <CommandMenu className="t-menu" label="Menu principal" items={items} memory="title" />
-
-      <SkillBar
-        className="t-skills"
-        skills={SKILL_INFO}
-        state={(k) => (unlocked(k) ? 'ready' : 'locked')}
-        onUse={explain}
-        explainLocked
-      />
 
       <motion.div className="t-mini" variants={slideFrom(12, 8)} initial="hidden" animate="show">
         <Minimap stars={s.stars} current={Math.min(12, done)} />

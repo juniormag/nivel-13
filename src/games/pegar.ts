@@ -7,6 +7,7 @@
 // (até +15), a cada 5 um anel de 22 px e tremor vertical.
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
+import { FlyToHud, TutorialHand } from './fx-c'
 import {
   bake,
   Debris,
@@ -112,25 +113,38 @@ function fakeTex(alarm: boolean) {
   })
 }
 
+/**
+ * Cesta em três quartos dentro de 32×14 (a área de pegar não muda): boca oval escura no alto (dá para ver
+ * o fundo), borda clara com chanfro, frente de vime vermelho com a cruz da farmácia e lateral direita
+ * grossa em carmim pontilhado com rim vermelho quente.
+ */
 function basketTex() {
-  return bake('cesta', BW, BH, (p) => {
-    p.rect(1, 2, BW - 2, BH - 2, P.red)
-    // trama
-    for (let y = 4; y < BH - 1; y += 3)
-      for (let x = 2 + (y % 2) * 2; x < BW - 2; x += 4) p.rect(x, y, 2, 1, P.crimson)
-    p.rect(1, BH - 2, BW - 2, 1, P.crimsonDeep)
-    p.rect(BW - 3, 3, 2, BH - 4, P.crimson)
-    // borda
-    p.rect(0, 0, BW, 3, P.redGlow)
-    p.rect(0, 2, BW, 1, P.crimsonDeep)
-    p.rect(1, 0, BW - 2, 1, P.sparkle)
+  return bake('cesta3q', BW, BH, (p) => {
+    const FW = BW - 4
+    // lateral direita
+    for (let x = FW; x < BW - 1; x++)
+      for (let y = 3 - (x - FW); y < BH - 1 - (x - FW); y++)
+        p.dot(x, y, (x + y) % 3 === 0 ? P.blood0 : P.crimsonDeep)
+    // frente de vime
+    p.rect(1, 3, FW - 1, BH - 4, P.red)
+    for (let y = 5; y < BH - 1; y += 3)
+      for (let x = 2 + (y % 2) * 2; x < FW - 1; x += 4) p.rect(x, y, 2, 1, P.crimson)
+    p.rect(1, BH - 2, FW - 1, 1, P.crimsonDeep)
+    p.rect(1, 3, 1, BH - 4, P.redGlow)
+    // borda e boca oval (fundo escuro visível)
+    p.rect(0, 0, FW + 2, 3, P.redGlow)
+    p.rect(1, 0, FW, 1, P.sparkle)
+    p.rect(3, 1, FW - 4, 1, P.blood0)
+    p.rect(2, 2, FW - 2, 1, P.crimson)
     // cruz da farmácia
-    const cx = Math.floor(BW / 2)
+    const cx = Math.floor(FW / 2)
     p.rect(cx - 1, 4, 3, 8, P.stoneHi)
-    p.rect(cx - 4, 7, 9, 3, P.stoneHi)
+    p.rect(cx - 4, 6, 9, 3, P.stoneHi)
     p.dot(cx - 1, 4, P.white)
     p.rect(cx + 1, 5, 1, 7, P.stone3)
+    p.rect(cx + 4, 7, 1, 2, P.stone3)
     p.outline(P.void, P.blood0)
+    p.rim(P.redHot, 'r')
   })
 }
 
@@ -170,6 +184,8 @@ export default function pegar(): MicroGame {
   let sparkles: Sparkles
   let scores: ScorePops
   let booms: Explosions
+  let fly: FlyToHud
+  let hand: TutorialHand
   let items: Item[] = []
   let bx = 0
   let prevBx = 0
@@ -218,6 +234,8 @@ export default function pegar(): MicroGame {
       c.fx.burst(it.x, it.y, P.redHot, 12, 60)
       debris.burst(it.x, it.y, [P.stone3, P.red, P.stoneHi], 8, 60, c.rnd, floorY, 0.9)
       c.sfx('shatter', { x: it.x })
+      // o erro ensina: diz o que foi pego
+      c.fx.float('BOATO', Math.round(it.x), by - 22, P.redHot)
       c.hit(it.x, it.y)
       return
     }
@@ -230,6 +248,7 @@ export default function pegar(): MicroGame {
     sparkles.spawn(Math.round(bx + (it.x > bx ? 8 : -8)), by - 6, it.kind === 'casa' ? 8 : 0)
     for (let i = 0; i < 4; i++) embers.spark(it.x, by - 4, 30)
     c.sfx('coin', { x: it.x, combo })
+    fly.send(it.x, by - 6, it.kind === 'casa' ? 4 : 1)
     if (it.kind === 'casa') stop(c, 50)
     if (combo > 0 && combo % 5 === 0) {
       scores.add(
@@ -278,6 +297,9 @@ export default function pegar(): MicroGame {
       sparkles = new Sparkles(c.reduced)
       scores = new ScorePops(c)
       booms = new Explosions(c)
+      fly = new FlyToHud(c)
+      // demonstração: a mão arrasta a cesta para os lados nos 3 primeiros segundos
+      hand = new TutorialHand(c, { kind: 'drag', x0: bx - 34, y0: by + 4, x1: bx + 34, y1: by + 4 })
       sign.blendMode = 'add'
       root.addChild(
         props,
@@ -290,6 +312,8 @@ export default function pegar(): MicroGame {
         sparkles.root,
         booms.root,
         scores.root,
+        fly.root,
+        hand.root,
       )
     },
     update(dt) {
@@ -363,17 +387,34 @@ export default function pegar(): MicroGame {
       // cruz verde de farmácia piscando no alto
       sign.clear()
       const on = Math.floor(c.time * 1.5) % 4 !== 0
-      const sx0 = 8
+      const sx0 = 6
       const sy0 = c.top + 6
-      sign.rect(sx0 + 3, sy0, 3, 9).fill({ color: on ? P.leafHi : P.vine1, alpha: 0.7 })
-      sign.rect(sx0, sy0 + 3, 9, 3).fill({ color: on ? P.leafHi : P.vine1, alpha: 0.7 })
-      if (on) sign.rect(sx0 + 4, sy0 + 4, 1, 1).fill(P.white)
+      // neon em 3 camadas: halo pontilhado, corpo verde e núcleo claro
+      if (on)
+        for (let y = -3; y < 16; y++)
+          for (let x = -3; x < 16; x++)
+            if (
+              (x + y) % 2 === 0 &&
+              (Math.abs(x - 6) < 3 || Math.abs(y - 6) < 3) &&
+              Math.hypot(x - 6, y - 6) < 10
+            )
+              sign.rect(sx0 + x, sy0 + y, 1, 1)
+      if (on) sign.fill({ color: P.green, alpha: 0.35 })
+      sign.rect(sx0 + 4, sy0, 5, 13).fill({ color: on ? P.green : P.vine1, alpha: 0.75 })
+      sign.rect(sx0, sy0 + 4, 13, 5).fill({ color: on ? P.green : P.vine1, alpha: 0.75 })
+      if (on) {
+        sign.rect(sx0 + 6, sy0 + 1, 1, 11).fill(P.leafHi)
+        sign.rect(sx0 + 1, sy0 + 6, 11, 1).fill(P.leafHi)
+        sign.rect(sx0 + 6, sy0 + 6, 1, 1).fill(P.white)
+      }
 
       embers.update(dt, c.time)
       sparkles.update(dt)
       scores.update(dt)
       booms.update(dt)
       debris.update(dt)
+      fly.update(dt)
+      hand.update(dt)
     },
     down(x) {
       target = x
@@ -401,6 +442,7 @@ export default function pegar(): MicroGame {
       return true
     },
     dispose() {
+      hand?.destroy()
       embers?.destroy()
       root.destroy({ children: true })
       items = []

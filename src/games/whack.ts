@@ -2,6 +2,8 @@
 // Prédio procedural à noite: a janela acende antes (antecipação) e a cor da luz já diz o que vem.
 import { Container, Graphics, type Sprite, type Text, type Texture } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
+import { mulberry32 } from '../lib/rng'
+import { Flyers, finale, HandHint, HitFlash, LastFrame, showRight, solidTex } from './fx-b'
 import {
   Combo,
   clamp01,
@@ -17,6 +19,7 @@ import {
   lerp,
   P,
   popScale,
+  rowsTex,
   setSquash,
   shade,
   shadowTex,
@@ -49,43 +52,184 @@ interface Win {
   pix: Text
 }
 
-/** carteira de trabalho azul 16×18 com rim light */
-function carteiraTex() {
-  return gridTex('whack-carteira', () => {
-    const m = new Grid(16, 18)
-    m.rect(2, 1, 12, 16, 1)
-    m.rect(2, 1, 2, 16, 2)
-    const g = shade(m, {
-      1: { ramp: [P.void, P.blue0, P.blue0, P.blue1, P.blue1], rim: P.sparkle },
-      2: { ramp: [P.void, P.blue0, P.blue0, P.blue0] },
-    })
-    // brasão dourado e linhas de texto
-    g.rect(7, 4, 4, 4, P.gold)
-    g.rect(8, 5, 2, 2, P.goldHi)
-    g.set(7, 4, P.gold1)
-    g.rect(6, 10, 6, 1, P.goldHi)
-    g.rect(6, 12, 6, 1, P.stone3)
-    g.rect(6, 14, 4, 1, P.stone3)
-    return g
+/**
+ * carteira de trabalho 16×18 em três quartos: capa azul com lombada escura, borda das páginas grossa
+ * à direita (creme), brasão dourado e rim. `f` 0/1: brilho que corre pelo brasão (idle a 4 fps).
+ */
+function carteiraGrid(f: number) {
+  const m = new Grid(16, 18)
+  m.rect(2, 1, 11, 16, 1)
+  m.rect(2, 1, 2, 16, 2)
+  m.rect(13, 2, 2, 15, 3)
+  const g = shade(m, {
+    1: { ramp: [P.void, P.blue0, P.blue0, P.blue1, P.blue1], rim: P.sparkle },
+    2: { ramp: [P.void, P.night, P.blue0, P.blue0] },
+    3: { ramp: [P.stone1, P.stone2, P.stone3, P.stoneHi], rim: P.redHot, outline: P.void },
   })
+  // páginas: linhas finas na borda grossa
+  for (let y = 4; y < 16; y += 2) g.set(13, y, P.stone2)
+  // brasão dourado e linhas de texto
+  g.rect(6, 4, 5, 5, P.gold)
+  g.rect(7, 5, 3, 3, P.goldHi)
+  g.set(8, 6, P.sparkle)
+  g.set(6, 4, P.gold1)
+  g.set(10, 8, P.gold1)
+  g.rect(5, 11, 7, 1, P.goldHi)
+  g.rect(5, 13, 7, 1, P.stone3)
+  g.rect(5, 15, 5, 1, P.stone3)
+  // brilho que corre na capa (quadro 1)
+  if (f === 1) {
+    g.set(11, 3, P.white)
+    g.set(12, 4, P.sparkle)
+    g.set(10, 2, P.sparkle)
+  }
+  return g
+}
+const carteiraTex = (f = 0) => gridTex(`whack-carteira3q${f}`, () => carteiraGrid(f))
+
+/**
+ * golpe 16×18: celular vermelho em três quartos (lateral sangue grossa), tela com alerta e "R$".
+ * `f` 0/1: a tela pisca entre âmbar e branco-quente (telegrafa a ameaça).
+ */
+function golpeGrid(f: number) {
+  const m = new Grid(16, 18)
+  m.rect(3, 1, 9, 16, 1)
+  m.rect(12, 2, 2, 15, 3)
+  m.rect(5, 3, 5, 10, 2)
+  const g = shade(m, {
+    1: { ramp: [P.blood0, P.blood1, P.crimsonDeep, P.crimson, P.red], rim: P.redHot },
+    2: { ramp: [P.void, P.blood0, P.blood1, P.blood1], outline: null },
+    3: { ramp: [P.void, P.blood0, P.blood1, P.crimsonDeep], rim: P.redHot, outline: P.void },
+  })
+  // triângulo de alerta
+  const tri = f ? P.goldHi : P.emberBright
+  for (let y = 0; y < 5; y++) g.rect(7 - Math.floor(y / 2), 5 + y, 1 + Math.floor(y / 2) * 2, 1, tri)
+  g.rect(7, 6, 1, 2, P.void)
+  g.set(7, 9, P.void)
+  g.rect(6, 11, 3, 1, f ? P.redGlow : P.red)
+  g.rect(6, 14, 3, 1, P.stone2)
+  return g
+}
+const golpeTex = (f = 0) => gridTex(`whack-golpe3q${f}`, () => golpeGrid(f))
+
+/** mini carteira 8×9 que voa até o contador */
+function miniCarteiraTex() {
+  return rowsTex('whack-mini', [
+    '.bbbbbs.',
+    'bBBBBBts',
+    'bByyBBts',
+    'bBYyBBts',
+    'bBBBBBts',
+    'bBYYYBts',
+    'bBBBBBts',
+    'bBBBBBts',
+    '.bbbbbs.',
+  ])
 }
 
-/** golpe 16×18: celular vermelho com "R$" e sinal de alerta */
-function golpeTex() {
-  return gridTex('whack-golpe', () => {
-    const m = new Grid(16, 18)
-    m.rect(3, 1, 10, 16, 1)
-    m.rect(5, 3, 6, 10, 2)
-    const g = shade(m, {
-      1: { ramp: [P.blood0, P.blood1, P.crimsonDeep, P.crimson, P.red], rim: P.redHot },
-      2: { ramp: [P.void, P.blood0, P.blood1, P.blood1], outline: null },
-    })
-    // triângulo de alerta
-    for (let y = 0; y < 5; y++)
-      g.rect(8 - Math.floor(y / 2), 5 + y, 1 + Math.floor(y / 2) * 2, 1, P.emberBright)
-    g.rect(8, 6, 1, 2, P.void)
-    g.set(8, 9, P.void)
-    g.rect(7, 14, 2, 1, P.stone2)
+/**
+ * fachada 3/4 assada numa textura: corpo de concreto noturno com pilastras e faixas de andar, cornija
+ * chanfrada, lateral grossa em granito vermelho à direita (rim red-hot na aresta), teto com caixa d'água
+ * e antena, molduras e peitoris claros nas janelas, marquise e porta acesa, caixa do letreiro em 3/4.
+ */
+function facadeTex(bw: number, bh: number, cols: number, rows: number, cw: number, ch: number, d: number) {
+  return gridTex(`whack-facade${bw}x${bh}c${cols}r${rows}w${cw}h${ch}d${d}`, () => {
+    const ox = 3
+    const oy = 24
+    const rise = Math.max(2, Math.round(d * 0.5))
+    const g = new Grid(bw + ox + d + 2, bh + oy + 1, -1)
+    const r = mulberry32(bw * 31 + bh)
+    // lateral: granito vermelho pontilhado, sobe para o fundo, rim na aresta de fora
+    for (let i = 0; i < d; i++) {
+      const lift = Math.round(((i + 1) / d) * rise)
+      for (let y = oy - lift; y < oy + bh - lift; y++) {
+        const t = (y - oy + lift) / bh
+        let k: number = t < 0.06 ? P.crimson : (i + y) % 3 === 0 || r() < 0.18 ? P.blood0 : P.blood1
+        if (t > 0.08 && t < 0.9 && r() < 0.05) k = P.crimsonDeep
+        if (i === d - 1) k = P.redHot
+        g.set(ox + bw + i, y, k)
+      }
+      // janelinhas da lateral (fresta acesa por andar)
+      if (i === Math.floor(d / 2))
+        for (let rr = 0; rr < rows; rr++) {
+          const y = oy + 8 + rr * (ch + 6) + Math.round(ch / 3) - lift
+          g.rect(ox + bw + i, y, 1, Math.max(2, Math.round(ch / 3)), (rr * 5 + i) % 3 ? P.emberDark : P.ember)
+        }
+    }
+    // teto em paralelogramo
+    for (let j = 0; j < rise; j++) {
+      const sh = Math.round(((j + 1) / rise) * d)
+      for (let x = 0; x < bw; x++) g.set(ox + x + sh, oy - 1 - j, j === rise - 1 ? P.stone1 : P.stone0)
+    }
+    // frente: concreto com luz de cima, pilastras entre colunas e faixas de andar
+    for (let y = 0; y < bh; y++)
+      for (let x = 0; x < bw; x++) {
+        const t = y / bh
+        let k: number = t < 0.25 && (x + y) % 2 === 0 && r() < 0.5 ? P.hazeDark : P.dusk
+        if (t > 0.75 && (x + y) % 2 === 0) k = P.night
+        g.set(ox + x, oy + y, k)
+      }
+    for (let k = 0; k <= cols; k++) {
+      const x = 8 + k * (cw + 6) - 4
+      for (let y = 4; y < bh - 14; y++) {
+        g.set(ox + x, oy + y, P.hazeDark)
+        g.set(ox + x + 1, oy + y, P.night)
+      }
+    }
+    for (let rr = 0; rr <= rows; rr++) {
+      const y = 8 + rr * (ch + 6) - 3
+      g.rect(ox, oy + y, bw, 1, P.hazeDark)
+      g.rect(ox, oy + y + 1, bw, 1, P.night)
+    }
+    // cornija chanfrada (1 px claro em cima) e bordas
+    g.rect(ox - 1, oy, bw + 1, 2, P.stone1)
+    g.rect(ox - 1, oy, bw + 1, 1, P.stone2)
+    g.set(ox - 1, oy, P.stone3)
+    for (let y = 0; y < bh; y++) {
+      g.set(ox, oy + y, P.haze)
+      g.set(ox - 1, oy + y, P.void)
+      g.set(ox + bw - 1, oy + y, P.stone1)
+    }
+    // molduras, verga e peitoril das janelas
+    for (let rr = 0; rr < rows; rr++)
+      for (let k = 0; k < cols; k++) {
+        const x = ox + 8 + k * (cw + 6)
+        const y = oy + 8 + rr * (ch + 6)
+        g.rect(x - 1, y - 1, cw + 2, ch + 2, P.void)
+        g.rect(x - 2, y + ch + 1, cw + 4, 1, P.stone2)
+        g.set(x - 2, y + ch + 1, P.stone3)
+        g.rect(x - 1, y + ch + 2, cw + 2, 1, P.stone0)
+        g.rect(x - 1, y - 2, cw + 2, 1, P.hazeDark)
+      }
+    // térreo: marquise em 3/4 e porta de vidro acesa
+    const dx = ox + Math.round(bw / 2 - 8)
+    const by2 = oy + bh
+    g.rect(dx - 4, by2 - 15, 24, 2, P.stone2)
+    g.rect(dx - 4, by2 - 15, 24, 1, P.stone3)
+    g.rect(dx - 3, by2 - 13, 22, 1, P.stone0)
+    g.rect(dx, by2 - 12, 16, 12, P.void)
+    g.rect(dx + 1, by2 - 11, 14, 11, P.gold1)
+    g.rect(dx + 1, by2 - 11, 14, 2, P.goldHi)
+    g.rect(dx + 7, by2 - 11, 2, 11, P.void)
+    g.set(dx + 2, by2 - 8, P.sparkle)
+    // caixa d'água no teto (3/4) e antena
+    const tx = ox + 6
+    g.rect(tx, oy - rise - 7, 12, 6, P.stone1)
+    g.rect(tx, oy - rise - 7, 12, 1, P.stone2)
+    g.rect(tx + 12, oy - rise - 6, 2, 6, P.blood1)
+    g.set(tx + 13, oy - rise - 6, P.redHot)
+    for (let x = tx + 1; x < tx + 12; x += 3) g.set(x, oy - rise - 1, P.stone0)
+    g.rect(ox + bw - 10, oy - 16, 1, 16 - rise, P.stone1)
+    g.rect(ox + bw - 12, oy - 10, 5, 1, P.stone0)
+    // caixa do letreiro em 3/4: fundo sangue, moldura escura, lateral, pés
+    const sx = ox + Math.round(bw / 2) - 22
+    g.rect(sx, oy - 14, 44, 11, P.void)
+    g.rect(sx + 1, oy - 13, 42, 9, P.blood0)
+    g.rect(sx + 1, oy - 13, 42, 1, P.blood1)
+    g.rect(sx + 44, oy - 13, 2, 10, P.crimsonDeep)
+    g.rect(sx + 45, oy - 13, 1, 10, P.crimson)
+    g.rect(sx + 10, oy - 3, 1, 3, P.stone1)
+    g.rect(sx + 33, oy - 3, 1, 3, P.stone1)
     return g
   })
 }
@@ -147,6 +291,9 @@ function offTex(w: number, h: number, deco: number) {
   })
 }
 
+/** chaves de recorte pré-montadas (nada de string nova por quadro) */
+const SUB_KEY = ['g0', 'g1', 'b0', 'b1']
+
 export default function whack(): MicroGame {
   let c: GameCtx
   const root = new Container()
@@ -162,43 +309,31 @@ export default function whack(): MicroGame {
   let bh = 0
   let cw = 0
   let ch = 0
-  let good: Texture
-  let bad: Texture
+  let good: Texture[] = []
+  let bad: Texture[] = []
+  let goodFlash: Texture
+  let badFlash: Texture
+  let flyers: Flyers
+  const flash = new HitFlash(4)
+  const last = new LastFrame(25)
+  let hand: HandHint
+  /** janela com uma carteira visível agora (para a mão de demonstração e para o erro ensinar) */
+  const goodWin = () =>
+    wins.find(
+      (o) =>
+        o.item?.good && o.item.hitT < 0 && c.time >= o.item.t0 && c.time - o.item.t0 < o.item.life - 0.15,
+    )
+  /** o erro ensina: mostra onde estava a carteira certa */
+  function teach() {
+    const w = goodWin()
+    if (w) showRight(c, w.x + w.w / 2, w.y + w.h / 2)
+  }
   let neon: Text
   let beacon: Sprite
   const winTex: Record<string, Texture> = {}
-  const facade = new Graphics()
   const cracks = new Graphics()
 
   const lit = (kind: 'off' | 'gold' | 'red', lvl: number) => winTex[`${kind}${lvl}`] as Texture
-
-  function drawFacade() {
-    const g = facade
-    g.clear()
-    // corpo do prédio em rampa noturna, com rim light vermelho à direita e topo claro
-    g.rect(bx - 3, by - 3, bw + 6, bh + 3).fill(P.void)
-    g.rect(bx, by, bw, bh).fill(P.dusk)
-    for (let x = bx + 4; x < bx + bw - 2; x += 6) g.rect(x, by + 2, 1, bh - 2).fill(P.night)
-    g.rect(bx, by, bw, 2).fill(P.haze)
-    g.rect(bx, by, 1, bh).fill(P.hazeDark)
-    g.rect(bx + bw - 1, by, 1, bh).fill(P.crimson)
-    g.rect(bx + bw - 2, by, 1, bh).fill(P.blood1)
-    // marquise e porta
-    const dx = Math.round(bx + bw / 2 - 8)
-    g.rect(dx - 3, by + bh - 14, 22, 2).fill(P.stone2)
-    g.rect(dx, by + bh - 12, 16, 12).fill(P.void)
-    g.rect(dx + 1, by + bh - 11, 14, 11).fill(P.gold0)
-    g.rect(dx + 7, by + bh - 11, 1, 11).fill(P.void)
-    // letreiro VAGAS
-    g.rect(bx + bw / 2 - 22, by - 13, 44, 11).fill(P.void)
-    g.rect(bx + bw / 2 - 21, by - 12, 42, 9).fill(P.blood0)
-    g.rect(bx + bw / 2 - 12, by - 2, 1, 2).fill(P.stone1)
-    g.rect(bx + bw / 2 + 11, by - 2, 1, 2).fill(P.stone1)
-    // antena
-    g.rect(bx + bw - 10, by - 16, 1, 13).fill(P.stone1)
-    // molduras das janelas
-    for (const w of wins) g.rect(w.x - 1, w.y - 1, w.w + 2, w.h + 2).fill(P.void)
-  }
 
   function drawCracks() {
     cracks.clear()
@@ -234,9 +369,14 @@ export default function whack(): MicroGame {
       field.blast(cx, cy, 16, 60, GOLD, { add: true })
       field.blast(cx, cy, 8, 40, [P.sparkle, P.blue1, P.blue0])
       field.sparkle(cx + 6, cy - 6)
+      flash.show(goodFlash, cx, w.y + w.h - 2, 0.5, 1)
+      flyers.send(cx, cy, { arc: 26 })
+      c.fx.hitstop(50)
       c.sfx('coin', { x: cx, combo: combo.n })
     } else {
       w.crackT = c.time
+      flash.show(badFlash, cx, w.y + w.h - 2, 0.5, 1)
+      teach()
       combo.reset()
       field.blast(cx, cy, 14, 60, [P.stoneHi, P.stone3, P.stone2], { grav: 180 })
       field.blast(cx, cy, 10, 50, ENERGY, { add: true })
@@ -255,8 +395,15 @@ export default function whack(): MicroGame {
       field = new Field(c)
       field.trail = GOLD
       combo = new Combo(c, field, 1.5)
-      good = carteiraTex()
-      bad = golpeTex()
+      good = [carteiraTex(0), carteiraTex(1)]
+      bad = [golpeTex(0), golpeTex(1)]
+      goodFlash = solidTex('carteira', () => carteiraGrid(0))
+      badFlash = solidTex('golpe', () => golpeGrid(0), P.redGlow)
+      flyers = new Flyers(c, miniCarteiraTex(), 8)
+      hand = new HandHint(c, 3.5)
+      flyers.trail = (x, y) => {
+        if (c.rnd() < 0.5) field.spawn(x, y, { life: 0.25, ramp: GOLD, add: true, drag: 2 })
+      }
       const portrait = c.W < c.H
       const cols = portrait ? 3 : 5
       const rows = portrait ? 4 : 3
@@ -273,7 +420,7 @@ export default function whack(): MicroGame {
         for (let k = 0; k < cols; k++) {
           const x = bx + 8 + k * (cw + 6)
           const y = by + 8 + r * (ch + 6)
-          const s = spr(good, x + cw / 2, y + ch, 0.5, 1)
+          const s = spr(good[0] as Texture, x + cw / 2, y + ch, 0.5, 1)
           s.visible = false
           const pix = label('PIX?', P.white)
           pix.visible = false
@@ -296,34 +443,20 @@ export default function whack(): MicroGame {
             pix,
           })
         }
-      drawFacade()
+      const side = portrait ? 5 : 8
+      const facade = spr(facadeTex(bw, bh, cols, rows, cw, ch, side), bx - 3, by - 24, 0, 0)
       const panes = new Container()
       for (const w of wins) {
         panes.addChild(w.pane)
         items.addChild(w.spr)
       }
       for (const w of wins) items.addChild(w.pix)
-      // vizinhos em silhueta (plano de trás) e postes no primeiro plano: profundidade
+      // plano do meio: muro baixo da calçada com grades (os vizinhos e os marcos ficam no cenário l05)
       const back = new Graphics()
-      let nx = 0
-      while (nx < c.W) {
-        const w2 = 14 + Math.floor(c.rnd() * 18)
-        const h2 = Math.round(bh * (0.45 + c.rnd() * 0.45))
-        if (nx + w2 < bx - 2 || nx > bx + bw + 2) {
-          back.rect(nx, by + bh - h2, w2, h2).fill(P.night)
-          back.rect(nx, by + bh - h2, w2, 1).fill(P.hazeDark)
-          for (let k = 0; k < (w2 * h2) / 70; k++)
-            back
-              .rect(
-                nx + 2 + Math.floor(c.rnd() * (w2 - 4)),
-                by + bh - h2 + 3 + Math.floor(c.rnd() * (h2 - 5)),
-                1,
-                1,
-              )
-              .fill(c.rnd() < 0.7 ? P.gold1 : P.ember)
-        }
-        nx += w2 + 2
-      }
+      back.rect(0, by + bh - 6, c.W, 6).fill(P.night)
+      back.rect(0, by + bh - 6, c.W, 1).fill(P.hazeDark)
+      for (let x = 1; x < c.W; x += 4) back.rect(x, by + bh - 10, 1, 4).fill(P.night)
+      back.rect(0, by + bh - 10, c.W, 1).fill(P.night)
       const front = new Graphics()
       for (const lx of [Math.round(bx - 10), Math.round(bx + bw + 9)]) {
         front.rect(lx, by + bh - 26, 1, 27).fill(P.void)
@@ -359,7 +492,10 @@ export default function whack(): MicroGame {
         beacon,
         front,
         ...lamps,
+        flash.root,
+        flyers.root,
         combo.text,
+        hand.root,
       )
     },
     update(dt) {
@@ -375,7 +511,9 @@ export default function whack(): MicroGame {
           w.item = { good, t0: c.time + (good ? 0.15 : 0.3), life: lerp(1.5, 0.85, d), hitT: -1 }
         }
       }
-      tap.poll(c.time, hitAt)
+      tap.poll(c.time, hitAt, teach)
+      const gw = goodWin()
+      hand.update(gw ? { x: gw.x + gw.w / 2, y: gw.y + gw.h / 2 } : null)
       for (const w of wins) {
         const it = w.item
         if (it) {
@@ -398,7 +536,9 @@ export default function whack(): MicroGame {
         }
         const age = c.time - cur.t0
         // sobe de trás do peitoril (recorte por linhas, sem máscara), desce ao sair
-        const tex = cur.good ? good : bad
+        // idle a 4 fps: brilho que corre na carteira; a tela do golpe pisca
+        const fr = frameAt(c.time + w.x * 0.01, 4, 2)
+        const tex = (cur.good ? good[fr] : bad[fr]) as Texture
         const th = tex.frame.height
         const rise = clamp01(age / 0.12)
         const leave = clamp01((age - cur.life + 0.15) / 0.15)
@@ -410,8 +550,17 @@ export default function whack(): MicroGame {
           yo = cur.good ? -Math.round(k * 80) : Math.round(k * 30)
         }
         w.spr.visible = vis > 0
-        w.spr.texture = subTex(cur.good ? 'g' : 'b', tex, 0, 0, tex.frame.width, Math.max(1, vis))
-        w.spr.x = Math.round(w.x + w.w / 2)
+        w.spr.texture = subTex(
+          SUB_KEY[cur.good ? fr : fr + 2] as string,
+          tex,
+          0,
+          0,
+          tex.frame.width,
+          Math.max(1, vis),
+        )
+        // o golpe vibra 1 px (celular tocando) enquanto está na janela
+        const buzz = !cur.good && cur.hitT < 0 && rise >= 1 ? (frameAt(c.time, 20, 2) ? 1 : -1) : 0
+        w.spr.x = Math.round(w.x + w.w / 2) + buzz
         w.spr.y = Math.round(w.y + w.h - 2 + yo)
         if (cur.hitT > 0 && cur.good) {
           const [sx, sy] = popScale(c.time - cur.hitT)
@@ -428,12 +577,21 @@ export default function whack(): MicroGame {
       if (c.rnd() < 0.08) field.ember(bx + c.rnd() * bw, by + bh, ENERGY)
       combo.update()
       field.update(dt)
+      flash.update(dt)
+      flyers.update(dt)
+      // final de fase como evento: o prédio inteiro acende e solta a chuva dourada
+      last.check(c, () => {
+        for (const w of wins) if (!w.item) w.pane.texture = lit('gold', 4)
+        finale(c, bx + bw / 2, by + bh / 2)
+        c.sfx('perfect', { x: bx + bw / 2 })
+      })
     },
     move(x, y) {
       field.pointer(x, y)
     },
     down(x, y) {
       field.pointer(x, y, true)
+      hand.dismiss()
       if (!hitAt(x, y)) {
         tap.push(x, y, c.time)
         c.sfx('tap')

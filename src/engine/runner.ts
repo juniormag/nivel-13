@@ -1,11 +1,11 @@
 // Runner: cria o app PixiJS em resolução lógica, roda o laço, aplica juice e expõe o estado ao HUD.
 import { Application, Container, Sprite, Texture } from 'pixi.js'
 import { hitstop as audioHitstop, setIntensity, sfx } from '../audio/audio'
+import { computeFit, ditherGradient, offscreen, type PixelFit } from '../lib/pixel'
 import { mulberry32 } from '../lib/rng'
-import { type PixelFit, computeFit, ditherGradient, offscreen } from '../lib/pixel'
-import { type SkillKind, usePlay } from '../state/play'
-import { Ambient } from './ambient'
+import { usePlay } from '../state/play'
 import { haptic } from '../ui/prefs'
+import { Ambient } from './ambient'
 import { JuiceLayer } from './juice'
 import { tex } from './textures'
 import type { GameCtx, MicroGame } from './types'
@@ -31,9 +31,9 @@ export interface RunnerOpts {
 }
 
 // Cenários por fase do diretor de arte (src/scene/index.ts); sem o arquivo, usa o fundo genérico.
-const sceneMods = import.meta.glob<{ renderLevelBackdrop?: (level: number, W: number, H: number) => HTMLCanvasElement }>(
-  '../scene/index.ts',
-)
+const sceneMods = import.meta.glob<{
+  renderLevelBackdrop?: (level: number, W: number, H: number) => HTMLCanvasElement
+}>('../scene/index.ts')
 
 async function levelBackdrop(level: number | undefined, W: number, H: number, theme: Theme) {
   const load = sceneMods['../scene/index.ts']
@@ -94,8 +94,6 @@ export class Runner {
   ambient!: Ambient
   ctx!: GameCtx
   time = 0
-  slowUntil = 0
-  shield = false
   hearts: number
   score = 0
   ended = false
@@ -125,7 +123,9 @@ export class Runner {
     canvas.style.width = `${this.fit.W * this.fit.css}px`
     canvas.style.height = `${this.fit.H * this.fit.css}px`
     canvas.style.imageRendering = 'pixelated'
-    const bg = new Sprite(Texture.from(await levelBackdrop(this.o.level, this.fit.W, this.fit.H, this.o.theme)))
+    const bg = new Sprite(
+      Texture.from(await levelBackdrop(this.o.level, this.fit.W, this.fit.H, this.o.theme)),
+    )
     bg.texture.source.scaleMode = 'nearest'
     this.juice = new JuiceLayer(this.fit.W, this.fit.H, this.o.reduced)
     this.ambient = new Ambient(this.fit.W, this.fit.H, this.o.reduced)
@@ -138,9 +138,6 @@ export class Runner {
       score: 0,
       duration: this.o.game.duration,
       timeLeft: this.o.game.duration,
-      used: [],
-      shield: false,
-      slow: false,
       combo: 0,
     })
     this.app.ticker.add((t) => this.tick(t.deltaMS / 1000))
@@ -167,7 +164,8 @@ export class Runner {
       addScore(n, x, y) {
         self.score = Math.max(0, self.score + n)
         usePlay.setState({ score: self.score })
-        if (x !== undefined && y !== undefined) self.juice.float(n >= 0 ? `+${n}` : `${n}`, x, y, n >= 0 ? 0xf5c04a : 0xff3b3b)
+        if (x !== undefined && y !== undefined)
+          self.juice.float(n >= 0 ? `+${n}` : `${n}`, x, y, n >= 0 ? 0xf5c04a : 0xff3b3b)
       },
       hit(x, y) {
         self.hit(x, y)
@@ -211,18 +209,9 @@ export class Runner {
     usePlay.setState({ phase: 'run' })
   }
 
-  hit(x?: number, y?: number) {
+  hit(x?: number, _y?: number) {
     if (!this.running) return
     const cx = x ?? this.fit.W / 2
-    const cy = y ?? this.fit.H / 2
-    if (this.shield) {
-      this.shield = false
-      usePlay.setState({ shield: false })
-      sfx('shield', { x: cx / this.fit.W })
-      this.juice.ring(cx, cy, 0x4fae3f, 30)
-      this.juice.float('ESCUDO', cx, cy, 0x4fae3f)
-      return
-    }
     sfx('bad', { x: cx / this.fit.W })
     haptic('damage')
     audioHitstop(70)
@@ -233,34 +222,6 @@ export class Runner {
     this.hearts--
     usePlay.setState({ hearts: this.hearts, combo: 0 })
     if (this.hearts <= 0) this.end(false)
-  }
-
-  useSkill(kind: SkillKind): boolean {
-    if (!this.running) return false
-    const g = this.o.game
-    let ok = false
-    if (kind === 'checar') ok = !!g.clear?.()
-    else if (kind === 'lembrar') ok = !!g.hint?.()
-    else if (kind === 'foco') {
-      this.slowUntil = performance.now() + 4000
-      usePlay.setState({ slow: true })
-      ok = true
-    } else {
-      this.shield = true
-      usePlay.setState({ shield: true })
-      ok = true
-    }
-    if (!ok) {
-      sfx('error')
-      return false
-    }
-    sfx(kind === 'foco' ? 'slowmo' : kind === 'proteger' ? 'shield' : kind === 'checar' ? 'spark' : 'power')
-    const cx = this.fit.W / 2
-    const cy = this.fit.H / 2
-    this.juice.ring(cx, cy, kind === 'proteger' ? 0x4fae3f : kind === 'foco' ? 0xf5c04a : 0xff3b3b, 60)
-    this.juice.flash(kind === 'proteger' ? 0x4fae3f : 0xf5c04a, 120, 0.2)
-    usePlay.setState((s) => ({ used: [...s.used, kind] }))
-    return true
   }
 
   end(success: boolean) {
@@ -280,12 +241,9 @@ export class Runner {
     const dt0 = Math.min(0.05, realDt)
     this.juice.update(dt0)
     this.ambient.update(dt0, performance.now() / 1000)
-    const now = performance.now()
-    const slow = now < this.slowUntil
-    if (usePlay.getState().slow !== slow) usePlay.setState({ slow })
     if (this.running && this.juice.freeze <= 0) {
       // aparelho lento: até 100 ms por quadro, em subpassos de no máximo 1/30 s (o tempo não fica em câmera lenta)
-      let rest = Math.min(0.1, realDt) * (slow ? 0.45 : 1)
+      let rest = Math.min(0.1, realDt)
       while (rest > 1e-6 && this.running) {
         const step = Math.min(rest, 1 / 30)
         rest -= step

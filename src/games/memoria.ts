@@ -1,4 +1,4 @@
-// Fase 9 · Siga o Dinheiro: jogo da memória ligando cada ano ao fato documentado.
+// Fase 9 · Siga o Dinheiro: jogo da memória ligando cada pista ao fato documentado.
 // Cartas em DOM (.grid-cards/.mcard) sobre um quadro de cortiça em Pixi; cada par certo é ligado por um
 // barbante vermelho e uma trilha de moedas pixel que corre pelos vãos entre as cartas.
 // Feel (números): virada em degraus 90 ms + 120 ms; par certo = hit-stop 70 ms, pulso dourado 420 ms, anel do
@@ -7,6 +7,7 @@
 import { Container, Graphics, Sprite } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
 import { shuffle } from '../lib/rng'
+import { Banner, domHand, FlyToHud } from './fx-c'
 import {
   bake,
   domRect,
@@ -26,15 +27,16 @@ import {
   tactile,
 } from './kit-b'
 
-// Textos factuais (revisados): mesmos do jogo legado. Fontes em src/content/facts.ts, ids 'rachadinha'
-// (InfoMoney 2025, Congresso em Foco 2021, Poder360 fev/2020) e 'mansao' (Diario de Pernambuco out/2026).
+// Textos factuais: só o que src/content/facts.ts sustenta, ids 'rachadinha' (InfoMoney 2025, Congresso em
+// Foco 2021) e 'mansao' (Diario de Pernambuco out/2026, Poder360 2021). Sem associação com milícia (TSE,
+// 15 e 20/10/2026). Os rótulos são únicos: 4 anos, o status de hoje e o valor financiado.
 const PAIRS = [
-  { year: '2005', text: 'Flávio dá a Medalha Tiradentes ao ex-PM Adriano da Nóbrega, então preso' },
-  { year: '2007', text: 'Mulher de Adriano é nomeada no gabinete de Flávio na Alerj' },
-  { year: '2018', text: 'Coaf aponta R$ 1,2 mi atípicos na conta de Queiroz, ex-assessor de Flávio' },
+  { year: '2018', text: 'Coaf: R$ 1,2 mi atípicos na conta de Queiroz, ex-assessor de Flávio' },
   { year: '2020', text: 'MP-RJ denuncia Flávio por peculato, lavagem e organização criminosa' },
   { year: '2021', text: 'STJ anula a quebra de sigilo e as provas caem' },
-  { year: '2026', text: 'PF apura o financiamento da casa de R$ 6 mi de Flávio' },
+  { year: 'Hoje', text: 'Denúncia arquivada; Flávio nunca foi réu e nega irregularidades' },
+  { year: 'R$ 3,1 mi', text: 'Financiados pelo BRB na casa de R$ 6 mi de Flávio' },
+  { year: 'out/2026', text: 'PF apura o financiamento; Flávio nega irregularidades' },
 ]
 
 interface Card {
@@ -58,15 +60,7 @@ interface Trail {
 const COIN_SPEED = 150
 
 function coinTex() {
-  return bake('coin5', 5, 5, (p) => {
-    p.rect(1, 0, 3, 5, P.gold)
-    p.rect(0, 1, 5, 3, P.gold)
-    p.rect(1, 1, 1, 2, P.goldHi)
-    p.dot(1, 1, P.sparkle)
-    p.rect(3, 3, 1, 1, P.gold1)
-    p.rect(4, 2, 1, 2, P.gold1)
-    p.rect(2, 4, 2, 1, P.gold1)
-  })
+  return coinFrame(0)
 }
 
 function pinTex() {
@@ -79,30 +73,68 @@ function pinTex() {
   })
 }
 
-/** cortiça: base escura dourada com grão pontilhado (valor baixo, para não brigar com as cartas) */
+/**
+ * Quadro de cortiça em três quartos (ref v2): frente de cortiça em 3 tons com grão, moldura de madeira com
+ * chanfro claro em cima, lateral grossa à direita e embaixo em madeira escura saturada, e a luz quente da
+ * luminária lavando o alto do quadro. `w`×`h` é a frente; a textura tem +D de lateral.
+ */
+const BOARD_D = 4
 function corkTex(w: number, h: number) {
-  return bake(`cork${w}x${h}`, w, h, (p) => {
-    p.rect(0, 0, w, h, P.gold0)
+  const D = BOARD_D
+  return bake(`cork3q${w}x${h}`, w + D, h + D, (p) => {
     let s = 9
     const r = () => {
       s = (s * 1103515245 + 12345) & 0x7fffffff
       return s / 0x7fffffff
     }
-    for (let i = 0; i < (w * h) / 5; i++)
-      p.dot(
-        Math.floor(r() * w),
-        Math.floor(r() * h),
-        r() < 0.6 ? P.blood1 : r() < 0.7 ? P.emberDark : P.gold1,
-      )
-    // moldura de madeira
+    // lateral direita e de baixo (madeira escura, pontilhada como granito)
+    for (let i = 1; i <= D; i++) {
+      for (let y = i; y < h + i; y++) p.dot(w - 1 + i, y, (y + i) % 3 === 0 ? P.blood0 : P.blood1)
+      for (let x = i; x < w + i; x++) p.dot(x, h - 1 + i, (x * 7 + i) % 5 === 0 ? P.crimsonDeep : P.blood1)
+    }
+    p.rect(w + D - 1, D, 1, h, P.redHot)
+    // frente: cortiça escura com grão em 3 tons (valor baixo, as cartas é que brilham)
+    p.rect(0, 0, w, h, P.gold0)
+    for (let i = 0; i < (w * h) / 4; i++) {
+      const v = r()
+      p.dot(Math.floor(r() * w), Math.floor(r() * h), v < 0.5 ? P.blood1 : v < 0.8 ? P.emberDark : P.gold1)
+    }
+    // luz quente da luminária no alto, pontilhada e morrendo para baixo
+    for (let y = 4; y < h * 0.35; y++)
+      for (let x = 4; x < w - 4; x++) {
+        const t = 1 - y / (h * 0.35)
+        const cx = Math.abs(x - w / 2) / (w / 2)
+        if (((x + y) & 1) === 0 && r() < t * (1 - cx) * 0.35) p.dot(x, y, P.gold1)
+      }
+    // moldura de madeira com chanfro: claro em cima/esquerda, escuro embaixo/direita
     p.rect(0, 0, w, 3, P.emberDark)
-    p.rect(0, 0, w, 1, P.gold1)
-    p.rect(0, h - 3, w, 3, P.blood1)
+    p.rect(0, 0, w, 1, P.ember)
     p.rect(0, 0, 3, h, P.emberDark)
     p.rect(0, 0, 1, h, P.gold1)
+    p.rect(0, h - 3, w, 3, P.blood1)
     p.rect(w - 3, 0, 3, h, P.blood1)
-    p.rect(w - 1, 0, 1, h, P.blood0)
+    p.rect(3, 3, w - 6, 1, P.blood0)
+    p.rect(3, 3, 1, h - 6, P.blood0)
     p.outline(P.void)
+  })
+}
+
+/** moeda girando em 4 quadros (frente, 3/4, perfil, 3/4) */
+function coinFrame(f: number) {
+  return bake(`coin5f${f}`, 5, 5, (p) => {
+    const w = [5, 3, 1, 3][f] ?? 5
+    const x0 = Math.floor((5 - w) / 2)
+    if (w === 1) {
+      p.rect(2, 0, 1, 5, P.gold1)
+      p.dot(2, 1, P.goldHi)
+      return
+    }
+    p.rect(x0 + (w > 3 ? 1 : 0), 0, w - (w > 3 ? 2 : 0), 5, P.gold)
+    p.rect(x0, 1, w, 3, P.gold)
+    p.rect(x0 + 1, 1, 1, 2, P.goldHi)
+    p.dot(x0 + 1, 1, P.sparkle)
+    p.rect(x0 + w - 1, 2, 1, 2, P.gold1)
+    p.rect(x0 + 1, 4, w - 2, 1, P.gold1)
   })
 }
 
@@ -118,6 +150,13 @@ export default function memoria(): MicroGame {
   const coinLayer = new Container()
   const pins = new Container()
   const glow = new Graphics()
+  const pips = new Graphics()
+  let fly: FlyToHud
+  let banner: Banner
+  let killHand: (() => void) | null = null
+  let boardX = 0
+  let boardY = 0
+  let boardW = 0
   let coins: Sprite[] = []
   let cards: Card[] = []
   let trails: Trail[] = []
@@ -204,6 +243,26 @@ export default function memoria(): MicroGame {
     }
   }
 
+  /**
+   * Telegrafia do erro: 4 alfinetes na moldura mostram quantos erros faltam para perder um coração
+   * (a cada 4 erros). O último aceso pisca em vermelho quente.
+   */
+  function drawPips() {
+    const g = pips
+    g.clear()
+    const filled = misses % 4
+    const x0 = boardX + boardW - 4 - 4 * 6
+    const y = boardY - 1
+    for (let i = 0; i < 4; i++) {
+      const x = x0 + i * 6
+      const on = i < filled
+      const warn = on && filled === 3 && Math.floor(c.time * 6) % 2 === 0
+      g.rect(x - 1, y - 1, 5, 4).fill(P.void)
+      g.rect(x, y, 3, 2).fill(on ? (warn ? P.redHot : P.red) : P.blood0)
+      if (on) g.rect(x, y, 1, 1).fill(P.redGlow)
+    }
+  }
+
   function addPin(x: number, y: number) {
     const s = new Sprite(pinTex())
     s.x = Math.round(x - 2)
@@ -225,6 +284,8 @@ export default function memoria(): MicroGame {
       sparkles.spawn(Math.round(k.r.x + k.r.w + 1), Math.round(k.r.y + k.r.h + 1), 0)
       embers.blast(k.r.cx, k.r.cy, 120, 50)
     }
+    // recompensa voa até o contador de pontos
+    fly.send(Math.round((a.r.cx + b.r.cx) / 2), Math.round((a.r.cy + b.r.cy) / 2), 6)
     // trilha de moedas: 6 moedas saem de A a cada 50 ms e chegam em B
     for (let i = 0; i < 6; i++) timers.after(i * 0.05, () => launchCoin(t, i === 5))
   }
@@ -290,6 +351,16 @@ export default function memoria(): MicroGame {
             P.goldHi,
             Math.round((gx1 - gx0) * 0.7),
           )
+          banner.show(
+            [
+              { text: 'DINHEIRO', size: 8, color: P.stoneHi },
+              { text: 'RASTREADO', size: 16, color: P.goldHi },
+            ],
+            Math.round((gx0 + gx1) / 2),
+            Math.round((gy0 + gy1) / 2),
+            0.6,
+          )
+          fly.send(Math.round((gx0 + gx1) / 2), Math.round((gy0 + gy1) / 2), 12)
         })
         timers.after(1.5, () => c.finish())
       }
@@ -369,7 +440,7 @@ export default function memoria(): MicroGame {
           d.label,
           el('span', { class: 'back', 'aria-hidden': 'true' }, '13'),
         )
-        b.style.fontSize = d.year ? '' : ch < 80 ? '11px' : '13px'
+        b.style.fontSize = d.year ? (d.label.length > 5 ? '15px' : '') : ch < 80 ? '11px' : '13px'
         tactile(b)
         const card: Card = {
           pair: d.pair,
@@ -394,9 +465,15 @@ export default function memoria(): MicroGame {
       const board = new Sprite(corkTex(bw, bh))
       board.x = gx0 - m
       board.y = gy0 - m
+      boardX = board.x
+      boardY = board.y
+      boardW = bw
+      // sombra de contato pontilhada embaixo e à direita da lateral grossa
       const shadow = new Graphics()
-      shadow.rect(board.x + 2, board.y + bh + 1, bw, 2).fill({ color: P.void, alpha: 0.7 })
-      shadow.rect(board.x + bw + 1, board.y + 2, 2, bh).fill({ color: P.void, alpha: 0.7 })
+      for (let x = 0; x < bw + BOARD_D; x++)
+        for (let y = 0; y < 3; y++)
+          if ((x + y) % 2 === 0) shadow.rect(board.x + 3 + x, board.y + bh + BOARD_D + y, 1, 1)
+      shadow.fill({ color: P.void, alpha: 0.8 })
       // alfinetes de canto
       for (const [x, y] of [
         [board.x + 4, board.y + 4],
@@ -407,13 +484,34 @@ export default function memoria(): MicroGame {
       embers = new Embers(c, { x0: 0, y0: c.top, x1: c.W, y1: c.bottom }, { ambient: 16 }).listen()
       sparkles = new Sparkles(c.reduced)
       pops = new ScorePops(c)
-      root.addChild(shadow, board, strings, glow, coinLayer, pins, embers.root, sparkles.root, pops.root)
+      fly = new FlyToHud(c)
+      banner = new Banner(c)
+      root.addChild(
+        shadow,
+        board,
+        strings,
+        glow,
+        coinLayer,
+        pins,
+        pips,
+        embers.root,
+        sparkles.root,
+        pops.root,
+        fly.root,
+        banner.root,
+      )
+      // demonstração: a mão toca a primeira carta nos 3 primeiros segundos
+      const firstCard = cards[0]?.el
+      if (firstCard) killHand = domHand(c, firstCard)
     },
     update(dt) {
       timers.update(dt)
       embers.update(dt, c.time)
       sparkles.update(dt)
       pops.update(dt)
+      fly.update(dt)
+      banner.update(dt)
+      drawPips()
       drawStrings()
       glow.clear()
       // moedas correndo pelo barbante
@@ -422,6 +520,7 @@ export default function memoria(): MicroGame {
         const p = along(f.t, f.d)
         f.s.x = p.x - 2
         f.s.y = p.y - 2
+        f.s.texture = coinFrame(Math.floor(c.time * 12 + f.d * 0.05) % 4)
         if (!f.loop) energyDot(glow, p.x, p.y, P.sparkle, P.goldHi, P.gold1)
         if (f.d >= f.t.len) {
           f.s.visible = false
@@ -496,6 +595,7 @@ export default function memoria(): MicroGame {
     },
     dispose() {
       timers.clear()
+      killHand?.()
       embers?.destroy()
       grid?.remove()
       root.destroy({ children: true })

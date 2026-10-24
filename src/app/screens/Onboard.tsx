@@ -10,7 +10,7 @@ import { rise } from '../../ui/motion'
 import { PixelButton, Tap } from '../../ui/PixelButton'
 import { PixelIcon } from '../../ui/PixelIcon'
 import { AVATAR_NAMES, Page, Screen } from '../../ui/Shell'
-import { go } from '../nav'
+import { go, useNav } from '../nav'
 
 const AVATARS: Avatar[] = ['coelho', 'onca', 'arara', 'capivara']
 const BLOCK = /(bolsominion|gado|petralha|lula ?ladr|ladr[aã]o|merda|porra|caralho|puta|fdp|viado|nazi)/i
@@ -25,6 +25,8 @@ export function cleanName(s: string) {
 
 export default function Onboard() {
   const save = useSave()
+  // vindo do resultado do primeiro fato: depois do personagem, segue para a próxima fase
+  const next = Number(useNav((s) => s.params.next) ?? 0)
   const [pick, setPick] = useState<Avatar>(save.avatar)
   const [name, setName] = useState(save.name)
   const [uf, setUf] = useState(save.uf)
@@ -45,12 +47,21 @@ export default function Onboard() {
   const start = () => {
     save.patch({ avatar: pick, name: cleanName(name), uf, onboarded: true })
     void api.hello()
-    go('map')
+    // primeira vez: direto para a fase 1 (o mapa aparece depois do primeiro fato); o onboarding sai do histórico
+    if (next >= 1 && next <= 13) go('play', { level: next }, { replace: true })
+    else
+      go(levelsDone(save) === 0 ? 'play' : 'map', levelsDone(save) === 0 ? { level: 1 } : {}, {
+        replace: true,
+      })
   }
 
   return (
     <Screen world={levelsDone(save) / 13} className="scr--page">
-      <Page eyebrow="Antes de começar" title="Escolha seu personagem" tone="red">
+      <Page
+        eyebrow={next ? `Antes da fase ${next}` : 'Antes de começar'}
+        title="Escolha seu personagem"
+        tone="red"
+      >
         <form
           className="page-body"
           onSubmit={(e) => {
@@ -110,7 +121,7 @@ export default function Onboard() {
             Sem cadastro e sem telefone. O apelido aparece no placar; o estado entra só na contagem por
             estado.
           </motion.p>
-          <motion.div className="actions actions--end" variants={rise}>
+          <motion.div className="actions actions--end actions--sticky" variants={rise}>
             <PixelButton tone="ghost" commit="back" onClick={() => go('title')}>
               Voltar
             </PixelButton>

@@ -3,6 +3,8 @@
 // brasa voando de uma árvore para outra antes de espalhar, água espirrando ao apagar.
 import { Container, type Sprite, type Text, type Texture } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
+import { anchors } from '../scene/levels/l04'
+import { Driver, Flyers, Hand, reticleFrames, whiteTex } from './fx-a'
 import {
   Combo,
   clamp01,
@@ -19,6 +21,7 @@ import {
   P,
   popScale,
   rampBurst,
+  rowsTex,
   SMOKE,
   setSquash,
   shade,
@@ -58,8 +61,13 @@ const BARK = [P.void, P.gold0, P.emberDark, P.gold1]
  * em cima à esquerda, sombra violeta-verde embaixo, rim vermelho à direita e tronco com raízes.
  * Variantes: 0 = copa redonda, 1 = alta, 2 = larga e baixa.
  */
-function treeTex(v: number, look: 'ok' | 'burn' | 'char') {
-  return gridTex(`fogo-tree2-${v}${look}`, () => {
+function treeTex(v: number, look: 'ok' | 'burn' | 'char' | 'warn', sway = 0) {
+  return gridTex(`fogo-tree3-${v}${look}${sway}`, () => treeGrid(v, look, sway))
+}
+
+/** grade da árvore; `sway` 1 = copa de cima 1 px para a direita (idle de 2 quadros ao vento) */
+function treeGrid(v: number, look: 'ok' | 'burn' | 'char' | 'warn', sway = 0) {
+  {
     const m = new Grid(20, 26)
     m.rect(9, 15, 2, 9, 2).rect(8, 23, 4, 1, 2).set(7, 24, 2)
     m.set(12, 24, 2)
@@ -84,9 +92,10 @@ function treeTex(v: number, look: 'ok' | 'burn' | 'char') {
               [14, 8.5, 4.5, 4],
               [10, 6, 4.5, 3.5],
             ]
-    for (const [x, y, rx, ry] of tufts) m.ellipse(x, y, rx, ry, 1)
-    const leaf = look === 'ok' ? CANOPY : look === 'burn' ? BURNING : CHAR
-    const rim = look === 'ok' ? P.crimsonDeep : look === 'burn' ? P.ember : undefined
+    for (const [x, y, rx, ry] of tufts) m.ellipse(x + (sway && y < 10 ? 1 : 0), y, rx, ry, 1)
+    const leaf = look === 'ok' || look === 'warn' ? CANOPY : look === 'burn' ? BURNING : CHAR
+    const rim =
+      look === 'ok' ? P.crimsonDeep : look === 'warn' ? P.redHot : look === 'burn' ? P.ember : undefined
     const g = shade(
       m,
       { 1: { ramp: leaf, grain: 0.12, rim }, 2: { ramp: look === 'char' ? CHAR : BARK } },
@@ -103,8 +112,18 @@ function treeTex(v: number, look: 'ok' | 'burn' | 'char') {
       }
     // sombra dos tufos de cima sobre a copa de baixo
     for (let x = 4; x < 17; x++) if (m.get(x, 12) === 1 && x % 2) g.set(x, 12, leaf[1] ?? P.vine0)
+    // personalidade: com a fumaça chegando, a árvore arregala os olhos e sua (gota azul)
+    if (look === 'warn') {
+      for (const ex of [7, 12]) {
+        g.rect(ex, 10, 2, 2, P.white)
+        g.set(ex + 1, 11, P.void)
+      }
+      g.rect(9, 14, 2, 1, P.void)
+      g.set(15, 8, P.blue1)
+      g.set(15, 9, P.sparkle)
+    }
     return g
-  })
+  }
 }
 
 function stumpTex() {
@@ -228,7 +247,45 @@ export default function fogo(): MicroGame {
   const arcs: { from: Tree; to: Tree; t: number }[] = []
   const T: Record<string, Texture> = {}
 
-  const look = (tr: Tree, l: 'ok' | 'burn' | 'char') => T[`${tr.v}${l}`] as Texture
+  const look = (tr: Tree, l: 'ok' | 'burn' | 'char' | 'warn') => T[`${tr.v}${l}`] as Texture
+  let flyers: Flyers
+  let driver: Driver | null = null
+  let leafF: Texture[] = []
+  const flash = new Map<Tree, number>()
+  const rets: { s: Sprite; tr: Tree | null }[] = []
+  let retF: Texture[] = []
+  const horizon: Sprite[] = []
+  let ended = false
+  let endT = 0
+  let hand: Hand
+  let lastTap = { x: 0, y: 0 }
+
+  function finale() {
+    ended = true
+    endT = 0
+    for (const t of trees)
+      if (t.state === 'ok' || t.state === 'broto') {
+        if (c.rnd() < 0.35) field.sparkle(t.x, t.y - 14)
+        if (c.rnd() < 0.5) field.blast(t.x, t.y - 12, 4, 30, LEAF)
+      }
+    const x = c.W / 2
+    const y = (c.top + c.bottom) / 2
+    c.fx.ring(x, y, P.leafHi, 60)
+    c.fx.ring(x, y, P.white, 28)
+    flyers.retarget()
+    flyers.send(x, y, leafF, 10, 30)
+  }
+
+  function live(dt: number) {
+    flyers.update(dt)
+    const now = performance.now() / 1000
+    for (let i = 0; i < horizon.length; i++)
+      (horizon[i] as Sprite).alpha = c.reduced ? 0.35 : frameAt(now + i * 0.29, 7, 3) === 1 ? 0.55 : 0.38
+    if (ended) {
+      endT += dt
+      field.update(dt * (endT < 0.3 ? 0.3 : 1))
+    }
+  }
 
   function setBody(tr: Tree) {
     const s = tr.state
@@ -239,7 +296,9 @@ export default function fogo(): MicroGame {
           ? (T.sprout as Texture)
           : s === 'fire'
             ? look(tr, tr.t > tr.burnFor - 1.2 ? 'char' : 'burn')
-            : look(tr, 'ok')
+            : s === 'warn'
+              ? look(tr, 'warn')
+              : look(tr, 'ok')
   }
 
   function warn(tr: Tree, secs: number) {
@@ -284,11 +343,30 @@ export default function fogo(): MicroGame {
     return best
   }
 
+  /** foco ou toco mais perto (sem limite de distância), para o erro mostrar onde era */
+  function nearestAny(x: number, y: number) {
+    let best: Tree | null = null
+    let bd = 1e9
+    for (const t of trees) {
+      if (t.state !== 'fire' && t.state !== 'warn') continue
+      const d = Math.hypot(t.x - x, t.y - 9 - y)
+      if (d < bd) {
+        bd = d
+        best = t
+      }
+    }
+    return best
+  }
+
   /** tenta apagar/replantar no ponto; devolve true se acertou algo */
   function act(x: number, y: number) {
     const fire = nearest(x, y, (t) => t.state === 'fire' || t.state === 'warn')
     if (fire) {
       const early = fire.state === 'warn'
+      flash.set(fire, c.time)
+      flyers.retarget()
+      flyers.send(fire.x, fire.y - 14, leafF, early ? 2 : 3, 10)
+      c.fx.ring(fire.x, fire.y - 10, P.white, 8)
       fire.state = 'ok'
       fire.t = 0
       fire.pop = c.time
@@ -314,6 +392,9 @@ export default function fogo(): MicroGame {
       setBody(toco)
       c.addScore(15, toco.x, toco.y - 14)
       c.fx.ring(toco.x, toco.y - 4, P.leafHi, 14)
+      flash.set(toco, c.time)
+      flyers.retarget()
+      flyers.send(toco.x, toco.y - 8, leafF, 1, 8)
       field.blast(toco.x, toco.y - 4, 10, 40, LEAF)
       field.sparkle(toco.x + 3, toco.y - 8)
       c.sfx('spark', { x: toco.x })
@@ -332,7 +413,11 @@ export default function fogo(): MicroGame {
       field.trail = WATER
       combo = new Combo(c, field, 1.5)
       for (const v of [0, 1, 2])
-        for (const l of ['ok', 'burn', 'char'] as const) T[`${v}${l}`] = treeTex(v, l)
+        for (const l of ['ok', 'burn', 'char', 'warn'] as const) {
+          T[`${v}${l}`] = treeTex(v, l)
+          T[`${v}${l}1`] = treeTex(v, l, 1)
+        }
+      for (const v of [0, 1, 2]) T[`${v}white`] = whiteTex(`fogo-tree${v}`, () => treeGrid(v, 'ok'))
       T.stump = stumpTex()
       T.sprout = sproutTex()
       for (let s = 0; s < 3; s++) flames.push([0, 1, 2, 3].map((f) => flameTex(s, f)))
@@ -394,7 +479,35 @@ export default function fogo(): MicroGame {
         splashes.push({ s, t: -1 })
       }
       const grass = spr(grassTex(c.W), 0, c.bottom + 2, 0, 1)
-      root.addChild(shadows, decals, glows, bodies, field.root, fx, grass, combo.text)
+      // cenário vivo: os clarões das queimadas no horizonte tremulam
+      for (const f of anchors(c.W, c.H).fires) {
+        const g = spr(glowTex(9, FIRE), f.x, f.y - 2)
+        g.blendMode = 'add'
+        g.alpha = 0.4
+        horizon.push(g)
+        root.addChild(g)
+      }
+      // mira da ameaça (telegrafa) sobre as árvores com fumaça
+      retF = reticleFrames(24)
+      for (let i = 0; i < 8; i++) {
+        const s = spr(retF[0] as Texture, 0, 0)
+        s.visible = false
+        fx.addChild(s)
+        rets.push({ s, tr: null })
+      }
+      leafF = [rowsTex('fogo-leaf0', ['.G.', 'GgV', '.V.']), rowsTex('fogo-leaf1', ['..G', '.gV', 'V..'])]
+      flyers = new Flyers(c, 30)
+      flyers.trail = (x, y) => field.spawn(x, y, { life: 0.22, ramp: LEAF, add: false })
+      flyers.onArrive = (x, y) => {
+        if (c.rnd() < 0.4) field.sparkle(x, y + 4)
+      }
+      root.addChild(shadows, decals, glows, bodies, field.root, fx, grass, flyers.root, combo.text)
+      hand = new Hand(c, 3.5)
+      hand.x = Math.round(c.W / 2)
+      hand.y = Math.round((c.top + c.bottom) / 2)
+      root.addChild(hand.s)
+      driver = new Driver(live)
+      driver.start()
     },
     update(dt) {
       const d = curve(c.time, 30)
@@ -406,7 +519,21 @@ export default function fogo(): MicroGame {
         // antecipação: 0,7 s de fumaça antes de pegar fogo
         if (pick) warn(pick, lerp(0.9, 0.6, d))
       }
-      tap.poll(c.time, act)
+      tap.poll(c.time, act, () => {
+        // o erro ensina: anel cinza no toque e a mira pisca no foco mais perto
+        c.fx.ring(lastTap.x, lastTap.y, P.stone2, 6)
+        const f = nearestAny(lastTap.x, lastTap.y)
+        if (f) c.fx.ring(f.x, f.y - 10, P.redHot, 16)
+      })
+      // demonstração: a mão espera no meio e vai para a primeira árvore em perigo
+      if (!hand.done) {
+        const f = trees.find((t) => t.state === 'warn' || t.state === 'fire')
+        if (f) {
+          hand.x = f.x
+          hand.y = f.y - 10
+        }
+        hand.update(dt)
+      }
       for (const t of trees) {
         t.t += dt
         if (t.state === 'warn') {
@@ -462,6 +589,18 @@ export default function fogo(): MicroGame {
           t.pip.x = t.x
           t.pip.y = t.y - 30
         } else t.pip.visible = false
+        // idle ao vento (2 quadros a 2 fps, em fase pela posição) e clarão branco de 1 quadro no acerto
+        const fl = flash.get(t)
+        if (fl !== undefined && c.time - fl < 0.05) t.body.texture = T[`${t.v}white`] as Texture
+        else {
+          if (fl !== undefined) flash.delete(t)
+          if (t.state === 'ok' || t.state === 'warn') {
+            const sw = Math.floor(c.time * 2 + t.x * 0.05) % 2 ? '1' : ''
+            t.body.texture = T[`${t.v}${t.state}${sw}`] as Texture
+          }
+        }
+        // ameaça treme: a árvore com fumaça tremelica 1 px a 15 fps
+        t.body.x = t.state === 'warn' && !c.reduced ? t.x + (frameAt(c.time, 15, 2) ? 1 : -1) : t.x
         const [sx, sy] = popScale(t.pop < 0 ? 1 : c.time - t.pop)
         setSquash(t.body, sx, sy)
       }
@@ -484,6 +623,17 @@ export default function fogo(): MicroGame {
           s.s.visible = false
         } else s.s.texture = tex
       }
+      // miras sobre as árvores em alerta
+      let ri = 0
+      for (const t of trees) {
+        if (t.state !== 'warn' || ri >= rets.length) continue
+        const r = rets[ri++] as { s: Sprite; tr: Tree | null }
+        r.s.visible = true
+        r.s.x = t.x
+        r.s.y = t.y - 10
+        r.s.texture = retF[Math.min(3, Math.floor((t.t / Math.max(0.1, t.warnFor)) * 4))] as Texture
+      }
+      for (; ri < rets.length; ri++) (rets[ri] as { s: Sprite }).s.visible = false
       combo.update()
       field.update(dt)
     },
@@ -492,6 +642,8 @@ export default function fogo(): MicroGame {
     },
     down(x, y) {
       field.pointer(x, y, true)
+      hand.hide()
+      lastTap = { x, y }
       if (!act(x, y)) tap.push(x, y, c.time)
     },
     clear() {
@@ -512,9 +664,12 @@ export default function fogo(): MicroGame {
     timeUp() {
       const alive = trees.filter((t) => t.state === 'ok' || t.state === 'broto').length
       c.addScore(alive * 10)
-      return burned < trees.length / 2
+      const ok = burned < trees.length / 2
+      if (ok) finale()
+      return ok
     },
     dispose() {
+      driver?.stop()
       root.destroy({ children: true })
     },
   }

@@ -4,6 +4,7 @@
 import { Container, Graphics, type Sprite, type Texture } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
 import { mulberry32 } from '../lib/rng'
+import { Flyers, finale, HandHint, HitFlash, LastFrame, showRight, solidTex } from './fx-b'
 import {
   Booms,
   boomFrames,
@@ -18,6 +19,7 @@ import {
   lerp,
   P,
   PAPER,
+  rowsTex,
   SMOKE,
   shade,
   shadowTex,
@@ -59,9 +61,14 @@ interface Building {
 const STONE = [P.stone0, P.stone1, P.stone2, P.stone3, P.stoneHi]
 const STONE_HURT = [P.stone0, P.stone1, P.stone1, P.stone2, P.stone3]
 
+/** espessura da lateral em três quartos (px), proporcional ao prédio */
+const sideOf = (w: number) => Math.max(3, Math.min(7, Math.round(w / 9)))
+
 function buildingTex(kind: Kind, w: number, h: number, stage: number) {
-  return gridTex(`defesa-${kind}${w}x${h}s${stage}`, () => {
-    const W = w + 4
+  return gridTex(`defesa3q-${kind}${w}x${h}s${stage}`, () => {
+    const D = sideOf(w)
+    const W0 = w + 4
+    const W = W0 + D
     const H = h + 12
     const m = new Grid(W, H)
     const base = H - 1
@@ -75,11 +82,11 @@ function buildingTex(kind: Kind, w: number, h: number, stage: number) {
       m.rect(1, base - 5, w + 2, 2, 2)
       m.rect(5, base - 3, w - 6, 3, 1)
     } else {
-      const cx = Math.round(W / 2)
+      const cx = Math.round(W0 / 2)
       // cúpula convexa (Senado) à direita e côncava (Câmara) à esquerda, antes da laje
       const R = Math.max(5, Math.round(w * 0.12))
       const lx = Math.round(w * 0.2) + 2
-      const rx = W - Math.round(w * 0.2) - 2
+      const rx = W0 - Math.round(w * 0.2) - 2
       m.ellipse(rx, base - 6, R * 0.85, R * 0.7, 4)
       const ry = Math.max(3, Math.round(R * 0.55))
       for (let i = 0; i <= ry; i++) {
@@ -109,14 +116,14 @@ function buildingTex(kind: Kind, w: number, h: number, stage: number) {
     // detalhes: colunas, janelas e o ornamento do STF
     if (kind === 'stf') {
       for (let x = 5; x < w; x += 4) for (let y = base - h + 2; y < base - 2; y++) g.set(x, y, P.stone2)
-      g.rect(Math.round(W / 2) - 1, base - h - 4, 2, 3, P.gold)
-      g.set(Math.round(W / 2) - 1, base - h - 4, P.goldHi)
+      g.rect(Math.round(W0 / 2) - 1, base - h - 4, 2, 3, P.gold)
+      g.set(Math.round(W0 / 2) - 1, base - h - 4, P.goldHi)
     } else if (kind === 'planalto') {
       for (let x = 4; x < w + 1; x += 5)
         for (let y = base - h + 1; y < base - 5; y++) g.set(x + (y > base - 8 ? 1 : 0), y, P.stone3)
       for (let x = 6; x < w - 2; x += 3) if ((x * 7) % 5 < 2) g.set(x, base - h + 3, P.gold)
     } else {
-      const cx = Math.round(W / 2)
+      const cx = Math.round(W0 / 2)
       for (let y = base - h; y < base - 6; y += 3) {
         g.rect(cx - 4, y, 2, 1, P.stone2)
         g.rect(cx + 2, y, 2, 1, P.stone2)
@@ -127,7 +134,7 @@ function buildingTex(kind: Kind, w: number, h: number, stage: number) {
     const r = mulberry32(w * 7 + h)
     const n = [0, 2, 4, 7][Math.min(3, stage)] ?? 0
     for (let k = 0; k < n; k++) {
-      let x = Math.round(3 + r() * (W - 6))
+      let x = Math.round(3 + r() * (W0 - 6))
       let y = base - Math.round(r() * h)
       for (let i = 0; i < 4 + r() * 7; i++) {
         if (g.get(x, y, -1) !== -1) g.set(x, y, stage >= 3 && i % 3 === 1 ? P.ember : P.stone0)
@@ -137,7 +144,7 @@ function buildingTex(kind: Kind, w: number, h: number, stage: number) {
     }
     if (stage >= 2) {
       const left = r() < 0.5
-      const x0 = left ? 1 : W - 6
+      const x0 = left ? 1 : W0 - 6
       for (let y = 0; y < 4; y++)
         for (let x = 0; x < 5 - y; x++) {
           const px = left ? x0 + x : x0 + 4 - x
@@ -148,6 +155,37 @@ function buildingTex(kind: Kind, w: number, h: number, stage: number) {
           if (top < H) g.set(px, top, -1)
         }
     }
+    // lateral em três quartos (lição da ref v2): granito vermelho pontilhado acompanhando a silhueta,
+    // subindo para o fundo, com rim red-hot na aresta de fora e topo aceso
+    const rise = Math.max(1, Math.round(D * 0.5))
+    const xr: number[] = []
+    for (let y = 0; y < H; y++) {
+      let r0 = -1
+      // no Congresso a lateral sai só das torres e da laje (a cúpula é redonda, não ganha face)
+      const xs = kind === 'congresso' && y < base - 6 ? Math.round(W0 / 2) + 5 : W0 - 1
+      for (let x = xs; x >= 0; x--)
+        if (g.get(x, y, -1) !== -1) {
+          r0 = x
+          break
+        }
+      xr.push(r0)
+    }
+    const side = new Grid(W, H, -1)
+    for (let y = 0; y < H; y++) {
+      const x0 = xr[y] ?? -1
+      if (x0 < 0) continue
+      for (let i = 1; i <= D; i++) {
+        const yy = y - Math.round((i / D) * rise)
+        const top = (xr[y - 1] ?? -1) < x0 - 1 || y === 0
+        let k: number = (i + y) % 3 === 0 || (i * 7 + y * 3) % 5 === 0 ? P.blood0 : P.blood1
+        if (stage >= 2 && (i * 5 + y) % 7 === 0) k = P.void
+        if (top) k = P.crimson
+        if (i === D) k = stage >= 3 && y % 3 === 0 ? P.ember : P.redHot
+        if (yy >= 0) side.set(x0 + i, yy, k)
+      }
+    }
+    for (let i = 0; i < side.d.length; i++)
+      if ((side.d[i] ?? -1) >= 0 && (g.d[i] ?? -1) < 0) g.d[i] = side.d[i] ?? -1
     return g
   })
 }
@@ -156,7 +194,7 @@ function buildingTex(kind: Kind, w: number, h: number, stage: number) {
  * minuta 16×20 tremulando em 6 quadros a 10 fps: frente, frente inclinada (cisalhada), estreita,
  * de lado, verso estreito e verso inclinado. O verso mostra o texto e o carimbo vazando do papel.
  */
-function paperFrames(): Texture[] {
+function paperFrames(hot = false): Texture[] {
   // largura, cisalhamento (px no topo), verso?
   const spec: [number, number, boolean][] = [
     [12, 0, false],
@@ -167,45 +205,57 @@ function paperFrames(): Texture[] {
     [11, -3, true],
   ]
   return spec.map(([w, sh, back], f) =>
-    gridTex(`defesa-paper2-${f}`, () => {
-      const m = new Grid(16, 20)
-      const H = 16
+    gridTex(`defesa-paper3-${f}${hot ? 'h' : ''}`, () => paperGrid(w, sh, back, hot)),
+  )
+}
+
+function paperGrid(w: number, sh: number, back: boolean, hot: boolean) {
+  {
+    const m = new Grid(16, 20)
+    const H = 16
+    for (let y = 0; y < H; y++) {
+      const off = Math.round(sh * (1 - y / (H - 1)))
+      const x0 = Math.round(8 - w / 2) + off
+      m.rect(x0, 2 + y, w, 1, 1)
+    }
+    if (w >= 8) m.set(Math.round(8 - w / 2) + sh + w - 1, 2, 0)
+    const g = shade(m, {
+      1: {
+        ramp: back
+          ? [P.stone1, P.stone2, P.stone2, P.stone3, P.stoneHi]
+          : [P.stone1, P.stone2, P.stone3, P.stoneHi, P.stoneHi],
+        rim: P.redHot,
+      },
+    })
+    if (w >= 6) {
+      const ink = back ? P.stone2 : P.stone1
       for (let y = 0; y < H; y++) {
         const off = Math.round(sh * (1 - y / (H - 1)))
         const x0 = Math.round(8 - w / 2) + off
-        m.rect(x0, 2 + y, w, 1, 1)
+        const row = y + 2
+        if ([4, 6, 8, 10].includes(row))
+          for (let x = x0 + 2; x < x0 + w - 2; x++)
+            if ((x - x0 + row) % 6 && (!back || x % 2)) g.set(x, row, ink)
+        // carimbo vermelho "GOLPE" (no verso vaza mais escuro)
+        if (row >= 12 && row <= 14 && w >= 8)
+          for (let x = x0 + 2; x < x0 + w - 2; x++)
+            g.set(
+              x,
+              row,
+              back
+                ? P.crimsonDeep
+                : row === 13 && x > x0 + 2 && x < x0 + w - 3
+                  ? hot
+                    ? P.redGlow
+                    : P.redHot
+                  : hot
+                    ? P.red
+                    : P.crimson,
+            )
       }
-      if (w >= 8) m.set(Math.round(8 - w / 2) + sh + w - 1, 2, 0)
-      const g = shade(m, {
-        1: {
-          ramp: back
-            ? [P.stone1, P.stone2, P.stone2, P.stone3, P.stoneHi]
-            : [P.stone1, P.stone2, P.stone3, P.stoneHi, P.stoneHi],
-          rim: P.redHot,
-        },
-      })
-      if (w >= 6) {
-        const ink = back ? P.stone2 : P.stone1
-        for (let y = 0; y < H; y++) {
-          const off = Math.round(sh * (1 - y / (H - 1)))
-          const x0 = Math.round(8 - w / 2) + off
-          const row = y + 2
-          if ([4, 6, 8, 10].includes(row))
-            for (let x = x0 + 2; x < x0 + w - 2; x++)
-              if ((x - x0 + row) % 6 && (!back || x % 2)) g.set(x, row, ink)
-          // carimbo vermelho "GOLPE" (no verso vaza mais escuro)
-          if (row >= 12 && row <= 14 && w >= 8)
-            for (let x = x0 + 2; x < x0 + w - 2; x++)
-              g.set(
-                x,
-                row,
-                back ? P.crimsonDeep : row === 13 && x > x0 + 2 && x < x0 + w - 3 ? P.redHot : P.crimson,
-              )
-        }
-      }
-      return g
-    }),
-  )
+    }
+    return g
+  }
 }
 
 export default function defesa(): MicroGame {
@@ -221,6 +271,35 @@ export default function defesa(): MicroGame {
   const halves: { s: Sprite; x: number; y: number; vx: number; vy: number; t: number }[] = []
   const warns: { x: number; t: number; target: number }[] = []
   let frames: Texture[] = []
+  let framesHot: Texture[] = []
+  let tearFlash: Texture
+  let flyers: Flyers
+  const flash = new HitFlash(4)
+  const last = new LastFrame(30)
+  let hand: HandHint
+  /** dedo apertado: arrastar por cima de uma minuta também rasga (mesmo raio de 15 px do toque) */
+  let pressed = false
+  // soltar o dedo fora do canvas também solta (senão o mouse passando por cima rasgaria sem clique)
+  const release = () => {
+    pressed = false
+    if (field) field.trail = PAPER
+  }
+  let lastX = 0
+  let lastY = 0
+  /** o erro ensina: o toque que não pegou nada acende a minuta mais perto */
+  function teach() {
+    let best: Minuta | null = null
+    let bd = 1e9
+    for (const m of ms) {
+      if (m.sp <= 0) continue
+      const d = Math.hypot(m.x - lastX, m.y - lastY)
+      if (d < bd) {
+        bd = d
+        best = m
+      }
+    }
+    if (best) showRight(c, best.x, best.y)
+  }
   let smokeBoom: Texture[] = []
   let spawn = 1
   let ground = 0
@@ -253,6 +332,10 @@ export default function defesa(): MicroGame {
   function tear(m: Minuta) {
     m.sp = -1
     m.s.visible = false
+    // 1 quadro branco no lugar da minuta, hit-stop curto e um selo dourado voando até o placar
+    flash.show(tearFlash, m.x, m.y)
+    c.fx.hitstop(50)
+    flyers.send(m.x, m.y, { arc: 16, dur: 0.4 })
     const n = combo.hit(m.x, m.y - 14)
     c.addScore(30, m.x, m.y - 6)
     c.fx.ring(m.x, m.y, n >= 5 ? P.redHot : P.stoneHi, 16)
@@ -297,12 +380,26 @@ export default function defesa(): MicroGame {
     init(ctx) {
       c = ctx
       c.stage.addChild(root)
+      addEventListener('pointerup', release)
+      addEventListener('pointercancel', release)
       field = new Field(c)
       field.trail = PAPER
       booms = new Booms(4)
       smokeBoom = boomFrames(FIRE, SMOKE)
       combo = new Combo(c, field)
       frames = paperFrames()
+      framesHot = paperFrames(true)
+      tearFlash = solidTex('minuta', () => paperGrid(12, 0, false, false))
+      // selo dourado 7×7 (recompensa que viaja)
+      flyers = new Flyers(
+        c,
+        rowsTex('defesa-selo', ['..yYy..', '.yYsYy.', 'yYsysYy', 'YsyYysY', 'yYsysYy', '.yYsYy.', '..yYy..']),
+        10,
+      )
+      flyers.trail = (x, y) => {
+        if (c.rnd() < 0.4)
+          field.spawn(x, y, { life: 0.22, ramp: [P.goldHi, P.gold, P.gold1], add: true, drag: 2 })
+      }
       ground = c.bottom - 18
       const span = Math.min(c.W - 12, 280)
       // prédios crescem com a altura disponível (no celular em pé, a praça ocupa o terço de baixo)
@@ -347,7 +444,18 @@ export default function defesa(): MicroGame {
       }
       root.addChild(floor)
       for (const b of bs) root.addChild(spr(shadowTex(b.w + 8), b.x + b.w / 2, ground + 1), b.s)
-      root.addChild(marks, papers, field.root, booms.root, combo.text, fence)
+      hand = new HandHint(c, 4)
+      root.addChild(
+        marks,
+        papers,
+        field.root,
+        booms.root,
+        flash.root,
+        flyers.root,
+        combo.text,
+        fence,
+        hand.root,
+      )
     },
     update(dt) {
       const d = curve(c.time, 30)
@@ -366,7 +474,10 @@ export default function defesa(): MicroGame {
           warns.splice(i, 1)
         }
       }
-      tap.poll(c.time, hitAt)
+      tap.poll(c.time, hitAt, teach)
+      // demonstração: a mão segue a primeira minuta até o primeiro toque
+      const first = ms.find((m) => m.sp > 0)
+      hand.update(first ? { x: first.x, y: first.y } : null)
       for (const m of ms) {
         const dx = m.tx - m.x
         const dy = m.ty - m.y
@@ -394,7 +505,10 @@ export default function defesa(): MicroGame {
           m.x += (dx / dist) * m.sp * dt + Math.sin(c.time * 3 + m.ph) * 12 * dt
           m.y += (dy / dist) * m.sp * dt
         }
-        m.s.texture = frames[frameAt(c.time + m.ph, 10, frames.length)] as Texture
+        // o carimbo pulsa a 4 fps; perto do alvo pulsa mais rápido (telegrafa o impacto)
+        const near = Math.hypot(m.tx - m.x, m.ty - m.y) < 40
+        const set = frameAt(c.time + m.ph, near ? 10 : 4, 2) ? framesHot : frames
+        m.s.texture = set[frameAt(c.time + m.ph, 10, frames.length)] as Texture
         m.s.x = Math.round(m.x) + (m.contact ? (m.contact % 2 ? 1 : -1) : 0)
         m.s.y = Math.round(m.y + Math.sin(c.time * 6 + m.ph) * 1.5)
       }
@@ -454,12 +568,30 @@ export default function defesa(): MicroGame {
       combo.update()
       field.update(dt)
       booms.update(dt)
+      flash.update(dt)
+      flyers.update(dt)
+      // final de fase: a Praça resistiu, chuva dourada sobre o Congresso
+      last.check(c, () => {
+        const b = bs[1]
+        if (b) finale(c, b.x + b.w / 2, ground - b.h)
+        c.sfx('perfect', { x: c.W / 2 })
+      })
     },
     move(x, y) {
       field.pointer(x, y)
+      if (pressed) hitAt(x, y)
+    },
+    up() {
+      release()
     },
     down(x, y) {
+      pressed = true
+      // enquanto o dedo está apertado o rastro vira faísca (mostra que arrastar corta)
+      field.trail = ENERGY
       field.pointer(x, y, true)
+      hand.dismiss()
+      lastX = x
+      lastY = y
       if (!hitAt(x, y)) {
         tap.push(x, y, c.time)
         c.sfx('tap')
@@ -479,6 +611,8 @@ export default function defesa(): MicroGame {
       return true
     },
     dispose() {
+      removeEventListener('pointerup', release)
+      removeEventListener('pointercancel', release)
       root.destroy({ children: true })
     },
   }

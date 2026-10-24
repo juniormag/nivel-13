@@ -1,0 +1,867 @@
+/* Onde Foi? (prefixo onde-). Só variáveis da paleta (src/ui/global.css). Pixel: bordas em degrau por
+   box-shadow, sem raio e sem blur; movimento em degraus; reduzido = corte seco. */
+
+.onde-scr {
+  --hair: 2px;
+  font-family: var(--f-text);
+  font-variant-ligatures: none;
+  font-feature-settings:
+    "liga" 0,
+    "clig" 0;
+  color: var(--stone-hi);
+  background:
+    linear-gradient(to bottom, var(--void), transparent 22%),
+    linear-gradient(to top, var(--blood-0), transparent 30%), var(--night);
+}
+
+/* ---------- estrutura ---------- */
+.onde-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--safe-t) var(--safe-r) 0 var(--safe-l);
+}
+.onde-play {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* ---------- HUD ---------- */
+.onde-hud {
+  width: 100%;
+  height: 56px;
+  flex: none;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px 4px 6px;
+  font-family: var(--f-hud);
+  text-transform: uppercase;
+}
+.onde-close {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0;
+  font-size: 16px;
+}
+.onde-hud-l {
+  min-width: 0;
+}
+.onde-title {
+  margin: 0 0 6px;
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  color: var(--stone-hi);
+  text-shadow: var(--shadow-text);
+  white-space: nowrap;
+}
+.onde-title b {
+  font-weight: 400;
+  color: var(--red-hot);
+}
+.onde-pips {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--void);
+  box-shadow:
+    0 -1px 0 0 var(--stone-3),
+    0 1px 0 0 var(--stone-3),
+    -1px 0 0 0 var(--stone-3),
+    1px 0 0 0 var(--stone-3);
+}
+.onde-pips i {
+  width: 22px;
+  height: 8px;
+}
+.onde-pips i.is-avanco {
+  background: var(--vine-0);
+  box-shadow: inset 0 -2px 0 0 var(--vine-1);
+}
+.onde-pips i.is-caso {
+  background: var(--blood-0);
+  box-shadow: inset 0 -2px 0 0 var(--crimson-deep);
+}
+.onde-pips i.is-avanco.is-done {
+  background: var(--green);
+  box-shadow: inset 0 2px 0 0 var(--leaf-hi);
+}
+.onde-pips i.is-caso.is-done {
+  background: var(--red);
+  box-shadow: inset 0 2px 0 0 var(--red-glow);
+}
+.onde-pips i.is-now {
+  animation: onde-blink 0.8s steps(1) infinite;
+}
+@keyframes onde-blink {
+  50% {
+    background: var(--stone-hi);
+  }
+}
+.onde-hud-r {
+  text-align: right;
+  line-height: 1;
+}
+.onde-hud-r span {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--stone-3);
+  margin-bottom: 4px;
+}
+.onde-hud-r b {
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--gold);
+  text-shadow: var(--shadow-text);
+}
+
+/* ---------- pista ---------- */
+.onde-clue {
+  flex: none;
+  width: calc(100% - 24px);
+  max-width: 560px;
+  min-height: 100px;
+  margin: 2px 12px 10px;
+  padding: 10px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.onde-clue.is-avanco {
+  --pf-line: var(--green);
+  --pf-hi: var(--vine-0);
+}
+.onde-clue.is-caso {
+  --pf-line: var(--red);
+  --pf-hi: var(--blood-0);
+}
+.onde-clue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: var(--f-hud);
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+.onde-side {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 8px 3px 4px;
+  background: var(--void);
+}
+.onde-side i {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+.onde-side.is-avanco {
+  color: var(--leaf-hi);
+}
+.onde-side.is-avanco i {
+  background: var(--green);
+  box-shadow: inset 2px 2px 0 0 var(--leaf-hi);
+}
+.onde-side.is-caso {
+  color: var(--red-glow);
+}
+.onde-side.is-caso i {
+  background: var(--red);
+  box-shadow: inset 2px 2px 0 0 var(--red-glow);
+}
+.onde-step {
+  color: var(--stone-3);
+}
+.onde-step em {
+  font-style: normal;
+  color: var(--gold);
+}
+.onde-q {
+  margin: 0;
+  font-weight: 400;
+  font-size: 17px;
+  line-height: 1.3;
+  color: var(--white);
+  text-wrap: pretty;
+}
+
+/* ---------- mapa ---------- */
+.onde-stage {
+  position: relative;
+  flex: none;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+.onde-map {
+  position: relative;
+  flex: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow:
+    0 -2px 0 0 var(--stone-1),
+    0 2px 0 0 var(--stone-1),
+    -2px 0 0 0 var(--stone-1),
+    2px 0 0 0 var(--stone-1),
+    0 6px 0 0 var(--void);
+}
+.onde-map.is-live {
+  cursor: crosshair;
+}
+.onde-map:focus-visible {
+  outline: 2px solid var(--gold-hi);
+  outline-offset: 4px;
+}
+.onde-map > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+.onde-north {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-family: var(--f-hud);
+  font-size: 11px;
+  color: var(--stone-2);
+  pointer-events: none;
+}
+.onde-loupe {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+  background: var(--void);
+  box-shadow:
+    0 -2px 0 0 var(--gold),
+    0 2px 0 0 var(--gold),
+    -2px 0 0 0 var(--gold),
+    2px 0 0 0 var(--gold),
+    0 6px 0 0 var(--void);
+}
+.onde-loupe canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+/* cantoneiras marcando o centro exato */
+.onde-loupe-x {
+  position: absolute;
+  inset: calc(50% - 10px);
+  border: 2px solid transparent;
+  border-top-color: var(--white);
+  border-bottom-color: var(--white);
+  opacity: 0.85;
+}
+
+/* ---------- dock (zona do polegar) ---------- */
+.onde-dock {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px calc(12px + var(--safe-b));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* empurra para a zona do polegar sem cortar o topo quando a carta é mais alta que o espaço */
+.onde-dock-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* trilha dos 6 pinos (a grade do MapTap se montando) */
+.onde-trail {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.onde-trail li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 2px 8px;
+  font-family: var(--f-hud);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--stone-2);
+  background: var(--void);
+  box-shadow: inset 0 -2px 0 0 var(--stone-0);
+  white-space: nowrap;
+}
+.onde-sw {
+  flex: none;
+  width: 8px;
+  height: 8px;
+}
+.onde-trail .is-avanco .onde-sw {
+  background: var(--vine-1);
+}
+.onde-trail .is-caso .onde-sw {
+  background: var(--crimson-deep);
+}
+.onde-trail li.is-done {
+  color: var(--gold-hi);
+}
+.onde-trail .is-done.is-avanco .onde-sw {
+  background: var(--green);
+}
+.onde-trail .is-done.is-caso .onde-sw {
+  background: var(--red);
+}
+.onde-trail li.is-now {
+  color: var(--stone-hi);
+  box-shadow: inset 0 -2px 0 0 var(--stone-3);
+}
+.onde-hint {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--stone-3);
+  min-height: 1.3em;
+}
+.onde-dock-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+.onde-listbtn {
+  min-height: 60px;
+  min-width: 92px;
+  font-size: 13px;
+}
+
+/* ---------- carta do fato ---------- */
+.onde-fact {
+  flex: none;
+  margin-top: auto;
+  padding: 10px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.onde-fact.is-avanco {
+  --pf-line: var(--green);
+}
+.onde-fact.is-caso {
+  --pf-line: var(--red);
+}
+.onde-fact-score {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+}
+.onde-fact-place {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.15;
+  color: var(--stone-hi);
+}
+.onde-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  box-shadow: 0 0 0 2px var(--void);
+}
+.onde-dot.is-avanco {
+  background: var(--green);
+}
+.onde-dot.is-caso {
+  background: var(--red);
+}
+.onde-fact-km {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1;
+  font-family: var(--f-hud);
+}
+.onde-fact-km b {
+  font-weight: 400;
+  font-size: 20px;
+  color: var(--gold-hi);
+  text-shadow: var(--shadow-text);
+  white-space: nowrap;
+}
+.onde-fact-km em {
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--stone-3);
+  margin-top: 3px;
+}
+.onde-fact-km.is-bull em,
+.onde-fact-km.is-good em {
+  color: var(--leaf-hi);
+}
+.onde-fact-pts {
+  font-family: var(--f-hud);
+  font-size: 18px;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.onde-fact-pts small {
+  font-size: 11px;
+  color: var(--stone-3);
+}
+.onde-fact-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 2px;
+}
+.onde-fact-title {
+  margin: 0;
+  font-family: var(--f-hud);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1.15;
+  text-transform: uppercase;
+  color: var(--white);
+}
+.onde-seal {
+  margin: 0;
+  padding: 3px 8px;
+  font-family: var(--f-hud);
+  font-size: 11px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.onde-seal.is-good {
+  background: var(--vine-0);
+  color: var(--leaf-hi);
+  box-shadow:
+    0 -2px 0 0 var(--green),
+    0 2px 0 0 var(--green),
+    -2px 0 0 0 var(--green),
+    2px 0 0 0 var(--green);
+}
+.onde-seal.is-legal {
+  background: var(--blood-0);
+  color: var(--red-glow);
+  box-shadow:
+    0 -2px 0 0 var(--red),
+    0 2px 0 0 var(--red),
+    -2px 0 0 0 var(--red),
+    2px 0 0 0 var(--red);
+}
+.onde-fact-body {
+  margin: 2px 0 0;
+  font-size: 15px;
+  line-height: 1.25;
+  color: var(--stone-hi);
+  text-wrap: pretty;
+}
+.onde-fact-src {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--stone-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.onde-fact-src a {
+  color: var(--gold-hi);
+  text-underline-offset: 2px;
+}
+.onde-fact-src a:focus-visible {
+  outline: 2px solid var(--gold-hi);
+  outline-offset: 2px;
+}
+.onde-fact-cta {
+  margin-top: 2px;
+}
+.onde-next {
+  min-height: 54px;
+  font-size: 16px;
+}
+
+/* ---------- lista de UFs ---------- */
+.onde-ufs {
+  position: absolute;
+  inset: 0 8px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 10px 8px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+.onde-ufs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.onde-ufs-head h3 {
+  margin: 0;
+  font-family: var(--f-hud);
+  font-weight: 400;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.onde-ufs-x {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+.onde-ufs-note {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--stone-3);
+}
+.onde-ufs-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px 2px 8px;
+}
+.onde-ufs-body h4 {
+  margin: 10px 0 6px;
+  font-family: var(--f-hud);
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--stone-2);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.onde-ufs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+}
+.onde-uf {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  min-height: 48px;
+  padding: 4px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  background: var(--dusk);
+  color: var(--stone-hi);
+  text-align: left;
+  box-shadow:
+    0 -2px 0 0 var(--stone-1),
+    0 2px 0 0 var(--stone-1),
+    -2px 0 0 0 var(--stone-1),
+    2px 0 0 0 var(--stone-1);
+}
+.onde-uf b {
+  font-family: var(--f-hud);
+  font-weight: 400;
+  font-size: 14px;
+}
+.onde-uf span {
+  font-size: 11px;
+  line-height: 1.1;
+  color: var(--stone-3);
+}
+.onde-uf[aria-pressed="true"] {
+  background: var(--gold-0);
+  box-shadow:
+    0 -2px 0 0 var(--gold),
+    0 2px 0 0 var(--gold),
+    -2px 0 0 0 var(--gold),
+    2px 0 0 0 var(--gold);
+}
+.onde-uf:focus-visible {
+  outline: 2px solid var(--gold-hi);
+  outline-offset: 2px;
+}
+.onde-uf[data-pressed] {
+  transform: translateY(2px);
+}
+
+.onde-empty {
+  margin: 40px 16px;
+  padding: 16px;
+  text-align: center;
+}
+
+/* ---------- fim: Seu mapa ---------- */
+.onde-wrap--end {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.onde-hud--end {
+  grid-template-columns: auto;
+}
+.onde-end {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 16px calc(24px + var(--safe-b));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.onde-end-head {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.onde-end-kicker {
+  margin: 0;
+  font-family: var(--f-hud);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--red-hot);
+}
+.onde-end-head h1 {
+  margin: 0;
+  font-family: var(--f-hud);
+  font-weight: 400;
+  font-size: 28px;
+  text-transform: uppercase;
+  color: var(--white);
+  text-shadow: var(--shadow-text);
+}
+.onde-end-head h1:focus {
+  outline: none;
+}
+.onde-end-total {
+  margin: 2px 0 0;
+  font-family: var(--f-hud);
+  line-height: 1;
+}
+.onde-end-total b {
+  font-weight: 400;
+  font-size: 48px;
+  color: var(--gold);
+  text-shadow:
+    0 3px 0 var(--blood-0),
+    0 -2px 0 var(--void);
+}
+.onde-end-total span {
+  font-size: 18px;
+  color: var(--stone-hi);
+  margin-left: 4px;
+}
+.onde-end-rival {
+  margin: 6px 0 0;
+  padding: 6px 12px;
+  font-size: 14px;
+}
+.onde-end-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.onde-end-map {
+  display: flex;
+  justify-content: center;
+}
+.onde-end-side {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.onde-end-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.onde-end-list li {
+  display: grid;
+  grid-template-columns: 12px 1fr auto 48px;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 4px 2px;
+  box-shadow: inset 0 -2px 0 0 var(--stone-0);
+}
+.onde-end-place {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.onde-end-place b {
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--white);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.onde-end-place small {
+  font-size: 12px;
+  color: var(--stone-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.onde-end-km {
+  font-family: var(--f-hud);
+  font-size: 13px;
+  color: var(--gold-hi);
+  white-space: nowrap;
+}
+.onde-end-pts {
+  font-family: var(--f-hud);
+  font-size: 13px;
+  color: var(--stone-hi);
+  text-align: right;
+}
+.onde-grid {
+  margin: 0;
+  padding: 10px 12px;
+  font-family: system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--stone-hi);
+}
+.onde-grid p {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.onde-end-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.onde-end-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+/* ---------- desktop / paisagem larga: mapa à esquerda, pista e carta à direita ---------- */
+.onde-wrap.is-wide .onde-play {
+  display: grid;
+  grid-template-columns: auto 440px;
+  grid-template-rows: max-content minmax(0, 1fr);
+  grid-template-areas:
+    "stage clue"
+    "stage dock";
+  justify-content: center;
+  align-items: start;
+  column-gap: 32px;
+  padding: 8px 24px 20px;
+}
+.onde-wrap.is-wide .onde-stage {
+  grid-area: stage;
+  width: auto;
+}
+.onde-wrap.is-wide .onde-clue {
+  grid-area: clue;
+  width: auto;
+  margin: 0;
+}
+.onde-wrap.is-wide .onde-dock {
+  grid-area: dock;
+  width: auto;
+  height: 100%;
+  justify-content: flex-start;
+  padding: 18px 0 0;
+}
+.onde-wrap.is-wide .onde-hint {
+  text-align: left;
+}
+.onde-wrap.is-wide .onde-fact {
+  margin-top: 0;
+}
+.onde-wrap.is-wide .onde-q {
+  font-size: 21px;
+}
+.onde-wrap.is-wide .onde-clue {
+  padding: 14px 18px 16px;
+  gap: 12px;
+}
+.onde-wrap.is-wide .onde-fact {
+  padding: 14px 18px 16px;
+  gap: 9px;
+}
+.onde-wrap.is-wide .onde-fact-place {
+  font-size: 16px;
+}
+.onde-wrap.is-wide .onde-fact-km b {
+  font-size: 24px;
+}
+.onde-wrap.is-wide .onde-fact-title {
+  font-size: 19px;
+}
+.onde-wrap.is-wide .onde-fact-body {
+  font-size: 18px;
+}
+.onde-wrap.is-wide .onde-fact-src {
+  font-size: 14px;
+}
+.onde-wrap.is-wide .onde-hint {
+  font-size: 15px;
+}
+.onde-wrap.is-wide .onde-trail li {
+  font-size: 12px;
+  min-height: 32px;
+}
+.onde-wrap.is-wide .onde-ufs {
+  inset: 0;
+}
+@media (min-width: 900px) {
+  .onde-end-main {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 32px;
+  }
+  .onde-end-head h1 {
+    font-size: 34px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .onde-pips i.is-now {
+    animation: none;
+    background: var(--stone-hi);
+  }
+  .onde-uf[data-pressed] {
+    transform: none;
+  }
+}

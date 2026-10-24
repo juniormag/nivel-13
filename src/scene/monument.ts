@@ -132,13 +132,16 @@ void main(){
     float wy = vObj.y + uYBase;
     float redChance = uPaint * clamp(1.5 - wy * 0.55, 0.0, 1.0) * 0.75;
     kind = tone < redChance ? 1 : 0;
-    float v = 0.8 + (lam - 0.6) * 0.7 + (tone - 0.5) * 0.3 - max(0.0, 2.0 - wy) * 0.06 - uWear * 0.07;
+    float v = 0.97 + (lam - 0.6) * 0.7 + (tone - 0.5) * 0.36 - max(0.0, 2.0 - wy) * 0.06 - uWear * 0.07;
     if (vObj.y < 0.25) v -= 0.18;
     if (speck < uWear * 0.06) v -= 0.3;
     // pontilhado só na transição entre faixas (superfície lisa, não estática)
     band = int(clamp(v * 3.0 + (bay - 0.5) * 0.3, 0.0, 3.0));
-    if (speck > 0.985) band += 1;
-    if (speck < 0.035) band -= 1;
+    // poucas manchas: algumas placas encardidas, o resto liso com grão fino e raro
+    if (tone < 0.09) v -= 0.22;
+    band = int(clamp(v * 3.0 + (bay - 0.5) * 0.3, 0.0, 3.0));
+    if (speck > 0.992) band += 1;
+    if (speck < 0.022) band -= 1;
     if (crack > 0.4 && crack < 0.6) band = 3;
     if (crack > 0.2 && crack < 0.3) band -= 1;
     band = clamp(band, 0, kind == 1 ? 4 : 3);
@@ -146,13 +149,12 @@ void main(){
     if (crack > 0.9) col = kind == 1 ? C_blood0 : C_stone0;
     else if (kind == 1) col = hot ? rampLitRed(band) : rampRed(band);
     else col = hot ? rampLitStone(band) : rampStone(band);
-    // granulação quente: o osso da referência puxa para o pêssego sob a luz das fitas
-    if (kind == 0 && crack < 0.1 && band >= 2) {
-      // placas quentes e frias: o pêssego vem por placa, não como ruído uniforme
-      float warm = tone > 0.45 ? 0.1 : 0.05;
-      if (speck > 0.5 && speck < 0.5 + warm) col = C_redGlow;
-      else if (speck > 0.65 && speck < 0.69) col = band == 3 ? C_stone3 : C_stoneHi;
-      else if (speck > 0.7 && speck < 0.7 + warm * 0.4) col = C_gold;
+    // calor raro nas placas mais claras (o pêssego da referência), sem virar ruído
+    if (kind == 0 && crack < 0.1 && band == 3 && tone > 0.55 && speck > 0.5 && speck < 0.525) col = C_redGlow;
+    // grão fino: pontos isolados de um tom vizinho, nunca manchas
+    if (kind == 0 && crack < 0.1 && !hot) {
+      if (band == 3 && speck > 0.3 && speck < 0.36) col = C_stone3;
+      else if (band == 2 && speck > 0.3 && speck < 0.35) col = C_stoneHi;
     }
   } else if (nO.y > 0.75) {
     // topo: pedra mais clara, musgo pontilhado onde o tom é alto
@@ -167,18 +169,20 @@ void main(){
     if (lit) col = bay < 0.5 ? C_crimson : C_crimsonDeep;
   } else if (abs(nO.x) > 0.75) {
     // laterais: granito vermelho profundo, mais escuro para trás e embaixo, salpico claro raro
-    float v = 0.17 + lam * 0.22 + (tone - 0.5) * 0.18 + vObj.z * 0.14 + min(vObj.y + uYBase, 3.0) * 0.02 + rl * 0.3;
+    // gradiente de luz: escuro embaixo e atrás, acende para cima e para a quina da frente
+    float v = 0.07 + lam * 0.2 + (tone - 0.5) * 0.1 + vObj.z * 0.14 + (vObj.y + uYBase) * 0.035 + rl * 0.3;
     float f = clamp(v, 0.0, 0.999) * 4.0;
     band = int(f) + (bay < fract(f) ? 1 : 0);
     // quina da frente acesa (fio vermelho vivo) e fundo da lateral em sombra funda
     if (vObj.z > 0.85) band += 1;
     if (vObj.z < -0.35 && bay < 0.6) band -= 1;
-    if (speck > 0.93) band += 1;
-    if (speck < 0.08) band -= 1;
+    // granito pontilhado: grãos claros e escuros finos
+    if (speck > 0.95) band += 1;
+    if (speck < 0.06) band -= 1;
     band = clamp(band, 0, 4);
     col = lit ? rampLitRed(band) : rampRed(band);
-    if (speck > 0.995) col = C_stoneHi;
-    else if (speck > 0.982) col = C_redGlow;
+    if (speck > 0.997) col = C_stoneHi;
+    else if (speck > 0.986) col = C_redGlow;
     if (crack > 0.9) col = tone > 0.6 ? C_void : C_blood0;
   } else {
     // bisel: degrau de luz que faz a geometria ler (lábio claro em cima/esquerda, escuro embaixo/direita)
@@ -694,7 +698,16 @@ export class Monument3D {
   private buildLeaves() {
     const r = mulberry32(4242)
     const front = D / 2 + 0.06
-    const add = (dig: number, piece: number, ax: number, ay: number, x: number, y: number, z: number, s: number) => {
+    const add = (
+      dig: number,
+      piece: number,
+      ax: number,
+      ay: number,
+      x: number,
+      y: number,
+      z: number,
+      s: number,
+    ) => {
       const [gx, gy, gz] = digitToGroup(dig, x, y, z)
       const m = new THREE.Matrix4().compose(
         new THREE.Vector3(gx, gy, gz),
@@ -721,13 +734,13 @@ export class Monument3D {
       }
       // touceiras derramando pela beira da frente
       for (let x = p.x0 + 0.2; x < p.x1 - 0.1; x += 0.4 + r() * 0.6) {
-        if (r() > 0.4) continue
+        if (r() > 0.65) continue
         const ty = topAt(p.pts, x)
         if (ty === null) continue
-        const n = 5 + Math.floor(r() * 8)
+        const n = 8 + Math.floor(r() * 10)
         for (let q = 0; q < n; q++) {
           const a2 = r() * Math.PI * 2
-          const d2 = Math.sqrt(r()) * 0.3
+          const d2 = Math.sqrt(r()) * 0.36
           add(
             dg,
             pi,
@@ -746,7 +759,7 @@ export class Monument3D {
         const x0 = p.x0 + 0.25 + r() * (w - 0.5)
         const ty = topAt(p.pts, x0)
         if (ty === null) continue
-        const len = 0.4 + r() * Math.min(2.4, ty - p.y0 + 0.8)
+        const len = 0.5 + r() * Math.min(2.6, ty - p.y0 + 0.8)
         const ph = r() * 6
         for (let k = 0; k * 0.17 < len; k++) {
           const y = ty - k * 0.17
@@ -754,7 +767,20 @@ export class Monument3D {
           const x = x0 + Math.sin(k * 0.8 + ph) * 0.1
           const s = (0.27 - t * 0.15) * (0.8 + r() * 0.4)
           add(dg, pi, x0, ty + 0.05, x, y, front + r() * 0.08, s)
-          if (r() < 0.6) add(dg, pi, x0, ty + 0.05, x + (r() - 0.5) * 0.35, y - r() * 0.1, front + 0.04, s * 0.8)
+          // cacho: mais folhas perto da borda, afinando para baixo
+          const extra = t < 0.35 ? 3 : 1
+          for (let q = 0; q < extra; q++)
+            if (r() < 0.75)
+              add(
+                dg,
+                pi,
+                x0,
+                ty + 0.05,
+                x + (r() - 0.5) * (0.5 - t * 0.3),
+                y - r() * 0.1,
+                front + 0.04,
+                s * 0.85,
+              )
         }
       }
       // trepadeira pela lateral direita (a face vermelha que a câmera vê)
@@ -763,8 +789,18 @@ export class Monument3D {
         const ty = topAt(p.pts, p.x1 - 0.02) ?? p.y1
         const len = 0.6 + r() * (ty - p.y0)
         for (let k = 0; k * 0.16 < len; k++) {
-          add(dg, pi, p.x1 - 0.05, ty + 0.05, p.x1 + 0.07, ty - k * 0.16, z0 + Math.sin(k * 0.7) * 0.2, 0.25 - (k * 0.16 * 0.1) / len)
-          if (r() < 0.5) add(dg, pi, p.x1 - 0.05, ty + 0.05, p.x1 + 0.09, ty - k * 0.16, z0 + (r() - 0.5) * 0.6, 0.18)
+          add(
+            dg,
+            pi,
+            p.x1 - 0.05,
+            ty + 0.05,
+            p.x1 + 0.07,
+            ty - k * 0.16,
+            z0 + Math.sin(k * 0.7) * 0.2,
+            0.25 - (k * 0.16 * 0.1) / len,
+          )
+          if (r() < 0.5)
+            add(dg, pi, p.x1 - 0.05, ty + 0.05, p.x1 + 0.09, ty - k * 0.16, z0 + (r() - 0.5) * 0.6, 0.18)
         }
       }
     })
@@ -963,9 +999,11 @@ export class Monument3D {
     if (topPiece) {
       const d = topPiece.def
       topPiece.mesh.updateMatrixWorld()
-      const v = new THREE.Vector3(FLAG_AT.x - (d.x0 + d.x1) / 2, FLAG_AT.y - d.y0 + 0.05, FLAG_AT.z).applyMatrix4(
-        topPiece.mesh.matrixWorld,
-      )
+      const v = new THREE.Vector3(
+        FLAG_AT.x - (d.x0 + d.x1) / 2,
+        FLAG_AT.y - d.y0 + 0.05,
+        FLAG_AT.z,
+      ).applyMatrix4(topPiece.mesh.matrixWorld)
       flag = this.project(v)
     }
     const crown = this.project(this.local(1, CROWN_AT.x, CROWN_AT.y, CROWN_AT.z))

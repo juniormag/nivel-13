@@ -1,8 +1,8 @@
 // Depois de cada fase: estrelas, XP subindo e a carta (ou cartas) de fato conquistada.
 // Momentos de compartilhar: 3 estrelas e, na fase 3, a economia do IR.
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
-import { playMusic, stinger } from '../../audio/audio'
+import { type RefObject, useEffect, useRef, useState } from 'react'
+import { playMusic, sfx, stinger } from '../../audio/audio'
 import { factById } from '../../content/facts'
 import { LEVELS } from '../../content/levels'
 import { ShareSheet } from '../../share/ShareSheet'
@@ -10,9 +10,11 @@ import type { Moment } from '../../share/types'
 import { levelsDone, useSave, XP_MAX, xpTotal } from '../../state/save'
 import { FactCard } from '../../ui/FactCard'
 import { fmt } from '../../ui/hooks'
-import { pop, rise, stagger } from '../../ui/motion'
+import { Banner, Corners, IconTile, StarRow, useBeats } from '../../ui/LevelCard'
+import { pop, prefersReduced, rise, stagger } from '../../ui/motion'
 import { PixelButton } from '../../ui/PixelButton'
-import { Screen, Stars } from '../../ui/Shell'
+import { haptic } from '../../ui/prefs'
+import { Screen } from '../../ui/Shell'
 import { XPBar } from '../../ui/XPBar'
 import { go, useNav } from '../nav'
 
@@ -39,6 +41,76 @@ function useEconomiaAno(monthly: number | null, enabled: boolean) {
 
 const cardKey = (lv: { n: number } | undefined, i: number) => (lv ? `${lv.n}:${i}` : '')
 
+/**
+ * XP que viaja: 6 orbes de ouro saem das estrelas e caem na ponta da barra em arco, em degraus;
+ * cada chegada toca uma moeda em escada. Chama onLand quando o último chega (ou já, sem movimento).
+ */
+function useXpFlight(
+  run: boolean,
+  from: RefObject<HTMLElement | null>,
+  to: RefObject<HTMLElement | null>,
+  layer: RefObject<HTMLElement | null>,
+  onLand: () => void,
+) {
+  const land = useRef(onLand)
+  land.current = onLand
+  useEffect(() => {
+    if (!run) return
+    const a = from.current?.getBoundingClientRect()
+    const b = to.current?.getBoundingClientRect()
+    const host = layer.current
+    const hb = host?.getBoundingClientRect()
+    if (!a || !b || !host || !hb || prefersReduced() || typeof Element.prototype.animate !== 'function') {
+      land.current()
+      return
+    }
+    const ax = Math.round(a.left + a.width / 2 - hb.left)
+    const ay = Math.round(a.top + a.height / 2 - hb.top)
+    const bx = Math.round(b.left + b.width - 6 - hb.left)
+    const by = Math.round(b.top + b.height / 2 - hb.top)
+    const els: HTMLElement[] = []
+    const timers: number[] = []
+    const N = 6
+    for (let i = 0; i < N; i++) {
+      const el = document.createElement('i')
+      el.className = 'mt-orb'
+      el.style.left = `${ax}px`
+      el.style.top = `${ay}px`
+      host.appendChild(el)
+      els.push(el)
+      const sx = (i - (N - 1) / 2) * 10
+      const dx = bx - ax
+      const dy = by - ay
+      el.animate(
+        [
+          { transform: 'translate(0px, 0px)', opacity: 0 },
+          { transform: `translate(${sx}px, -18px)`, opacity: 1, offset: 0.2 },
+          {
+            transform: `translate(${Math.round(dx * 0.6 + sx)}px, ${Math.round(dy * 0.4 - 26)}px)`,
+            offset: 0.6,
+          },
+          { transform: `translate(${dx}px, ${dy}px)`, opacity: 1 },
+        ],
+        { duration: 560, delay: i * 70, easing: 'steps(14, end)', fill: 'forwards' },
+      )
+      timers.push(
+        window.setTimeout(
+          () => {
+            el.remove()
+            sfx('coin', { combo: i })
+            if (i === N - 1) land.current()
+          },
+          560 + i * 70,
+        ),
+      )
+    }
+    return () => {
+      for (const t of timers) clearTimeout(t)
+      for (const el of els) el.remove()
+    }
+  }, [run, from, to, layer])
+}
+
 export default function Result() {
   const params = useNav((s) => s.params)
   const n = Number(params.level ?? 1)
@@ -48,6 +120,23 @@ export default function Result() {
   const [share, setShare] = useState<Moment | null>(null)
   const next = useRef<HTMLButtonElement>(null)
   const ano = useEconomiaAno(save.irMonthly, lv?.kind === 'ir')
+  // vindo da vitória, as estrelas já bateram lá: aqui elas só brilham. XP ganho vem por parâmetro.
+  const seen = !!params.seen
+  const gained = Math.max(0, Number(params.xp ?? 0) || 0)
+  const nStars = lv ? (save.stars[n - 1] ?? 0) : 0
+  const starTimes = seen ? [] : [380, 740, 1100].slice(0, Math.max(1, nStars))
+  const flyAt = (starTimes[starTimes.length - 1] ?? 200) + 280
+  const beats = useBeats([...starTimes, flyAt, flyAt + 900])
+  const flying = gained > 0 && beats.stage >= starTimes.length + 1 && !beats.skipped
+  const [landed, setLanded] = useState(false)
+  const starsRef = useRef<HTMLDivElement>(null)
+  const barRef = useRef<HTMLDivElement>(null)
+  const layerRef = useRef<HTMLDivElement>(null)
+  useXpFlight(flying, starsRef, barRef, layerRef, () => {
+    setLanded(true)
+    haptic('success')
+  })
+  const xpLanded = landed || beats.skipped || gained === 0
 
   useEffect(() => {
     if (!lv) {
@@ -69,22 +158,46 @@ export default function Result() {
   const facts = lv.facts.map(factById).filter((f) => !!f)
   const f = facts[i]
   const isLast = i >= facts.length - 1
-  const stars = save.stars[n - 1] ?? 0
+  const stars = nStars
   const score = save.best[n - 1] ?? 0
   const done = levelsDone(save)
 
   return (
     <Screen world={done / 13} className="scr--page">
       <motion.div className="res" variants={stagger(0.06, 0.05)} initial="hidden" animate="show">
-        <motion.header className="res-head" variants={rise}>
-          <div className="eyebrow">
-            Fase {n} concluída · {done}/13
+        <motion.header
+          className="res-head mt-res-head"
+          variants={rise}
+          onPointerDownCapture={beats.onPointerDownCapture}
+        >
+          <Corners />
+          <div className="mt-res-banner">
+            <Banner size="sm">Fase {n} concluída</Banner>
+            <span className="mt-res-count">{done}/13</span>
           </div>
           <h1>{lv.title}</h1>
-          <Stars n={stars} reveal />
-          <div className="res-xp">
-            <XPBar value={xpTotal(save)} max={XP_MAX} label="Experiência total" sound />
+          <div ref={starsRef} className={seen ? 'mt-glint' : ''}>
+            <StarRow
+              n={stars}
+              landed={seen ? stars : beats.stage}
+              instant={seen || beats.skipped}
+              size="mid"
+            />
           </div>
+          <div className={`res-xp mt-res-xp${landed ? ' is-land' : ''}`} ref={barRef}>
+            <XPBar
+              value={xpLanded ? xpTotal(save) : xpTotal(save) - gained}
+              max={XP_MAX}
+              label="Experiência total"
+              sound
+            />
+            {gained > 0 && (
+              <span className={`mt-xpchip${xpLanded ? ' mt-xpchip--pop' : ' is-wait'}`}>
+                +{fmt(gained)} XP
+              </span>
+            )}
+          </div>
+          <div ref={layerRef} className="mt-orbs" aria-hidden="true" />
         </motion.header>
 
         {facts.length > 1 && (
@@ -102,8 +215,16 @@ export default function Result() {
               animate="show"
               exit="exit"
               style={{ width: '100%' }}
+              className="mt-reward"
             >
-              <FactCard fact={f} />
+              <div className="mt-reward-kicker">
+                <IconTile name="cards" tone="gold" />
+                <span>{i === 0 ? 'Fato conquistado' : 'Mais um fato'}</span>
+              </div>
+              <div className="mt-reward-card">
+                <Corners />
+                <FactCard fact={f} />
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -142,7 +263,14 @@ export default function Result() {
               ref={next}
               tone="red"
               size="big"
-              onClick={() => (n < 13 ? go('play', { level: n + 1 }) : go('final'))}
+              onClick={() =>
+                n >= 13
+                  ? go('final')
+                  : save.onboarded
+                    ? go('play', { level: n + 1 })
+                    : // primeiro fato visto: agora sim, o personagem (e o onboarding segue para a próxima fase)
+                      go('onboard', { next: n + 1 })
+              }
             >
               {n < 13 ? `Fase ${n + 1} ▶` : 'Final ▶'}
             </PixelButton>

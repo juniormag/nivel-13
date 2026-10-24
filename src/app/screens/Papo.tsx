@@ -3,7 +3,7 @@
 // Nada é gravado: nem quem, nem a preocupação, nem o texto.
 import '../../viral/viral.css'
 import { motion } from 'motion/react'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { CONFIG } from '../../config'
 import { dailyNumber } from '../../lib/time'
 import { getSave } from '../../state/save'
@@ -101,6 +101,16 @@ export default function Papo() {
   const [concern, setConcern] = useState<Concern | null>(null)
   const [text, setText] = useState('')
   const msgId = useId()
+  const msgRef = useRef<HTMLDivElement>(null)
+  // no celular a mensagem e o botão de mandar nascem abaixo da dobra: a primeira escolha leva até eles
+  const revealMsg = () => {
+    const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        msgRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' }),
+      ),
+    )
+  }
 
   useEffect(() => ev('papo_open'), [])
 
@@ -144,6 +154,7 @@ export default function Papo() {
             aria-pressed={concern === c.id}
             vibe="move"
             onClick={() => {
+              if (!concern) revealMsg()
               setConcern(c.id)
               choose(c.id, who)
               ev('papo_concern', c.id)
@@ -155,7 +166,14 @@ export default function Papo() {
       </motion.fieldset>
 
       {concern ? (
-        <motion.div className="field" key={concern} initial="hidden" animate="show" variants={rise}>
+        <motion.div
+          ref={msgRef}
+          className="field"
+          key={concern}
+          initial="hidden"
+          animate="show"
+          variants={rise}
+        >
           <label htmlFor={msgId}>Sua mensagem</label>
           <textarea
             id={msgId}

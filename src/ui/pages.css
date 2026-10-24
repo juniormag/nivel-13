@@ -131,12 +131,7 @@
   bottom: calc(76px + var(--safe-b));
   width: 330px;
 }
-.t-skills {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(40px + var(--safe-b));
-}
+
 .t-mini {
   position: absolute;
   right: calc(40px + var(--safe-r));
@@ -175,8 +170,7 @@
     font-size: 20px;
   }
   .title .xp-text,
-  .title .stat-label,
-  .title .skill-name {
+  .title .stat-label {
     font-size: 14px;
   }
   .title .stat-num {
@@ -203,11 +197,7 @@
     width: 300px;
     --cmd-fs: 16px;
   }
-  .t-skills {
-    --skill-gap: 16px;
-    --skill-icon: 48px;
-    --skill-pad: 8px;
-  }
+
   .t-mini {
     --mm-size: 128px;
   }
@@ -225,9 +215,6 @@
     --stat-w: 70px;
     --stat-h: 6px;
     --cmd-fs: 15px;
-    --skill-icon: 48px;
-    --skill-pad: 6px;
-    --skill-gap: 18px;
   }
   .t-player {
     left: calc(14px + var(--safe-l));
@@ -280,7 +267,7 @@
     left: calc(28px + var(--safe-l));
     right: calc(16px + var(--safe-r));
     width: auto;
-    bottom: calc(144px + var(--safe-b));
+    bottom: calc(56px + var(--safe-b));
   }
   .cmd-item {
     min-height: 44px;
@@ -289,18 +276,7 @@
   .cmd ul {
     gap: 0;
   }
-  .t-skills {
-    bottom: calc(46px + var(--safe-b));
-  }
-  .skill {
-    gap: 5px;
-  }
-  .skill-name {
-    font-size: 12px;
-  }
-  .skill-lock {
-    font-size: 12px;
-  }
+
   .t-mini {
     display: none;
   }
@@ -317,9 +293,22 @@
       linear-gradient(
         to top,
         color-mix(in srgb, var(--void) 88%, transparent) 0,
-        color-mix(in srgb, var(--void) 60%, transparent) 38%,
-        transparent 50%
+        color-mix(in srgb, var(--void) 60%, transparent) 26%,
+        transparent 40%
       );
+  }
+}
+
+/* Celular estreito (360 px): a barra de XP não encosta nos corações; com 7 itens no menu, ele desce até
+   perto do rodapé legal para o monumento continuar à mostra */
+@media (max-width: 380px) and (orientation: portrait) {
+  .title {
+    --xp-w: 128px;
+  }
+}
+@media (max-width: 720px) and (max-height: 760px) and (orientation: portrait) {
+  .t-menu {
+    bottom: calc(46px + var(--safe-b));
   }
 }
 
@@ -332,9 +321,6 @@
     --stat-w: 64px;
     --stat-h: 6px;
     --cmd-fs: 13px;
-    --skill-icon: 32px;
-    --skill-pad: 6px;
-    --skill-gap: 10px;
   }
   .t-player {
     left: calc(14px + var(--safe-l));
@@ -386,28 +372,7 @@
   .cmd ul {
     gap: 0;
   }
-  .t-skills {
-    left: auto;
-    transform: none;
-    right: calc(14px + var(--safe-r));
-    bottom: calc(30px + var(--safe-b));
-  }
-  .t-skills .skill-name {
-    display: none;
-  }
-  .t-skills .skill-lock span:first-child {
-    display: none;
-  }
-  .skill {
-    gap: 4px;
-  }
-  .skill-name {
-    font-size: 12px;
-  }
-  .skill-lock {
-    font-size: 12px;
-    letter-spacing: 0;
-  }
+
   .t-legal {
     font-size: 12px;
     bottom: calc(4px + var(--safe-b));
@@ -1170,4 +1135,14 @@
   font-size: 17px;
   line-height: 1.4;
   margin: 0;
+}
+
+/* ação principal sempre à vista quando a folha rola (paisagem e telas baixas): o botão gruda no pé */
+.page .actions--sticky {
+  position: sticky;
+  bottom: -24px;
+  z-index: 1;
+  margin: 0 -24px -24px;
+  padding: 12px 24px 24px;
+  background: linear-gradient(to bottom, transparent, var(--pf-fill, var(--night)) 14px);
 }

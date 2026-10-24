@@ -334,137 +334,6 @@ canvas {
   outline-offset: 2px;
 }
 
-/* ---------- SkillBar ---------- */
-.skills {
-  display: flex;
-  gap: var(--skill-gap, 26px);
-  align-items: flex-start;
-}
-.skill {
-  appearance: none;
-  border: 0;
-  background: none;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  color: var(--stone-hi);
-  font-family: var(--f-hud);
-  text-transform: uppercase;
-}
-.skill[aria-disabled="true"] {
-  cursor: default;
-}
-.skill-tile {
-  --pf-w: var(--hair, 2px);
-  position: relative;
-  display: block;
-  padding: var(--skill-pad, 10px);
-  background: var(--night);
-  box-shadow:
-    0 calc(var(--pf-w) * -1) 0 0 var(--stone-3),
-    0 var(--pf-w) 0 0 var(--stone-3),
-    calc(var(--pf-w) * -1) 0 0 0 var(--stone-3),
-    var(--pf-w) 0 0 0 var(--stone-3),
-    inset 0 0 0 var(--pf-w) var(--void),
-    0 calc(var(--px) * 3) 0 calc(var(--pf-w) * -1) var(--void);
-}
-.skill-tile::before {
-  content: "";
-  position: absolute;
-  left: calc(var(--pf-w) * 3);
-  top: calc(var(--pf-w) * 3);
-  width: calc(var(--pf-w) * 3);
-  height: calc(var(--pf-w) * 3);
-  border-left: var(--pf-w) solid var(--stone-3);
-  border-top: var(--pf-w) solid var(--stone-3);
-  z-index: 1;
-}
-.skill-icon {
-  display: block;
-  width: var(--skill-icon, 64px);
-  height: var(--skill-icon, 64px);
-}
-.skill-name {
-  font-size: 12px;
-  letter-spacing: 0.05em;
-  text-shadow: var(--shadow-text);
-}
-.skill-key {
-  min-width: 22px;
-  height: 22px;
-  font-size: 12px;
-}
-.skill-corner {
-  display: none;
-  position: absolute;
-  right: 2px;
-  bottom: 2px;
-  font-size: 12px;
-  line-height: 1;
-  padding: 2px 3px;
-  background: var(--void);
-  color: var(--stone-3);
-}
-.skill.is-ready .skill-icon {
-  animation: skillpulse 2.4s steps(1) infinite;
-}
-@keyframes skillpulse {
-  0%,
-  92% {
-    filter: none;
-  }
-  94% {
-    filter: brightness(1.6);
-  }
-}
-.skill.is-locked .skill-icon,
-.skill.is-used .skill-icon {
-  filter: grayscale(1) brightness(0.32);
-  animation: none;
-}
-.skill.is-locked .skill-name,
-.skill.is-used .skill-name {
-  color: var(--stone-2);
-}
-.skill-lock {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  color: var(--stone-3);
-  text-shadow: var(--shadow-text);
-}
-.skill:hover:not([aria-disabled="true"]) .skill-tile {
-  box-shadow:
-    0 calc(var(--pf-w) * -1) 0 0 var(--stone-hi),
-    0 var(--pf-w) 0 0 var(--stone-hi),
-    calc(var(--pf-w) * -1) 0 0 0 var(--stone-hi),
-    var(--pf-w) 0 0 0 var(--stone-hi),
-    inset 0 0 0 var(--pf-w) var(--void),
-    0 calc(var(--px) * 3) 0 calc(var(--pf-w) * -1) var(--void);
-}
-.skill:focus-visible {
-  outline: none;
-}
-.skill:focus-visible .skill-tile {
-  outline: var(--hair, 2px) solid var(--gold-hi);
-  outline-offset: 4px;
-}
-@media (pointer: coarse) {
-  .skill-corner {
-    display: block;
-  }
-  .skill-key {
-    display: none;
-  }
-}
-
 /* ---------- Minimap ---------- */
 .minimap {
   margin: 0;
@@ -919,41 +788,7 @@ canvas {
 .pause-btn:hover i {
   background: var(--gold-hi);
 }
-.play-skills {
-  position: absolute;
-  left: 50%;
-  bottom: calc(10px + var(--safe-b));
-  transform: translateX(-50%);
-  flex-direction: row;
-  --skill-gap: 14px;
-  --skill-icon: 32px;
-  --skill-pad: 6px;
-  --hair: 2px;
-}
-.play-skills .skill {
-  gap: 4px;
-}
-.play-skills .skill-name {
-  font-size: 12px;
-}
-.play-skills .skill-key {
-  display: none;
-}
-.play-skills .skill-corner {
-  display: block;
-  font-size: 12px;
-}
-.play-skills .skill-lock {
-  font-size: 12px;
-  letter-spacing: 0;
-}
-.skill.is-na .skill-icon {
-  filter: grayscale(1) brightness(0.45);
-  animation: none;
-}
-.skill.is-na .skill-name {
-  color: var(--stone-2);
-}
+
 @media (min-width: 1000px) and (min-height: 640px) {
   .play-top {
     padding: calc(16px + var(--safe-t)) calc(24px + var(--safe-r)) 18px calc(24px + var(--safe-l));
@@ -972,27 +807,11 @@ canvas {
   .score {
     font-size: 24px;
   }
-  .play-skills {
-    --skill-icon: 64px;
-    --skill-pad: 8px;
-    --skill-gap: 22px;
-    bottom: calc(16px + var(--safe-b));
-  }
-  .play-skills .skill-name {
-    font-size: 12px;
-  }
-  .play-skills .skill-corner {
-    font-size: 12px;
-  }
-  .play-skills .skill-lock {
-    font-size: 12px;
-  }
 }
 
 /* ---------- toque em pixel nativo (x-craft §2, regra 2) ----------
    pressionar: desce 1 px lógico e troca o bisel num quadro; soltar: volta em 120 ms */
 .btn,
-.skill-tile,
 .cmd-item,
 .tab,
 .av,
@@ -1023,7 +842,6 @@ canvas {
   box-shadow: none;
   background: var(--dusk);
 }
-.skill[data-pressed] .skill-tile,
 .cmd-item[data-pressed],
 .tab[data-pressed],
 .av[data-pressed],
@@ -1034,19 +852,13 @@ canvas {
 .pause-btn[data-pressed] {
   transform: translateY(var(--hair, 2px));
 }
-.skill[data-pressed] .skill-tile {
-  background: var(--dusk);
-}
 
-/* habilidade bloqueada: "FASE" em cima do número, cabe no ladrilho */
-.skill-lock {
-  flex-direction: column;
-  line-height: 1.1;
-  text-align: center;
-}
-@media (max-width: 999px), (max-height: 639px) {
-  .play-skills .skill-name,
-  .play-skills .skill-lock span:first-child {
+/* celular em pé: o número da fase já está na intro; no HUD fica só o nome, sem corte */
+@media (max-width: 479px) {
+  .play-title-n {
     display: none;
+  }
+  .play-title {
+    letter-spacing: 0.03em;
   }
 }

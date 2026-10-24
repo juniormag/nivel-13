@@ -56,9 +56,9 @@ export interface MicroGame {
   move?(x: number, y: number): void
   up?(x: number, y: number): void
   key?(k: string, down: boolean): void
-  /** LEMBRAR: mostra a resposta; false se não fez nada */
+  /** opcional e sem uso desde que as habilidades saíram: mostra a resposta; false se não fez nada */
   hint?(): boolean
-  /** CHECAR: limpa as ameaças */
+  /** opcional e sem uso desde que as habilidades saíram: limpa as ameaças */
   clear?(): boolean
   /** fim do tempo: retorna se venceu */
   timeUp?(): boolean
