@@ -36,7 +36,8 @@ export default function Title() {
       label: done === 0 ? 'Jogar' : done < 13 ? 'Continuar' : 'Rejogar',
       hint: done < 13 ? `${lvl}/13` : '13/13',
       hintLabel: done < 13 ? `fase ${lvl} de 13` : 'todas as 13 fases feitas',
-      onSelect: () => go(s.onboarded ? 'map' : 'onboard'),
+      // primeiro acesso: Jogar → Começar (2 toques); o personagem é pedido depois do primeiro fato
+      onSelect: () => (done === 0 ? go('play', { level: 1 }) : go(s.onboarded ? 'map' : 'onboard')),
     },
     {
       id: 'chuta',

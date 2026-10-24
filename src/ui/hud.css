@@ -852,3 +852,13 @@ canvas {
 .pause-btn[data-pressed] {
   transform: translateY(var(--hair, 2px));
 }
+
+/* celular em pé: o número da fase já está na intro; no HUD fica só o nome, sem corte */
+@media (max-width: 479px) {
+  .play-title-n {
+    display: none;
+  }
+  .play-title {
+    letter-spacing: 0.03em;
+  }
+}

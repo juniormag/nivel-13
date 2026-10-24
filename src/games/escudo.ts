@@ -375,7 +375,12 @@ export default function escudo(): MicroGame {
             miss = { a: s.a, t: c.time - 0.2 }
             missLong = true
             c.sfx('error', { x })
-            c.fx.float('BLOQUEIE AQUI', Math.round(cx + Math.cos(s.a) * (R + 16)), Math.round(cy + Math.sin(s.a) * (R + 16)), P.goldHi)
+            c.fx.float(
+              'BLOQUEIE AQUI',
+              Math.round(cx + Math.cos(s.a) * (R + 16)),
+              Math.round(cy + Math.sin(s.a) * (R + 16)),
+              P.goldHi,
+            )
           } else c.hit(x, y)
           continue
         }
@@ -404,7 +409,9 @@ export default function escudo(): MicroGame {
               for (let q = -k; q <= k; q++) {
                 const px = Math.round(x - ca * k + -sa * q)
                 const py = Math.round(y - sa * k + ca * q)
-                warn.rect(px, py, 1, 1).fill(k === 0 ? (urgent ? P.white : P.redHot) : urgent ? P.redHot : P.red)
+                warn
+                  .rect(px, py, 1, 1)
+                  .fill(k === 0 ? (urgent ? P.white : P.redHot) : urgent ? P.redHot : P.red)
               }
             warn.rect(Math.round(x + ca * 2), Math.round(y + sa * 2), 1, 1).fill(P.blood0)
           }

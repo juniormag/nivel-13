@@ -263,7 +263,14 @@ export default function Result() {
               ref={next}
               tone="red"
               size="big"
-              onClick={() => (n < 13 ? go('play', { level: n + 1 }) : go('final'))}
+              onClick={() =>
+                n >= 13
+                  ? go('final')
+                  : save.onboarded
+                    ? go('play', { level: n + 1 })
+                    : // primeiro fato visto: agora sim, o personagem (e o onboarding segue para a próxima fase)
+                      go('onboard', { next: n + 1 })
+              }
             >
               {n < 13 ? `Fase ${n + 1} ▶` : 'Final ▶'}
             </PixelButton>
