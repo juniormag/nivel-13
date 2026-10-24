@@ -84,6 +84,8 @@ export const EVENTS = new Set([
   'plano_create',
   'streak_freeze',
   'jornada_from_daily',
+  'fallback_shown',
+  'save_click',
 ])
 const EV_KEY = /^[a-z0-9_:.=+-]{0,24}$/
 const SURFACE = /^[a-z0-9_]{1,16}$/

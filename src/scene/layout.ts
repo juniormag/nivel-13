@@ -70,6 +70,6 @@ export function layoutFor(W: number, H: number): Layout {
     hillTop: baseY,
     moon: { x: Math.round(W * 0.17), y: Math.round(H * 0.24), r: Math.max(12, Math.round(H * 0.085)) },
     sugar: { x: Math.round(W * 0.17), h: Math.round(H * 0.15) },
-    corc: { x: Math.round(W * 0.88), peak: Math.round(H * 0.34), half: Math.round(W * 0.13) },
+    corc: { x: Math.round(W * 0.88), peak: Math.round(H * 0.4), half: Math.round(W * 0.13) },
   }
 }

@@ -1482,6 +1482,92 @@
   .cx-big-v {
     font-size: 52px;
   }
+  .cx-hud-r span,
+  .cx-big-k,
+  .cx-big-u,
+  .cx-scale,
+  .cx-pts-num small,
+  .cx-src-k,
+  .cx-crowd-k {
+    font-size: 12px;
+  }
+  .cx-card-head,
+  .cx-banner {
+    font-size: 13px;
+  }
+  .cx-dist {
+    font-size: 21px;
+  }
+  .cx-fact,
+  .cx-page p,
+  .cx-group p {
+    font-size: 19px;
+  }
+  .cx-src-n,
+  .cx-crowd p,
+  .cx-share-sub,
+  .cx-ans-q {
+    font-size: 17px;
+  }
+  .cx-pts-num b {
+    font-size: 34px;
+  }
+  .cx-opt {
+    font-size: 22px;
+  }
+  .eyebrow,
+  .cx-duel h2,
+  .cx-group h2,
+  .cx-share h2,
+  .cx-lc-k,
+  .cx-res-stats dt,
+  .cx-answers h2,
+  .cx-page h2,
+  .cx-chips legend,
+  .cx-teaser {
+    font-size: 13px;
+  }
+  .cx-res-total b {
+    font-size: 76px;
+  }
+  .cx-res-total small {
+    font-size: 22px;
+  }
+  .cx-res-grid .cx-tile {
+    width: 52px;
+    height: 52px;
+  }
+  .cx-res-stats {
+    max-width: 420px;
+  }
+  .cx-res-stats b {
+    font-size: 20px;
+  }
+  .cx-bar i {
+    width: 14px;
+    height: 10px;
+  }
+  .cx-duel-verdict {
+    font-size: 20px;
+  }
+  .cx-duel-total {
+    font-size: 34px;
+  }
+  .cx-duel-name {
+    font-size: 13px;
+  }
+  .cx-lc-t {
+    font-size: 18px;
+  }
+  .cx-share-row .btn {
+    font-size: 14px;
+  }
+  .cx-page-head h1 {
+    font-size: 26px;
+  }
+  .cx-chips .chip {
+    font-size: 13px;
+  }
 }
 
 /* ---------- movimento reduzido: corte seco, cor no lugar de movimento ---------- */

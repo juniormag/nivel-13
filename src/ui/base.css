@@ -570,11 +570,14 @@ select.input {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   width: min(560px, calc(100vw - 24px));
 }
 .timeline-slots .slot {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
   min-height: 46px;
   background: var(--night);
   box-shadow: 0 0 0 var(--px) var(--stone-1);
@@ -633,9 +636,9 @@ select.input {
 }
 
 .boss-ui {
+  /* a altura (bottom/top) vem do jogo, ancorada acima da barra de habilidades */
   position: absolute;
   left: 50%;
-  bottom: calc(108px + var(--safe-b));
   transform: translateX(-50%);
   width: min(520px, calc(100vw - 24px));
   display: flex;
@@ -758,5 +761,12 @@ select.input {
     animation-duration: 0.001s !important;
     animation-iteration-count: 1 !important;
     transition: none !important;
+  }
+}
+
+/* linha do tempo em 2 fileiras de 3 no celular */
+@media (max-width: 480px) {
+  .timeline-slots .slot {
+    flex: 1 1 calc(33.333% - 4px);
   }
 }

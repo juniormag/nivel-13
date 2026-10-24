@@ -106,7 +106,7 @@ export class Monument2D {
     const spec = RINGS[i]
     if (!spec) return
     const head = this.head[i] ?? 0
-    const N = 240
+    const N = Math.ceil(Math.PI * 2 * spec.R * this.ppu * 1.6)
     for (let k = 0; k < N; k++) {
       const tt = k / N
       const s = ((((head - tt) % 1) + 1) % 1) / spec.arc
