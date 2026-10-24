@@ -41,6 +41,11 @@ export const useTio = create<TioState>()(
         })
       },
     }),
-    { name: 'nivel13:tio', storage: safe, version: 1, partialize: (s) => ({ convinced: s.convinced, best: s.best }) },
+    {
+      name: 'nivel13:tio',
+      storage: safe,
+      version: 1,
+      partialize: (s) => ({ convinced: s.convinced, best: s.best }),
+    },
   ),
 )

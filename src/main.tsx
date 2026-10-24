@@ -4,8 +4,8 @@ import './ui/global.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
-import { unlockAudio } from './audio/audio'
 import { go, initHistory } from './app/nav'
+import { unlockAudio } from './audio/audio'
 
 addEventListener('pointerdown', () => unlockAudio(), { once: true })
 addEventListener('keydown', () => unlockAudio(), { once: true })

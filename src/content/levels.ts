@@ -131,7 +131,7 @@ export const LEVELS: Level[] = [
     lon: -43.2,
     lat: -22.9,
     kind: 'memoria',
-    intro: 'Jogo da memória: ligue cada ano ao que aconteceu. Tudo com fonte.',
+    intro: 'Jogo da memória: ligue cada pista ao fato. Tudo com fonte.',
     how: ['Vire duas cartas', 'Ano + fato = par'],
     facts: ['rachadinha', 'mansao'],
     theme: { top: '#0a0a10', mid: '#2a1016', ground: '#160c10' },

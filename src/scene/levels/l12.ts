@@ -119,7 +119,12 @@ const p12: Painter = (c) => {
       )
   }
   // Gasômetro (marco) à esquerda e a cidade à direita
-  gasometro(c, Math.round(W * (portrait ? 0.14 : 0.16)), hz + Math.round(u * 2), u * (portrait ? 0.75 : 0.95))
+  gasometro(
+    c,
+    Math.round(W * (portrait ? 0.14 : 0.16)),
+    hz + Math.round(u * 2),
+    (H * (portrait ? 0.26 : 0.34)) / 51,
+  )
   city(c, W * 0.62, W, () => hz + 1, u * 2, u * 9, 'mid', 124, 0.15)
   city(c, W * 0.72, W, () => hz + Math.round(u * 2), u * 2, u * 6, 'lit', 125, 0.3)
   strokes(c, hz + wh + 1, deep, [

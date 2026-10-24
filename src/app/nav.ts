@@ -2,6 +2,7 @@
 // O histórico espelha as telas: cada entrada guarda { screen, i }. Fase e resultado trocam a entrada
 // um do outro (não empilham), então voltar de uma fase leva ao mapa e voltar do mapa leva ao início.
 // Voltar com a fase rodando só pausa: um gesto de borda sem querer não joga a partida fora.
+import { useEffect, useRef } from 'react'
 import { create } from 'zustand'
 import { usePlay } from '../state/play'
 
@@ -32,7 +33,7 @@ export interface NavState {
   go(screen: Screen, params?: Record<string, unknown>, opts?: { replace?: boolean }): void
 }
 
-type Entry = { screen: Screen; i: number }
+type Entry = { screen: Screen; i: number; overlay?: boolean }
 const inGame = (s: Screen) => s === 'play' || s === 'result'
 
 // telas por posição no histórico desta aba (stack[i] = tela da entrada i)
@@ -86,6 +87,39 @@ export const useNav = create<NavState>((set, get) => ({
   },
 }))
 
+// folhas e diálogos abertos (o último fecha primeiro com o voltar)
+const overlays: (() => void)[] = []
+
+/** Voltar do Android fecha a folha/diálogo aberto em vez de sair da tela embaixo dela. */
+export function useBackClose(open: boolean, onClose: () => void) {
+  const close = useRef(onClose)
+  close.current = onClose
+  useEffect(() => {
+    if (!open) return
+    const cur = useNav.getState().screen
+    const fn = () => close.current()
+    idx++
+    stack.length = idx
+    stack.push(cur)
+    write('push', { screen: cur, i: idx, overlay: true })
+    overlays.push(fn)
+    return () => {
+      const k = overlays.indexOf(fn)
+      if (k < 0) return // já fechou pelo voltar
+      overlays.splice(k, 1)
+      // fechou pelo botão: tira do histórico a entrada que a folha criou
+      if (useNav.getState().screen === cur && (history.state as Entry | null)?.overlay) {
+        idx--
+        try {
+          history.back()
+        } catch {
+          /* ignora */
+        }
+      }
+    }
+  }, [open])
+}
+
 export const go = (screen: Screen, params?: Record<string, unknown>, opts?: { replace?: boolean }) =>
   useNav.getState().go(screen, params, opts)
 
@@ -96,6 +130,12 @@ addEventListener('popstate', (e) => {
   const cur = useNav.getState().screen
   // já estamos nessa tela (go() voltou o histórico por conta própria)
   if (i === idx && target === cur) return
+  // voltar com uma folha aberta: fecha só a folha
+  if (overlays.length && i < idx) {
+    idx = i
+    overlays.pop()?.()
+    return
+  }
   // voltar durante a fase: pausa e recoloca a entrada da fase; um segundo voltar (com a pausa aberta) sai
   if (cur === 'play' && i < idx && usePlay.getState().phase === 'run') {
     write('push', { screen: 'play', i: idx })

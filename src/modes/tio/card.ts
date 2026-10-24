@@ -38,7 +38,12 @@ const SCALE = 6
 
 const WHITE: Ink[] = ['white', 'stoneHi', 'stoneHi', 'stone3']
 const GOLD: Ink[] = ['goldHi', 'gold', 'gold', 'gold1']
-const big = (fill: Ink[], k: number): Paint => ({ fill, outline: 'void', shadow: 'blood0', shadowDy: Math.max(1, k) })
+const big = (fill: Ink[], k: number): Paint => ({
+  fill,
+  outline: 'void',
+  shadow: 'blood0',
+  shadowDy: Math.max(1, k),
+})
 const small = (fill: Ink | Ink[]): Paint => ({ fill, outline: 'void' })
 
 const CHECK = ['........X', '.......XX', '......XX.', 'X....XX..', 'XX..XX...', '.XXXX....', '..XX.....']
@@ -184,7 +189,14 @@ async function render(d: TioCardData, fmt: TioFormat) {
   const LH = 4.5
   const hgt = CAP + 4 + 9 + legal.length * LH
   let fy0 = story ? Math.min(257 - hgt, Math.max(213, y + 2)) : Math.round(H - 4 - hgt)
-  shade(g, 0, Math.max(0, Math.round(fy0) - 6), W, Math.min(H, Math.round(hgt) + 12), (t) => 0.7 * Math.min(1, t * 3))
+  shade(
+    g,
+    0,
+    Math.max(0, Math.round(fy0) - 6),
+    W,
+    Math.min(H, Math.round(hgt) + 12),
+    (t) => 0.7 * Math.min(1, t * 3),
+  )
   const cta = `DUVIDO VOCÊ CONVENCER ${art_} ${name}:`
   const ctaLines = silkWidth(cta) <= x1 - x0 ? [cta] : [`DUVIDO VOCÊ CONVENCER`, `${art_} ${name}:`]
   if (ctaLines.length > 1) fy0 -= CAP + 3

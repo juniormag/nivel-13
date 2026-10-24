@@ -2,7 +2,11 @@
 // Tudo marcado como exemplo, sem número e sem afirmação factual: serve para ver a interface, nunca vai ao ar.
 import type { Parente, TioMsg } from '../../content/tio'
 
-const SRC = { name: 'Exemplo de fonte (fixture de desenvolvimento)', url: 'https://example.com/', date: 'exemplo' }
+const SRC = {
+  name: 'Exemplo de fonte (fixture de desenvolvimento)',
+  url: 'https://example.com/',
+  date: 'exemplo',
+}
 
 export const FIX_PARENTES: Parente[] = [
   {

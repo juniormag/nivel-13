@@ -111,7 +111,7 @@ export default function Onboard() {
             Sem cadastro e sem telefone. O apelido aparece no placar; o estado entra só na contagem por
             estado.
           </motion.p>
-          <motion.div className="actions actions--end" variants={rise}>
+          <motion.div className="actions actions--end actions--sticky" variants={rise}>
             <PixelButton tone="ghost" commit="back" onClick={() => go('title')}>
               Voltar
             </PixelButton>

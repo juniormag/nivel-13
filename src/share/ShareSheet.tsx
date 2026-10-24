@@ -3,6 +3,7 @@
 // O PNG é gerado assim que a folha abre: no toque, navigator.share é a primeira chamada (ativação do iOS).
 import './share.css'
 import { type KeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useBackClose } from '../app/nav'
 import { CONFIG, responsavelText } from '../config'
 import { shareLink } from '../state/save'
 import {
@@ -93,6 +94,8 @@ export function ShareSheet({ moment, onClose }: { moment: Moment; onClose: () =>
   const caps = useMemo(() => shareCaps(cur?.file ?? null), [cur])
   const canClip = moment.kind === 'nivel13' && clipSupported()
   const title = titleOf(moment)
+  // voltar do Android fecha a folha, não a tela de baixo
+  useBackClose(true, onClose)
 
   // pré-render: o formato escolhido primeiro, o outro logo depois
   useEffect(() => {

@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { type ReactNode, useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { useBackClose } from '../app/nav'
 import { sfx } from '../audio/audio'
 import { fade, pop } from './motion'
 import { Tap } from './PixelButton'
@@ -81,6 +82,7 @@ export function Dialog({
   className?: string
 }) {
   const box = useFocusTrap(open, onClose)
+  useBackClose(open, onClose)
   const id = useId()
   return createPortal(
     <AnimatePresence>

@@ -176,8 +176,10 @@ export function RoundView({
           <motion.header className="cx-card-head" variants={rise}>
             <PixelIcon src={sprite(round.icon)} className="cx-ico" />
             <span className="cx-theme">{round.theme}</span>
-            <span className="cx-weight" title={`vale ${w} vezes`}>
-              ×{w}
+            {/* sem hover no celular: o peso se explica no próprio rótulo */}
+            <span className="cx-weight">
+              <span aria-hidden="true">vale ×{w}</span>
+              <span className="sr-only">esta rodada vale {w} vezes</span>
             </span>
           </motion.header>
           <motion.h2 id={qid} className="cx-q" variants={rise}>

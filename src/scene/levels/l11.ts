@@ -201,7 +201,7 @@ const p11: Painter = (c) => {
   ])
   // portêineres (marco) e pilhas no cais, nas bordas
   const k = (H * (portrait ? 0.34 : 0.4)) / 34
-  porteiner(c, Math.round(W * (portrait ? 0.7 : 0.8)), quay, k, true, portrait ? 0.45 : 1)
+  porteiner(c, Math.round(W * (portrait ? 0.8 : 0.8)), quay, k, true, portrait ? 0.22 : 1)
   if (!portrait) porteiner(c, Math.round(W * 0.06), quay, k * 0.85, false, 0.6)
   pilha(c, Math.round(W * (portrait ? 0.66 : 0.8)), quay, 3, 3, u * 0.7, 3, -1)
   pilha(c, Math.round(-u * 2), quay, 3, 3, u * 0.7, 5, 1)

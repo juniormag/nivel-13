@@ -1,4 +1,4 @@
-// Fase 9 · Siga o Dinheiro: jogo da memória ligando cada ano ao fato documentado.
+// Fase 9 · Siga o Dinheiro: jogo da memória ligando cada pista ao fato documentado.
 // Cartas em DOM (.grid-cards/.mcard) sobre um quadro de cortiça em Pixi; cada par certo é ligado por um
 // barbante vermelho e uma trilha de moedas pixel que corre pelos vãos entre as cartas.
 // Feel (números): virada em degraus 90 ms + 120 ms; par certo = hit-stop 70 ms, pulso dourado 420 ms, anel do

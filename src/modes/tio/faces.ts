@@ -23,7 +23,7 @@ interface Look {
 const LOOK: Record<ParenteId, Look> = {
   tio: {
     skin: 'gold1',
-    shade: 'emberDark',
+    shade: 'gold0',
     light: 'emberBright',
     hair: 'night',
     hairShade: 'void',
@@ -32,8 +32,8 @@ const LOOK: Record<ParenteId, Look> = {
     shirtShade: 'vine1',
   },
   tia: {
-    skin: 'gold0',
-    shade: 'blood0',
+    skin: 'emberDark',
+    shade: 'blood1',
     light: 'gold1',
     hair: 'stone2',
     hairShade: 'stone1',
@@ -65,7 +65,7 @@ const LOOK: Record<ParenteId, Look> = {
   },
   mae: {
     skin: 'gold1',
-    shade: 'emberDark',
+    shade: 'gold0',
     light: 'emberBright',
     hair: 'gold0',
     hairShade: 'blood0',
@@ -91,7 +91,7 @@ function put(g: Grid, x: number, y: number, c: PaletteKey | null) {
 }
 const at = (g: Grid, x: number, y: number) => g[y]?.[x] ?? null
 
-function body(g: Grid, L: Look) {
+function body(g: Grid, L: Look, id: ParenteId) {
   // ombros
   for (let y = 15; y < FACE; y++)
     for (let x = 0; x < FACE; x++)
@@ -107,7 +107,7 @@ function body(g: Grid, L: Look) {
       const nx = (x + 0.5 - CX) / RX
       const ny = (y + 0.5 - CY) / RY
       const k = nx * 0.62 + ny * 0.78
-      put(g, x, y, k > 0.62 ? L.shade : L.skin)
+      put(g, x, y, k > 0.62 ? L.shade : L.light && k < -0.5 && id !== 'vo' ? L.light : L.skin)
     }
   if (L.light) {
     put(g, 6, 4, L.light)
@@ -120,7 +120,12 @@ function body(g: Grid, L: Look) {
   }
 }
 
-function hairCap(g: Grid, L: Look, line: (x: number) => number, outer: { rx: number; ry: number; dy?: number }) {
+function hairCap(
+  g: Grid,
+  L: Look,
+  line: (x: number) => number,
+  outer: { rx: number; ry: number; dy?: number },
+) {
   for (let y = 0; y < FACE; y++)
     for (let x = 0; x < FACE; x++) {
       if (!inEll(x, y, CX, CY + (outer.dy ?? 0), outer.rx, outer.ry)) continue
@@ -167,12 +172,16 @@ function hair(g: Grid, id: ParenteId, L: Look) {
       }
       put(g, 5, 6, L.hair)
       put(g, 14, 6, L.hairShade)
-      for (let x = 5; x <= 14; x++) {
-        put(g, x, 8, 'stone0')
-        put(g, x, 10, 'stone0')
+      for (const x of [5, 6, 7, 8, 9, 10, 11, 12, 13, 14]) {
+        if (x !== 9 && x !== 10) put(g, x, 7, 'stone0')
+        if (x !== 9 && x !== 10) put(g, x, 10, 'stone0')
       }
-      for (const x of [5, 9, 10, 14]) put(g, x, 9, 'stone0')
-      for (const x of [6, 7, 8, 11, 12, 13]) put(g, x, 9, 'stoneHi')
+      for (const x of [5, 9, 10, 14]) {
+        put(g, x, 8, 'stone0')
+        put(g, x, 9, 'stone0')
+      }
+      put(g, 6, 8, 'sparkle')
+      put(g, 11, 8, 'sparkle')
       for (let x = 8; x <= 11; x++) put(g, x, 11, L.hair)
       break
     }
@@ -205,7 +214,7 @@ function prop(g: Grid, id: ParenteId) {
 
 function face(g: Grid, id: ParenteId, L: Look, e: Expr) {
   const eye: PaletteKey = 'night'
-  const mouth: PaletteKey = id === 'tia' ? 'redGlow' : 'crimsonDeep'
+  const mouth: PaletteKey = id === 'tia' ? 'redGlow' : id === 'vo' || id === 'prima' ? 'crimsonDeep' : 'blood0'
   const glasses = id === 'vo'
   const lowLip = 12
   if (e === 'neutro') {
@@ -278,7 +287,7 @@ function outline(g: Grid) {
 export function faceGrid(id: ParenteId, e: Expr): Grid {
   const g: Grid = Array.from({ length: FACE }, () => Array<PaletteKey | null>(FACE).fill(null))
   const L = LOOK[id]
-  body(g, L)
+  body(g, L, id)
   hair(g, id, L)
   face(g, id, L, e)
   prop(g, id)

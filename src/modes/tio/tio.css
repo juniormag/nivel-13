@@ -1,0 +1,834 @@
+/* Convence o Tio. Prefixo tio-, só tokens do :root (src/ui/global.css). Pixel: bordas em degrau por
+   box-shadow, sem raio, sem blur. Celular em pé primeiro; movimento reduzido no fim do arquivo. */
+
+.tio-scr {
+  --tio-k: 2;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background: var(--void);
+}
+
+/* ---------- retrato ---------- */
+.tio-face {
+  --k: 2;
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: calc(20px * var(--k));
+  height: calc(20px * var(--k));
+  background: var(--dusk);
+}
+.tio-face canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+/* ---------- conversa ---------- */
+.tio-chat {
+  --pf-fill: var(--night);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  box-shadow: none;
+}
+@media (min-width: 700px) {
+  .tio-scr--chat {
+    align-items: center;
+    padding: 16px;
+  }
+  .tio-chat {
+    width: min(480px, 100%);
+    height: min(900px, 100%);
+    box-shadow:
+      0 -2px 0 0 var(--stone-3),
+      0 2px 0 0 var(--stone-3),
+      -2px 0 0 0 var(--stone-3),
+      2px 0 0 0 var(--stone-3),
+      0 8px 0 0 var(--void);
+  }
+}
+
+.tio-head {
+  display: grid;
+  grid-template-columns: 44px auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 8px;
+  padding: calc(8px + var(--safe-t)) 12px 10px 6px;
+  background: var(--dusk);
+  box-shadow:
+    inset 0 -2px 0 0 var(--stone-1),
+    0 2px 0 0 var(--void);
+  position: relative;
+  z-index: 2;
+}
+.tio-back {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font-size: 14px;
+}
+.tio-head-face {
+  --k: 3;
+  box-shadow:
+    0 0 0 2px var(--stone-3),
+    0 0 0 4px var(--void);
+  animation: tio-pop 0.18s steps(3);
+}
+.tio-head-face[data-expr="pensando"] {
+  box-shadow:
+    0 0 0 2px var(--gold),
+    0 0 0 4px var(--void);
+}
+.tio-head-face[data-expr="fechado"] {
+  box-shadow:
+    0 0 0 2px var(--red),
+    0 0 0 4px var(--void);
+}
+.tio-head-face[data-expr="pensando"]::after,
+.tio-head-face[data-expr="fechado"]::after {
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  font: 12px / 1 var(--f-hud);
+  box-shadow: 0 0 0 2px var(--void);
+}
+.tio-head-face[data-expr="pensando"]::after {
+  content: "?";
+  background: var(--gold);
+  color: var(--night);
+}
+.tio-head-face[data-expr="fechado"]::after {
+  content: "!";
+  background: var(--red);
+  color: var(--white);
+}
+@keyframes tio-pop {
+  0% {
+    transform: translateY(-4px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+.tio-head-who {
+  min-width: 0;
+}
+.tio-name {
+  margin: 0;
+  font: 400 17px / 1.15 var(--f-hud);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--stone-hi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tio-status {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.1;
+  color: var(--leaf-hi);
+}
+.tio-fixture {
+  font: 10px / 1 var(--f-hud);
+  text-transform: uppercase;
+  color: var(--night);
+  background: var(--gold);
+  padding: 4px 6px;
+}
+.tio-meter {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 8px;
+}
+.tio-meter-label {
+  font: 11px / 1 var(--f-hud);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--stone-3);
+}
+.tio-meter-bar {
+  flex: 1;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  height: 14px;
+}
+.tio-meter-bar i {
+  position: relative;
+  background: var(--blood-0);
+  box-shadow:
+    inset 0 0 0 2px var(--stone-0),
+    0 2px 0 0 var(--void);
+}
+.tio-meter-bar i.on {
+  background: var(--gold);
+  box-shadow:
+    inset 0 2px 0 0 var(--gold-hi),
+    inset 0 -2px 0 0 var(--gold-1),
+    0 2px 0 0 var(--void);
+  animation: tio-fill 0.24s steps(4);
+}
+.tio-meter-bar i.goal::after {
+  content: "";
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--stone-hi);
+}
+@keyframes tio-fill {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+.tio-meter-n {
+  font: 400 13px / 1 var(--f-hud);
+  color: var(--gold);
+  min-width: 2.6em;
+  text-align: right;
+}
+
+/* papel de parede genérico de mensageiro: pontos de pixel em grade */
+.tio-log {
+  list-style: none;
+  margin: 0;
+  padding: 14px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background-color: var(--night);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' shape-rendering='crispEdges'%3E%3Crect x='2' y='2' width='2' height='2' fill='%23181122'/%3E%3Crect x='14' y='14' width='2' height='2' fill='%23181122'/%3E%3C/svg%3E");
+  scrollbar-color: var(--stone-1) var(--night);
+  user-select: text;
+  -webkit-user-select: text;
+}
+.tio-log > :first-child {
+  margin-top: auto;
+}
+.tio-sys {
+  align-self: center;
+  font: 11px / 1.3 var(--f-hud);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--stone-3);
+  background: var(--dusk);
+  padding: 6px 10px;
+  box-shadow: 0 0 0 2px var(--stone-0);
+  margin-bottom: 6px;
+}
+.tio-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  animation: tio-in 0.16s steps(4);
+}
+.tio-row--me {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+@keyframes tio-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.tio-mini {
+  --k: 2;
+  box-shadow: 0 0 0 2px var(--void);
+}
+.tio-mini--gap {
+  width: 40px;
+  flex: none;
+}
+.tio-bubble {
+  position: relative;
+  margin: 0;
+  max-width: min(84%, 380px);
+  padding: 10px 12px;
+  font-size: 17px;
+  line-height: 1.32;
+}
+.tio-bubble--them {
+  background: var(--stone-0);
+  color: var(--stone-hi);
+  box-shadow:
+    0 -2px 0 0 var(--stone-1),
+    0 2px 0 0 var(--stone-1),
+    -2px 0 0 0 var(--stone-1),
+    2px 0 0 0 var(--stone-1),
+    0 6px 0 -2px var(--void);
+}
+.tio-bubble--me {
+  background: var(--blood-1);
+  color: var(--white);
+  box-shadow:
+    0 -2px 0 0 var(--crimson),
+    0 2px 0 0 var(--crimson),
+    -2px 0 0 0 var(--crimson),
+    2px 0 0 0 var(--crimson),
+    0 6px 0 -2px var(--void);
+}
+.tio-bubble--me p {
+  margin: 0;
+}
+.is-good .tio-bubble--me {
+  background: var(--vine-0);
+  box-shadow:
+    0 -2px 0 0 var(--green),
+    0 2px 0 0 var(--green),
+    -2px 0 0 0 var(--green),
+    2px 0 0 0 var(--green),
+    0 6px 0 -2px var(--void);
+}
+.is-trap .tio-bubble--me {
+  background: var(--blood-0);
+  color: var(--stone-3);
+  box-shadow:
+    0 -2px 0 0 var(--red),
+    0 2px 0 0 var(--red),
+    -2px 0 0 0 var(--red),
+    2px 0 0 0 var(--red),
+    0 6px 0 -2px var(--void);
+}
+.tio-ticks {
+  display: block;
+  margin-top: 4px;
+  text-align: right;
+  font: 10px / 1 var(--f-hud);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--stone-3);
+}
+.is-good .tio-ticks {
+  color: var(--leaf-hi);
+}
+.is-trap .tio-ticks {
+  color: var(--red-glow);
+}
+.tio-src {
+  display: block;
+  line-height: 20px;
+  max-width: min(84%, 380px);
+  padding: 12px 4px;
+  font-size: 14px;
+  color: var(--gold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: tio-in 0.16s steps(4);
+}
+.tio-src:focus-visible {
+  outline-offset: 0;
+}
+.tio-dots {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px 2px;
+}
+.tio-dots i {
+  width: 6px;
+  height: 6px;
+  background: var(--stone-3);
+  animation: tio-dot 0.9s steps(1) infinite;
+}
+.tio-dots i:nth-child(2) {
+  animation-delay: 0.3s;
+}
+.tio-dots i:nth-child(3) {
+  animation-delay: 0.6s;
+}
+@keyframes tio-dot {
+  0%,
+  100% {
+    transform: translateY(0);
+    background: var(--stone-2);
+  }
+  33% {
+    transform: translateY(-4px);
+    background: var(--stone-hi);
+  }
+}
+
+/* ---------- zona do polegar ---------- */
+.tio-zone {
+  position: relative;
+  z-index: 2;
+  min-height: 150px;
+  padding: 10px 12px calc(12px + var(--safe-b));
+  background: var(--dusk);
+  box-shadow:
+    inset 0 2px 0 0 var(--stone-1),
+    0 -2px 0 0 var(--void);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.tio-howto {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 11px / 1.2 var(--f-hud);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--stone-3);
+}
+.tio-arrow {
+  display: inline-grid;
+  grid-template-columns: repeat(5, 3px);
+  grid-template-rows: repeat(5, 3px);
+  animation: tio-bob 1s steps(2) infinite;
+}
+.tio-arrow i {
+  background: var(--gold);
+}
+@keyframes tio-bob {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+.tio-cards {
+  display: grid;
+  gap: 10px;
+}
+.tio-card {
+  --pf-fill: var(--night);
+  appearance: none;
+  border: 0;
+  width: 100%;
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 16px;
+  align-items: start;
+  gap: 10px;
+  padding: 12px 12px 12px 10px;
+  text-align: left;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.32;
+  color: var(--stone-hi);
+  cursor: grab;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.12s steps(2);
+  animation: tio-card-in 0.18s steps(4) backwards;
+}
+.tio-card[data-n="2"] {
+  animation-delay: 0.06s;
+}
+.tio-card[style] {
+  transition: none;
+  cursor: grabbing;
+  z-index: 3;
+}
+@keyframes tio-card-in {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.tio-card.is-pressed:not([style]) {
+  --pf-fill: var(--haze-dark);
+  transform: translateY(2px);
+}
+.tio-card.is-armed {
+  --pf-line: var(--gold);
+  --pf-hi: var(--gold-0);
+}
+.tio-card.is-fly-up {
+  animation: tio-fly-up 0.14s steps(3) forwards;
+}
+.tio-card.is-fly-right {
+  animation: tio-fly-right 0.14s steps(3) forwards;
+}
+@keyframes tio-fly-up {
+  100% {
+    opacity: 0;
+    transform: translateY(-120px);
+  }
+}
+@keyframes tio-fly-right {
+  100% {
+    opacity: 0;
+    transform: translateX(160px);
+  }
+}
+.tio-cards:has(.is-fly-up, .is-fly-right) .tio-card:not(.is-fly-up, .is-fly-right) {
+  opacity: 0.35;
+}
+.tio-card-n {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  font: 12px / 1 var(--f-hud);
+  color: var(--stone-hi);
+  background: var(--stone-1);
+  box-shadow: inset 0 -2px 0 0 var(--stone-0);
+}
+.tio-card-send {
+  align-self: center;
+  font: 12px / 1 var(--f-hud);
+  color: var(--stone-2);
+}
+.tio-card.is-armed .tio-card-send {
+  color: var(--gold-hi);
+}
+.tio-card:focus-visible {
+  outline: var(--px) solid var(--gold-hi);
+  outline-offset: 4px;
+}
+.tio-waiting {
+  margin: auto 0;
+  text-align: center;
+  font: 11px / 1.2 var(--f-hud);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--stone-2);
+}
+
+.tio-hint {
+  --pf-fill: var(--blood-0);
+  appearance: none;
+  border: 0;
+  width: 100%;
+  display: grid;
+  gap: 8px;
+  padding: 14px 14px 12px;
+  text-align: left;
+  font: inherit;
+  color: var(--stone-hi);
+  cursor: pointer;
+  animation: tio-card-in 0.18s steps(4);
+}
+.tio-hint-tag {
+  justify-self: start;
+  font: 11px / 1 var(--f-hud);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--white);
+  background: var(--crimson);
+  padding: 4px 8px;
+  box-shadow: inset 0 2px 0 0 var(--red);
+}
+.tio-hint-why {
+  font-size: 18px;
+  line-height: 1.32;
+}
+.tio-hint-go {
+  justify-self: end;
+  min-height: 24px;
+  font: 12px / 1 var(--f-hud);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.tio-hint[data-pressed] {
+  transform: translateY(2px);
+}
+
+/* ---------- fim ---------- */
+.tio-end {
+  display: grid;
+  gap: 10px;
+  animation: tio-card-in 0.2s steps(4);
+}
+.tio-end-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tio-end h2 {
+  margin: 0;
+  font: 400 20px / 1.1 var(--f-hud);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tio-end h2.is-win {
+  color: var(--gold);
+}
+.tio-end h2.is-lose {
+  color: var(--stone-hi);
+}
+.tio-grid {
+  margin: 0;
+  display: flex;
+  gap: 4px;
+}
+.tio-grid i {
+  width: 22px;
+  height: 22px;
+  box-shadow:
+    inset 2px 2px 0 0 var(--leaf-hi),
+    inset -2px -2px 0 0 var(--vine-1),
+    0 0 0 2px var(--void);
+  background: var(--green);
+}
+.tio-grid i.r {
+  background: var(--red);
+  box-shadow:
+    inset 2px 2px 0 0 var(--red-glow),
+    inset -2px -2px 0 0 var(--crimson),
+    0 0 0 2px var(--void);
+}
+.tio-end-tip {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.3;
+  color: var(--stone-hi);
+}
+.tio-end-tip b {
+  font: 400 12px / 1 var(--f-hud);
+  text-transform: uppercase;
+  color: var(--red-hot);
+}
+.tio-end-actions {
+  display: grid;
+  gap: 12px;
+}
+.tio-end-actions .btn {
+  min-height: 52px;
+}
+.tio-goods summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font: 11px / 1.2 var(--f-hud);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--stone-3);
+  list-style: none;
+}
+.tio-goods summary::-webkit-details-marker {
+  display: none;
+}
+.tio-goods summary::after {
+  content: " ▼";
+}
+.tio-goods[open] summary::after {
+  content: " ▲";
+}
+.tio-goods ol {
+  margin: 0 0 8px;
+  padding: 0 0 0 20px;
+  max-height: 34dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  font-size: 15px;
+  line-height: 1.32;
+  user-select: text;
+  -webkit-user-select: text;
+}
+.tio-goods li + li {
+  margin-top: 10px;
+}
+.tio-goods p {
+  margin: 0;
+}
+.tio-goods a {
+  display: inline-block;
+  min-height: 44px;
+  padding: 12px 0;
+  font-size: 14px;
+}
+.tio-copy {
+  width: 100%;
+}
+
+/* ---------- escolha do parente ---------- */
+.tio-scr--pick {
+  align-items: flex-start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(12px + var(--safe-t)) calc(12px + var(--safe-r)) calc(12px + var(--safe-b))
+    calc(12px + var(--safe-l));
+}
+.tio-pick {
+  width: min(520px, 100%);
+  margin: auto;
+  padding: 20px 14px 14px;
+  display: grid;
+  gap: 14px;
+}
+.tio-pick-head {
+  position: relative;
+  padding-right: 44px;
+}
+.tio-pick-head h1 {
+  margin: 4px 0 8px;
+  font: 400 20px / 1.2 var(--f-hud);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--stone-hi);
+}
+.tio-pick-head p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.35;
+  color: var(--stone-3);
+}
+.tio-pick-close {
+  position: absolute;
+  right: -6px;
+  top: -10px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+.tio-pick-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.tio-pcard {
+  --pf-fill: var(--dusk);
+  appearance: none;
+  border: 0;
+  width: 100%;
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 14px 8px 8px;
+  text-align: left;
+  font: inherit;
+  color: var(--stone-hi);
+  cursor: pointer;
+}
+.tio-pcard:hover {
+  --pf-fill: var(--haze-dark);
+}
+.tio-pcard.is-done {
+  --pf-line: var(--gold);
+  --pf-hi: var(--gold-0);
+}
+.tio-pcard-face {
+  --k: 3;
+  box-shadow: 0 0 0 2px var(--void);
+}
+.tio-pcard-txt {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.tio-pcard-txt b {
+  font: 400 15px / 1.15 var(--f-hud);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tio-pcard-txt span {
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--stone-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tio-pcard-go {
+  font: 12px / 1 var(--f-hud);
+  color: var(--red-hot);
+}
+.tio-seal {
+  font: 10px / 1 var(--f-hud);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--night);
+  background: var(--gold);
+  padding: 5px 6px;
+  box-shadow:
+    inset 0 2px 0 0 var(--gold-hi),
+    inset 0 -2px 0 0 var(--gold-1),
+    0 0 0 2px var(--void);
+}
+.tio-fixture-note,
+.tio-empty {
+  margin: 0;
+  font-size: 15px;
+  color: var(--gold);
+}
+.tio-legal {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--stone-2);
+  text-align: center;
+}
+
+@media (max-width: 370px) {
+  .tio-bubble {
+    font-size: 16px;
+  }
+  .tio-card {
+    font-size: 15px;
+    padding: 10px 10px 10px 8px;
+  }
+  .tio-head-face {
+    --k: 2;
+  }
+  .tio-pcard-face {
+    --k: 2;
+  }
+}
+@media (min-width: 1000px) and (min-height: 760px) {
+  .tio-head-face {
+    --k: 4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tio-row,
+  .tio-src,
+  .tio-card,
+  .tio-hint,
+  .tio-end,
+  .tio-head-face,
+  .tio-meter-bar i.on {
+    animation: none;
+  }
+  .tio-arrow,
+  .tio-dots i {
+    animation: none;
+  }
+  .tio-card {
+    transition: none;
+  }
+}

@@ -492,7 +492,8 @@ export class Banner {
     let y = py0 + 5
     for (const tx of this.texts) {
       const h = Math.round(tx.height / tx.scale.y)
-      tx.scale.set(sc)
+      // só bate em 2× se a linha couber na tela
+      tx.scale.set(sc > 1 && (tx.width / tx.scale.x) * sc > this.c.W - 8 ? 1 : sc)
       tx.x = this.cx
       tx.y = Math.round(y + h / 2)
       tx.alpha = out > 0 ? (Math.floor(t * 20) % 2 ? 0 : 1) : 1

@@ -259,7 +259,8 @@ export function ufAt(p: Pt): string | null {
 
 /** UF aproximada mais próxima, mesmo fora do contorno (litoral e ilhas). */
 export function ufNear(p: Pt): string {
-  if (p.lon >= DF_BOX.lon0 && p.lon <= DF_BOX.lon1 && p.lat <= DF_BOX.lat0 && p.lat >= DF_BOX.lat1) return 'DF'
+  if (p.lon >= DF_BOX.lon0 && p.lon <= DF_BOX.lon1 && p.lat <= DF_BOX.lat0 && p.lat >= DF_BOX.lat1)
+    return 'DF'
   let best = 'DF'
   let bd = Number.POSITIVE_INFINITY
   for (const s of SEED_LIST) {
