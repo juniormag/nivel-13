@@ -7,3 +7,6 @@ playwright-report
 .env*
 !.env.example
 .wrangler
+
+# logs de agentes
+log-*.txt
