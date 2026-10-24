@@ -28,13 +28,13 @@ export function ScoreTile({
   label?: string
 }) {
   const t = tier(s)
-  return (
-    <span
-      className={`cx-tile cx-tile--${t} cx-tile--${size}`}
-      role={label ? 'img' : undefined}
-      aria-label={label}
-      aria-hidden={label ? undefined : true}
-    >
+  const cls = `cx-tile cx-tile--${t} cx-tile--${size}`
+  return label ? (
+    <span className={cls} role="img" aria-label={label}>
+      {t === 'bull' && <i />}
+    </span>
+  ) : (
+    <span className={cls} aria-hidden="true">
       {t === 'bull' && <i />}
     </span>
   )
@@ -127,7 +127,7 @@ export function Reveal({
       )}
       {crowd && (
         <motion.div className="cx-crowd" variants={rise}>
-          <Histogram hist={crowd.hist} mine={mine} />
+          {round.kind === 'number' ? <Histogram hist={crowd.hist} mine={mine} /> : <span />}
           <p>
             <span className="cx-crowd-k">Brasil chutou</span> {crowd.text}
           </p>

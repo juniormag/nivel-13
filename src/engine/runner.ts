@@ -281,9 +281,14 @@ export class Runner {
     const slow = now < this.slowUntil
     if (usePlay.getState().slow !== slow) usePlay.setState({ slow })
     if (this.running && this.juice.freeze <= 0) {
-      const dt = dt0 * (slow ? 0.45 : 1)
-      this.time += dt
-      this.o.game.update(dt)
+      // aparelho lento: até 100 ms por quadro, em subpassos de no máximo 1/30 s (o tempo não fica em câmera lenta)
+      let rest = Math.min(0.1, realDt) * (slow ? 0.45 : 1)
+      while (rest > 1e-6 && this.running) {
+        const step = Math.min(rest, 1 / 30)
+        rest -= step
+        this.time += step
+        this.o.game.update(step)
+      }
       const d = this.o.game.duration
       if (d > 0) {
         const left = Math.max(0, d - this.time)

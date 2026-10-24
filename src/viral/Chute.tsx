@@ -218,7 +218,13 @@ function Stepper({
     clearInterval(timer.current)
     setPressed(false)
   }
-  useEffect(() => stop, [])
+  useEffect(
+    () => () => {
+      clearTimeout(timer.current)
+      clearInterval(timer.current)
+    },
+    [],
+  )
   const once = () => {
     const v = stepValue(round, cur.current, dir)
     cur.current = v

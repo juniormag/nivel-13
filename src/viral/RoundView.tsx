@@ -256,12 +256,7 @@ export function RoundView({
           </p>
         )}
         {revealed && (
-          <motion.div
-            className="cx-next"
-            initial={{ opacity: 0, y: 6 }}
-            animate={nextOn ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-            transition={{ duration: 0.16, ease: 'easeOut' }}
-          >
+          <div className={`cx-next${nextOn ? ' is-on' : ''}`}>
             <PixelButton
               ref={nextRef}
               tone={last ? 'gold' : 'red'}
@@ -273,7 +268,7 @@ export function RoundView({
             >
               {last ? 'Ver resultado ▶' : 'Próxima ▶'}
             </PixelButton>
-          </motion.div>
+          </div>
         )}
       </div>
     </>

@@ -34,7 +34,12 @@ function findHero() {
     }
     return null
   })()
-  return heroFn
+  const p = heroFn
+  // falha não fica em cache: o módulo pode estar só sendo recarregado
+  void p.then((fn) => {
+    if (!fn && heroFn === p) heroFn = null
+  })
+  return p
 }
 
 export interface Still {
@@ -134,9 +139,16 @@ export function heroStill(w: number, h: number, o: HeroOpts = {}): Promise<Still
   const key = `${forced() ?? ''}|${w}x${h}|${o.progress ?? 1}|${o.crown ? 1 : 0}|${o.monument === false ? 0 : 1}`
   let p = cache.get(key)
   if (!p) {
-    p = renderStill(w, h, o)
-    cache.set(key, p)
-    p.catch(() => cache.delete(key))
+    const made = renderStill(w, h, o)
+    p = made
+    cache.set(key, made)
+    // o degrau local não fica em cache: na próxima, tenta o still do diretor de arte de novo
+    made.then(
+      (st) => {
+        if (st.kind !== 'hero' && cache.get(key) === made) cache.delete(key)
+      },
+      () => cache.delete(key),
+    )
   }
   return p
 }

@@ -1,6 +1,9 @@
 // Fase 8 · O Julgamento: monte a linha do tempo da trama golpista, do mais antigo ao mais recente.
 // Cartas e trilho em DOM (.timeline-slots/.tl-card); em Pixi, a bancada do STF com o martelo do juiz,
 // que bate a cada acerto (antecipação, smear, quadro de impacto sob hit-stop, onda de choque).
+// Feel (números): martelo = antecipação 90 ms → smear 30 ms → impacto com hit-stop 90 ms, tremor vertical 2 px,
+// anéis 30/16 px, 8 lascas; balança em mola (k 40, amortecimento 6/s), chute -0,6 no acerto e +1,6 no erro.
+// Sem tempo (duration 0): pontos = max(60, 160 − 10 × erros) por evento; sequência sem erro sobe a cor do número.
 import { Container, Graphics, Sprite } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
 import { shuffle } from '../lib/rng'
@@ -456,8 +459,18 @@ export default function linha(): MicroGame {
         return b
       })
       grid.append(...cards)
-      grid.style.top = `${(c.top + 8) * c.css + 64}px`
+      // tela estreita: o trilho quebra em 2 linhas de 3 para as datas caberem sem cortar
+      if (innerWidth < 520) {
+        rail.style.flexWrap = 'wrap'
+        rail.style.rowGap = '6px'
+        for (const sl of slots) {
+          sl.style.flex = '1 0 30%'
+          sl.style.minWidth = '0'
+          sl.style.minHeight = '34px'
+        }
+      }
       c.layer.append(rail, grid)
+      grid.style.top = `${Math.round(rail.getBoundingClientRect().bottom + 10)}px`
 
       layoutScene()
       const area = { x0: 0, y0: blockY - 60, x1: c.W, y1: c.bottom }

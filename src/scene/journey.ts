@@ -211,8 +211,8 @@ export class JourneyMap {
       const hop = reduced ? 0 : Math.round(Math.abs(Math.sin(t * 3.2)) * 3)
       // sombrinha no chão
       g.fillStyle = HEX.void
-      g.fillRect(p.x - 4, p.y - 8, 9, 1)
-      g.drawImage(spr, Math.round(p.x - spr.width / 2), Math.round(p.y - 9 - spr.height - hop))
+      g.fillRect(p.x - 4, p.y - 4, 9, 1)
+      g.drawImage(spr, Math.round(p.x - spr.width / 2), Math.round(p.y - 4 - spr.height - hop))
     }
   }
 }

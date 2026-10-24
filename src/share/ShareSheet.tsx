@@ -353,6 +353,8 @@ export function ShareSheet({ moment, onClose }: { moment: Moment; onClose: () =>
                 </>
               ) : caps.inApp && !caps.files ? (
                 'Para postar a imagem, toque em ⋯ e escolha Abrir no navegador. Ou salve a imagem.'
+              ) : !caps.share && (caps.android || caps.ios) ? (
+                'Este navegador não abre a lista do celular. Salve a imagem e poste no Instagram ou no WhatsApp.'
               ) : !caps.share ? (
                 'No computador: salve a imagem e poste pelo celular, ou copie o link.'
               ) : (

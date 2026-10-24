@@ -1,6 +1,10 @@
 // Fase 11 · Soberania: gire o escudo em volta do Brasil e bloqueie tarifas e sanções.
 // Brasil em pixels (cores da bandeira) no centro, arco de escudo dourado com brilho em 3 camadas,
 // setas de tarifa com rastro de energia e aviso na borda antes de entrarem. Bloqueio perfeito solta ouro.
+// Feel (números), curva ramp(): intervalo max(0,42, 1,08 − 0,62k) s; velocidade 44 + 40k (+0..14) px/s; dispersão
+// 0,8 + 1,2k rad em volta do nordeste (70% → 50%). Arco 1,25 rad + 0,1 rad de folga; a seta ainda pode ser bloqueada
+// por 50 ms (3 quadros) depois de cruzar o raio. Perfeito (centro 18% do arco): +45, hit-stop 60 ms; normal +30;
+// sequência +2 por passo (até +20). Aviso pisca na borda da arena enquanto a seta está fora.
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js'
 import { inBrazil, LAT0, LAT1, LON0, LON1 } from '../content/brazil'
 import type { GameCtx, MicroGame } from '../engine/types'

@@ -684,7 +684,16 @@ async function cardChute(c: Card, m: Extract<Moment, { kind: 'chute' }>) {
   vignette(c, st ? 140 : 95, sc.base - 2, 0.88)
   foreground(c)
   let y = c.y0 + (st ? 2 : 0)
+  const ty0 = y
   y = tag(c, `CHUTA AÍ #${m.n}`, y)
+  // sequência: fogo + dias, à direita da faixa
+  const streak = getSave().daily.streak
+  if (streak > 1) {
+    const fire = sprite('fogo')
+    const sw = silkWidth(String(streak))
+    c.g.drawImage(fire, c.x1 - sw - fire.width - 2, ty0 - 3)
+    text(c.g, String(streak), c.x1, ty0, small(['emberBright', 'ember']), { align: 'right' })
+  }
   // total gigante em ouro + "/1.300" menor, alinhados pela base
   const tot = fmtInt(m.total)
   const den = `/${fmtInt(MAX_TOTAL)}`
@@ -709,15 +718,6 @@ async function cardChute(c: Card, m: Extract<Moment, { kind: 'chute' }>) {
   y += size + 6
   for (const l of wrap(chuteHook(m.s, m.theme, false).toLocaleUpperCase('pt-BR'), c.x1 - c.x0))
     y = head(c, l, y, WHITE, 1)
-  const streak = getSave().daily.streak
-  if (streak > 1) {
-    const s = `${streak} DIAS`
-    const fire = sprite('fogo')
-    const w = silkWidth(s) + fire.width + 3
-    const fx = Math.round(c.cx - w / 2)
-    c.g.drawImage(fire, fx, y - 2)
-    text(c.g, s, fx + fire.width + 3, y + 1, small(['emberBright', 'ember']))
-  }
   footer(c, { cta: 'QUANTO VOCÊ CHUTA? JOGUE:', link: chuteLink(m.n, false) })
 }
 

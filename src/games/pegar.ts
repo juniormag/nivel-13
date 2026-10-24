@@ -1,6 +1,10 @@
 // Fase 12 · Farmácia Popular: pegue os remédios e as casas; deixe o boato cair no chão.
 // Cesta com squash no pegar, sombras no chão que mostram onde cada item vai cair, boato piscando
 // em vermelho e balançando (dá para reconhecer pelo movimento), prateleiras de farmácia ao fundo.
+// Feel (números), curva ramp(t, 25, 8): intervalo 0,62 − 0,3k s; queda 40 + 45k (+0..20) px/s; boato 18% → 28%.
+// Cesta: alvo segue o dedo com lerp 16/s, teclado 170 px/s; pega com ±19 px (2 px de folga); boato só conta após
+// 50 ms dentro da cesta. Squash 1,2 × 0,8 por 60 ms e volta em 120 ms (ease-out-back). Sequência: +1 por passo
+// (até +15), a cada 5 um anel de 22 px e tremor vertical.
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
 import {

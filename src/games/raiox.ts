@@ -1,6 +1,10 @@
 // Fase 10 · Raio-X: as malas passam pelo scanner; segure só as que trazem joias.
 // Dentro da janela do scanner a mala vira raio-X (azul da paleta, linhas de varredura); joia aparece
 // como objeto denso e brilhante. Mala retida sobe com squash, carimbo "RETIDA" e hit-stop.
+// Feel (números), curva ramp() de kit-b (10 s fáceis, pico aos 70%): esteira 26 → 56 px/s; intervalo entre malas
+// (0,95..1,85 s) × (1 − 0,42 × k); 34% com joia. Toque: ±6 px na horizontal e toda a altura do scanner.
+// Retida: carimbo 80 ms depois (antecipação), hit-stop 100 ms, tremor vertical, mala sobe 46 px em 550 ms com
+// stretch 0,87 × 1,15; joia voa ao painel em 380 ms. Sequência de joias: +5 por passo (até +30). Mala limpa: −30.
 import { Container, Graphics, Sprite, type Text } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
 import {

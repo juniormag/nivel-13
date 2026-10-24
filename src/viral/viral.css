@@ -2,7 +2,18 @@
    Prefixo cx-. Só variáveis da paleta (src/ui/global.css). Pixel: bordas em degrau por box-shadow,
    sem raio, sem blur. Movimento em degraus (steps), 120 a 220 ms; reduzido = corte seco. */
 
+/* Algarismos do Silkscreen dentro do texto: o "5" do Pixelify Sans lê como "S" nos tamanhos de corpo,
+   e este é um jogo de números. Só os dígitos trocam de fonte (unicode-range). */
+@font-face {
+  font-family: "cx-digits";
+  src: url("../../node_modules/@fontsource/silkscreen/files/silkscreen-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0030-0039;
+  size-adjust: 88%;
+  font-display: swap;
+}
 .cx-scr {
+  --f-text: "cx-digits", "Pixelify Sans", system-ui, sans-serif;
+  font-family: var(--f-text);
   --hair: 2px;
   --cx-w: 600px;
   --cx-frame: var(--stone-3);
@@ -108,7 +119,7 @@
   background: var(--gold-1);
 }
 .cx-pips i.is-low {
-  background: var(--crimson-deep);
+  background: var(--stone-2);
 }
 .cx-hud-r {
   text-align: right;
@@ -721,9 +732,10 @@
   --t-lo: var(--gold-0);
 }
 .cx-tile--low {
-  --t-fill: var(--crimson-deep);
-  --t-hi: var(--crimson);
-  --t-lo: var(--blood-0);
+  /* erro é de todo mundo: pedra neutra, nunca vermelho de fracasso */
+  --t-fill: var(--stone-1);
+  --t-hi: var(--stone-2);
+  --t-lo: var(--stone-0);
 }
 
 /* efeitos */
@@ -886,14 +898,46 @@
 }
 
 .cx-share {
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
+.cx-share h2 {
+  margin: 0;
+  font-family: var(--f-hud);
+  font-weight: 400;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--red-hot);
+}
+.cx-share-sub {
+  margin: -6px 0 2px;
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--stone-3);
+}
 .cx-share-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
   gap: 14px;
+}
+.cx-share-row .btn {
+  white-space: nowrap;
+  padding-inline: 8px;
+  font-size: 13px;
+}
+.cx-next {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.16s steps(3),
+    transform 0.16s steps(3);
+}
+.cx-next.is-on {
+  opacity: 1;
+  transform: none;
 }
 
 /* duelo */

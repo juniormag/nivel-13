@@ -3,6 +3,10 @@
 // (recua, abre a boca, olhos acendem, linha de mira) quando você erra ou o tempo acaba. O fato certo
 // destrói a cabeça: hit-stop de 180 ms com quadro branco → vermelho, explosão de papel, anel e tremor.
 // A última cabeça dispara a explosão em cascata do corpo.
+// Feel (números): 14 s por cabeça (barra acima dela); bote = antecipação 300 ms, avanço 80 ms com 2 silhuetas de
+// smear, recuperação 320 ms; o dano chega no contato. Cabeça certa: hit-stop 180 ms (branco 120 ms → vermelho),
+// clarão de impacto, explosão com 1 quadro branco e fumaça, 18 papéis, pescoço desaba. Fim: 11 estouros em 1,4 s,
+// depois impacto dourado, anel de 110 px e 8 brilhos. Pontos = 200 + até 120 pela rapidez.
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js'
 import { stinger } from '../audio/audio'
 import type { GameCtx, MicroGame } from '../engine/types'
@@ -187,7 +191,7 @@ function bodyTex(w: number, h: number): Texture {
     const cy = h * 0.55
     // recortes empilhados: de trás (escuros) para a frente (claros)
     // massa escura por baixo: o corpo lê como uma coisa só
-    p.ellipse(Math.round(cx), Math.round(cy + 3), Math.round(w * 0.34), Math.round(h * 0.32), P.stone0)
+    p.ellipse(Math.round(cx), Math.round(cy + 2), Math.round(w * 0.24), Math.round(h * 0.26), P.stone0)
     p.ellipse(Math.round(cx), Math.round(cy + 4), Math.round(w / 3), Math.round(h / 4), P.blood1)
     p.ellipse(Math.round(cx), Math.round(cy + 4), Math.round(w / 6), Math.round(h / 8), P.crimsonDeep)
     const dens = (w * h) / 260
@@ -580,6 +584,8 @@ export default function chefe(): MicroGame {
       c.stage.addChild(root)
       bodyX = Math.round(c.W / 2)
       ui = el('div', { class: 'boss-ui' })
+      // ancora a interface logo acima das habilidades, qualquer que seja a altura do HUD
+      ui.style.bottom = `${Math.max(8, Math.round(innerHeight - c.bottom * c.css + 6))}px`
       c.layer.append(ui)
       heads = ROUNDS.map((_, i) => {
         const s = new Sprite(headTex(i, false, false))

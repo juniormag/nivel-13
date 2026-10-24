@@ -88,8 +88,9 @@ export function ChoiceButtons({
             </span>
             <span className="cx-opt-label">{o}</span>
             {revealed && i === round.correct && (
-              <span className="cx-opt-mark" aria-label="resposta certa">
-                ✓
+              <span className="cx-opt-mark">
+                <span aria-hidden="true">✓</span>
+                <span className="sr-only">resposta certa</span>
               </span>
             )}
           </Tap>

@@ -139,7 +139,7 @@ export default function JourneyScreen() {
         aria-label="Mapa do Brasil com as 13 fases"
         onPointerDown={onCanvas}
       />
-      <div className="topbar">
+      <div className="topbar" style={{ position: 'fixed', zIndex: 2 }}>
         <PixelButton tone="ghost" size="sm" commit="back" onClick={() => go('title')}>
           ← Início
         </PixelButton>
@@ -161,7 +161,11 @@ export default function JourneyScreen() {
         </span>
       </div>
       {l && (
-        <section className="map-panel pf pf--red" aria-live="polite">
+        <section
+          className="map-panel pf pf--red"
+          aria-live="polite"
+          style={{ position: 'fixed', top: 'auto', bottom: 'calc(14px + var(--safe-b, 0px))', zIndex: 2 }}
+        >
           <div>
             <div className="lvl">Fase {l.n} de 13</div>
             <h3>{l.title}</h3>

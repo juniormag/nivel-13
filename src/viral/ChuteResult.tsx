@@ -71,7 +71,7 @@ export function ChuteResult({
       clearTimeout(t)
       clearTimeout(st)
     }
-  }, [fresh])
+  }, [fresh, streak])
 
   const hookTheme = useMemo(() => {
     let worst = -1
@@ -191,19 +191,16 @@ export function ChuteResult({
         />
       )}
 
-      <motion.section className="cx-share" aria-labelledby="cx-share-h" variants={rise}>
-        <h2 id="cx-share-h" className="sr-only">
-          Compartilhar
-        </h2>
+      <motion.section className="cx-share pf pf--hud" aria-labelledby="cx-share-h" variants={rise}>
+        <h2 id="cx-share-h">Desafie a família</h2>
+        <p className="cx-share-sub">Sem spoiler: vai a grade e uma pergunta. Quem recebe chuta antes de abrir.</p>
         <PixelButton tone="red" size="big" wide onClick={() => void share('group')}>
           Mandar no grupo
         </PixelButton>
         <div className="cx-share-row">
           {!duel && <PixelButton onClick={() => void share('duel')}>Tira-teima</PixelButton>}
           <PixelButton onClick={() => setCard(true)}>Card</PixelButton>
-          <PixelButton tone="ghost" onClick={() => void copy()}>
-            Copiar
-          </PixelButton>
+          <PixelButton onClick={() => void copy()}>Copiar</PixelButton>
         </div>
       </motion.section>
 

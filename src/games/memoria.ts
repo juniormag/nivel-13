@@ -1,6 +1,9 @@
 // Fase 9 · Siga o Dinheiro: jogo da memória ligando cada ano ao fato documentado.
 // Cartas em DOM (.grid-cards/.mcard) sobre um quadro de cortiça em Pixi; cada par certo é ligado por um
 // barbante vermelho e uma trilha de moedas pixel que corre pelos vãos entre as cartas.
+// Feel (números): virada em degraus 90 ms + 120 ms; par certo = hit-stop 70 ms, pulso dourado 420 ms, anel do
+// tamanho da carta, 6 moedas a 150 px/s pelo barbante (uma a cada 50 ms); erro desvira em 850 ms e tira coração a
+// cada 4 erros. 80 s; vence com 4 pares. Pontos = max(80, 170 − 8 × erros) por par.
 import { Container, Graphics, Sprite } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
 import { shuffle } from '../lib/rng'
