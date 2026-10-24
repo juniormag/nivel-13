@@ -89,7 +89,7 @@ export async function renderOndeCard(d: OndeCardData, fmt: OndeFormat): Promise<
     for (let xx = 0; xx < W; xx++) if (bayer(xx, yy) > (yy - band + 6) / 12) rect(g, xx, yy, 1, 1, 'void')
   // story: horizonte em brasa embaixo (fica sob a barra de resposta do Instagram, só arte)
   if (story) {
-    const ramp: Ink[] = ['blood0', 'blood1', 'crimsonDeep', 'crimson']
+    const ramp: Ink[] = ['blood0', 'blood0', 'blood1', 'crimsonDeep']
     for (let yy = 262; yy < H; yy++) {
       const t = (yy - 262) / (H - 262)
       const k = t * ramp.length

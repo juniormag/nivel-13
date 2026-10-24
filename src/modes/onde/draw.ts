@@ -256,7 +256,7 @@ export function drawMap(
   for (const m of o.marks) {
     if (!m.past || !m.target) continue
     const [x, y] = P(m.target)
-    drawDot(g, x, y, SIDE[m.side].lo)
+    drawDot(g, x, y, SIDE[m.side].base)
   }
   for (const m of o.marks) {
     if (m.past || !m.guess || !m.target || !m.line) continue

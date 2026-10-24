@@ -384,10 +384,8 @@
   gap: 6px;
   min-width: 0;
   font-size: 14px;
+  line-height: 1.15;
   color: var(--stone-hi);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .onde-dot {
   flex: none;
@@ -805,6 +803,42 @@
 }
 .onde-wrap.is-wide .onde-hint {
   text-align: left;
+}
+.onde-wrap.is-wide .onde-fact {
+  margin-top: 0;
+}
+.onde-wrap.is-wide .onde-q {
+  font-size: 21px;
+}
+.onde-wrap.is-wide .onde-clue {
+  padding: 14px 18px 16px;
+  gap: 12px;
+}
+.onde-wrap.is-wide .onde-fact {
+  padding: 14px 18px 16px;
+  gap: 9px;
+}
+.onde-wrap.is-wide .onde-fact-place {
+  font-size: 16px;
+}
+.onde-wrap.is-wide .onde-fact-km b {
+  font-size: 24px;
+}
+.onde-wrap.is-wide .onde-fact-title {
+  font-size: 19px;
+}
+.onde-wrap.is-wide .onde-fact-body {
+  font-size: 18px;
+}
+.onde-wrap.is-wide .onde-fact-src {
+  font-size: 14px;
+}
+.onde-wrap.is-wide .onde-hint {
+  font-size: 15px;
+}
+.onde-wrap.is-wide .onde-trail li {
+  font-size: 12px;
+  min-height: 32px;
 }
 .onde-wrap.is-wide .onde-ufs {
   inset: 0;
