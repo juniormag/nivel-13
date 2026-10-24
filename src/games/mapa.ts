@@ -138,7 +138,8 @@ function atlasGrid(cols: number, ts: number) {
         const me = at(x, y)
         if (me < 0) continue
         // planalto de cada estado: alguns um degrau acima (relevo entre vizinhos)
-        let v = 2 + ((me * 7) % 3 === 0 ? 1 : 0)
+        // fome fica um degrau mais escura (orçamento de vermelho); comida e ouro no tom cheio
+        let v = (st <= HOT ? 1 : 2) + ((me * 7) % 3 === 0 ? 1 : 0)
         const lit = at(x - 1, y) !== me || at(x, y - 1) !== me
         const sh = at(x + 1, y) !== me || at(x, y + 1) !== me
         const sh2 = at(x + 2, y) !== me || at(x, y + 2) !== me

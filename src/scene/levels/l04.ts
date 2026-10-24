@@ -33,7 +33,7 @@ function sumauma(c: Ctx, x: number, w: number, dir: number) {
       const inner = dir > 0 ? i : ww - 1 - i
       const fiss = (inner * 3 + Math.floor(y / 6)) % 5 === 0
       let k: K = fiss ? 'void' : inner > ww - 4 ? 'night' : 'void'
-      if (edge) k = t < 0.55 ? 'crimsonDeep' : 'blood0'
+      if (edge) k = t < 0.55 && y % 3 === 0 ? 'crimsonDeep' : 'blood0'
       else if (inner === ww - 2 && t < 0.55 && y % 2) k = 'blood0'
       b.set(xx, y, k)
     }

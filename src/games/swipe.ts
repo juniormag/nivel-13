@@ -152,10 +152,10 @@ function scorchTex() {
   })
 }
 
-/** lateral grossa da carta em três quartos (lição 2): faixa de granito à direita e embaixo, 3 px */
+/** lateral grossa da carta em três quartos (lição 2): faixa de granito à direita e embaixo, 5 px */
 function slabTex(w: number, h: number, kind: 0 | 1 | 2) {
   return gridTex(`swipe-slab${w}x${h}-${kind}`, () => {
-    const D = 3
+    const D = 5
     const g = new Grid(w + D, h + D, -1)
     const ramp: number[] =
       kind === 1
