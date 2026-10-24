@@ -5,6 +5,7 @@ import { mulberry32 } from '../lib/rng'
 import { type PixelFit, computeFit, ditherGradient, offscreen } from '../lib/pixel'
 import { type SkillKind, usePlay } from '../state/play'
 import { Ambient } from './ambient'
+import { haptic } from '../ui/prefs'
 import { JuiceLayer } from './juice'
 import { tex } from './textures'
 import type { GameCtx, MicroGame } from './types'
@@ -223,6 +224,7 @@ export class Runner {
       return
     }
     sfx('bad', { x: cx / this.fit.W })
+    haptic('damage')
     audioHitstop(70)
     this.juice.impact(0xff4a3d)
     this.juice.shake(4, 220, { x: 1, y: 0.6 })
@@ -267,6 +269,7 @@ export class Runner {
     this.running = false
     usePlay.setState({ phase: 'end' })
     if (success) {
+      haptic('success')
       this.juice.flash(0xf5c04a, 260, 0.25)
       sfx('level')
     }

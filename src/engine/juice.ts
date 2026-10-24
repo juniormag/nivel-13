@@ -1,6 +1,7 @@
 // Juice: partículas, textos flutuantes, tremor, hit-stop, clarão e ondas de choque.
 import { Container, Graphics, Particle, ParticleContainer, Sprite, Text } from 'pixi.js'
 import type { Juice } from './types'
+import { getPrefs } from '../ui/prefs'
 import { px } from './textures'
 
 interface P {
@@ -65,9 +66,10 @@ export class JuiceLayer implements Juice {
   }
 
   shake(amount: number, _ms = 160, dir?: { x: number; y: number }) {
-    if (this.reduced) return
+    const pref = getPrefs().shake
+    if (this.reduced || pref <= 0) return
     // compatível com a API antiga em px: 4 px ≈ trauma 1
-    this.trauma = Math.min(1, this.trauma + Math.min(1, amount / 4) * 0.6)
+    this.trauma = Math.min(1, this.trauma + Math.min(1, amount / 4) * 0.6 * pref)
     this.dir = dir ?? { x: 1, y: 1 }
   }
 
@@ -94,6 +96,7 @@ export class JuiceLayer implements Juice {
 
   private flashLog: number[] = []
   private flashBudget() {
+    if (!getPrefs().flashes) return false
     const now = performance.now()
     this.flashLog = this.flashLog.filter((t) => now - t < 1000)
     if (this.flashLog.length >= 3) return false

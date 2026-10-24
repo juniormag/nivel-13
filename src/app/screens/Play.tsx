@@ -135,7 +135,7 @@ export default function Play() {
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key
       const s = map[k]
       if (down && s && !custom) {
-        useSkill(s)
+        triggerSkill(s)
         return
       }
       if (k.startsWith('Arrow')) e.preventDefault()
@@ -160,7 +160,7 @@ export default function Play() {
     if (!g) return false
     return k === 'checar' ? !!g.clear : k === 'lembrar' ? !!g.hint : true
   }
-  function useSkill(k: SkillKind) {
+  function triggerSkill(k: SkillKind) {
     if (!unlocked(k) || usePlay.getState().used.includes(k)) return
     runnerRef.current?.useSkill(k)
   }
@@ -224,7 +224,7 @@ export default function Play() {
             state={(k) =>
               !unlocked(k) ? 'locked' : used.includes(k) ? 'used' : supported(k) ? 'ready' : 'na'
             }
-            onUse={useSkill}
+            onUse={triggerSkill}
           />
         )}
         {(slow || shield) && <div className={`status-glow${shield ? ' shield' : ''}`} aria-hidden="true" />}

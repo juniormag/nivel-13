@@ -193,7 +193,9 @@ export function ChuteResult({
 
       <motion.section className="cx-share pf pf--hud" aria-labelledby="cx-share-h" variants={rise}>
         <h2 id="cx-share-h">Desafie a família</h2>
-        <p className="cx-share-sub">Sem spoiler: vai a grade e uma pergunta. Quem recebe chuta antes de abrir.</p>
+        <p className="cx-share-sub">
+          Sem spoiler: vai a grade e uma pergunta. Quem recebe chuta antes de abrir.
+        </p>
         <PixelButton tone="red" size="big" wide onClick={() => void share('group')}>
           Mandar no grupo
         </PixelButton>

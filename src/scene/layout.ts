@@ -51,7 +51,11 @@ export function layoutFor(W: number, H: number): Layout {
       ppu,
       base: { x: Math.round(W / 2), y: baseY },
       hillTop: baseY,
-      moon: { x: Math.round(W * 0.15), y: Math.round(baseY - ppu * 9.3), r: Math.max(11, Math.round(W * 0.062)) },
+      moon: {
+        x: Math.round(W * 0.15),
+        y: Math.round(baseY - ppu * 9.3),
+        r: Math.max(11, Math.round(W * 0.062)),
+      },
       sugar: { x: Math.round(W * 0.1), h: Math.round(ppu * 2.6) },
       corc: { x: Math.round(W * 0.9), peak: Math.round(horizon - ppu * 3.2), half: Math.round(W * 0.2) },
     }

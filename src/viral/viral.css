@@ -6,7 +6,8 @@
    e este é um jogo de números. Só os dígitos trocam de fonte (unicode-range). */
 @font-face {
   font-family: "cx-digits";
-  src: url("../../node_modules/@fontsource/silkscreen/files/silkscreen-latin-400-normal.woff2") format("woff2");
+  src: url("../../node_modules/@fontsource/silkscreen/files/silkscreen-latin-400-normal.woff2")
+    format("woff2");
   unicode-range: U+0030-0039;
   size-adjust: 88%;
   font-display: swap;
@@ -16,7 +17,9 @@
   font-family: var(--f-text);
   /* a ligadura "fi" do Pixelify Sans vira um "A" ("Acou" no lugar de "ficou") */
   font-variant-ligatures: none;
-  font-feature-settings: "liga" 0, "clig" 0;
+  font-feature-settings:
+    "liga" 0,
+    "clig" 0;
   --hair: 2px;
   --cx-w: 600px;
   --cx-frame: var(--stone-3);

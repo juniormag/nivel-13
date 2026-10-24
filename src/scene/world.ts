@@ -46,6 +46,7 @@ export class World {
   private follow = { x: 0, y: 0, tx: 0, ty: 0 }
   private progress = 0
   private crownOn = false
+  private crownLocked = false
   private crownDrop = -1
   private crownLanded = false
   private flare = 0
@@ -153,7 +154,7 @@ export class World {
     const prev = this.progress
     this.progress = p
     this.mon?.setProgress(p, animate && !this.reduced)
-    if (p >= 1 && !this.crownOn) {
+    if (p >= 1 && !this.crownOn && !this.crownLocked) {
       this.crownOn = true
       if (animate && prev < 1 && !this.reduced) this.dropCrown()
       else this.crownLanded = true
@@ -161,8 +162,22 @@ export class World {
   }
 
   showCrown() {
-    this.crownOn = true
+    this.setCrown(true)
+  }
+
+  /** liga/desliga a coroa sem animação (cards de share pedem `crown: false` mesmo no progresso 1) */
+  setCrown(on: boolean) {
+    this.crownOn = on
+    this.crownLocked = !on
     this.crownLanded = true
+    this.crownDrop = -1
+  }
+
+  /** tira o monumento (cards só com o cenário) */
+  dropMonument() {
+    this.mon?.dispose()
+    this.mon = null
+    this.loading = null
   }
 
   /** a coroa cai do alto, quica 2 vezes e explode em dourado */
@@ -220,6 +235,18 @@ export class World {
       x: Math.round(L.base.x - m.origin.x - this.cam.x),
       y: Math.round(L.base.y - m.origin.y - this.cam.y),
     }
+  }
+
+  /** simula só as partículas (sem desenhar): usado para encher o ar antes de um quadro parado */
+  simulate(t: number, dt: number) {
+    this.lastT = t
+    const L = this.bd.L
+    const u = L.ppu
+    const a = this.mon?.anchors()
+    const mp = this.monPos()
+    const heads = a ? a.heads.map((h) => ({ ...h, x: h.x + mp.x, y: h.y + mp.y })) : []
+    const anchors = a ? a.edges.map((e) => ({ x: e.x + mp.x, y: e.y + mp.y })) : []
+    this.fx.update(dt, t, { heads, base: { x: L.base.x, y: L.base.y - u, w: u * 9 }, anchors, mobile: false })
   }
 
   frame(t: number, dt: number) {
@@ -411,39 +438,59 @@ export function webgl2() {
   }
 }
 
+/** mundos de quadro parado em cache por tamanho (cenário assado + monumento já compilado) */
+const stillCache = new Map<string, World>()
+
 /**
- * Quadro parado da cena do título para cards de compartilhar: cenário + monumento em escala
- * de pixel inteira. `progress` 0..1 reconstrói o 13; `crown` põe a coroa.
+ * Quadro parado da cena do título para cards de compartilhar: cenário + monumento em escala de
+ * pixel inteira. `progress` 0..1 reconstrói o 13; `crown` liga/desliga a coroa (padrão: só no 1);
+ * `monument: false` devolve só o cenário. Determinístico: o mesmo pedido gera o mesmo card.
  */
 export async function renderHeroStill(
   width: number,
   height: number,
-  opts: { progress?: number; crown?: boolean } = {},
+  opts: { progress?: number; crown?: boolean; monument?: boolean; seed?: number } = {},
 ): Promise<HTMLCanvasElement> {
+  width = Math.max(32, Math.floor(width) || 1200)
+  height = Math.max(32, Math.floor(height) || 630)
   const s = Math.max(1, Math.round(Math.min(width, height) / 270))
   const W = Math.ceil(width / s)
   const H = Math.ceil(height / s)
-  const low = document.createElement('canvas')
-  const world = new World(low, W, H, { reduced: false, mobile: false, still: true })
-  const p = opts.progress ?? 1
-  world.setProgress(p)
-  if (opts.crown ?? p >= 1) world.showCrown()
-  await world.loadMonument()
-  world.setProgress(p)
-  // simula um pouco para as brasas e faíscas já estarem no ar
-  let t = 5.2
-  for (let i = 0; i < 70; i++) {
-    t += 1 / 30
-    world.frame(t, 1 / 30)
+  const key = `${W}x${H}`
+  let world = stillCache.get(key)
+  if (!world) {
+    world = new World(document.createElement('canvas'), W, H, { reduced: false, mobile: false, still: true })
+    stillCache.set(key, world)
+    // no máximo 2 tamanhos vivos (cada um segura um contexto WebGL)
+    if (stillCache.size > 2) {
+      const [oldKey, old] = stillCache.entries().next().value as [string, World]
+      old.dispose()
+      stillCache.delete(oldKey)
+    }
   }
-  world.dispose()
+  const p = Math.max(0, Math.min(1, opts.progress ?? 1))
+  const withMonument = opts.monument !== false
+  if (withMonument) await world.loadMonument()
+  else world.dropMonument()
+  world.setProgress(p)
+  world.setCrown(opts.crown ?? p >= 1)
+  world.fx.reseed(opts.seed ?? 1313)
+  // enche o ar de brasas e faíscas sem desenhar, depois um único quadro
+  let t = 5.2
+  // fixa a posição das fitas no instante inicial (senão herda o card anterior)
+  world.mon?.render(t)
+  for (let i = 0; i < 50; i++) {
+    t += 1 / 30
+    world.simulate(t, 1 / 30)
+  }
+  world.frame(t, 0)
   const out = document.createElement('canvas')
   out.width = width
   out.height = height
   const g = out.getContext('2d')
   if (g) {
     g.imageSmoothingEnabled = false
-    g.drawImage(low, 0, 0, W * s, H * s)
+    g.drawImage(world.canvas, 0, 0, W * s, H * s)
   }
   return out
 }
