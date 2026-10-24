@@ -57,6 +57,7 @@ export function InstallPrompt() {
   const [sheet, setSheet] = useState(false)
   const [sheetMounted, setSheetMounted] = useState(false)
   const allowed = !standalone && !installed && (!desktop || !!deferred)
+  const openReq = useInstall((s) => s.openReq)
 
   const openSheet = () => {
     setSheetMounted(true)
@@ -80,6 +81,14 @@ export function InstallPrompt() {
     }, 900)
     return () => clearTimeout(t)
   }, [])
+
+  // botão fixo do título pediu o tutorial
+  // biome-ignore lint/correctness/useExhaustiveDependencies: só reage a um pedido novo
+  useEffect(() => {
+    if (!openReq) return
+    setBanner(false)
+    openSheet()
+  }, [openReq])
 
   // hora certa
   useEffect(() => {

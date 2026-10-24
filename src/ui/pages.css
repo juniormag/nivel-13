@@ -239,6 +239,13 @@
     top: calc(14px + var(--safe-t));
     gap: var(--sp-1);
   }
+  /* com o botão Instalar, os corações decorativos saem para caber ao lado do jogador */
+  .t-topright:has(.inst-home) .hearts {
+    display: none;
+  }
+  .title:has(.inst-home) {
+    --xp-w: 120px;
+  }
   .title .heart {
     width: 22px;
     height: 20px;
@@ -1165,4 +1172,11 @@
   margin: 0 -24px -24px;
   padding: var(--sp-3) var(--sp-6) var(--sp-6);
   background: linear-gradient(to bottom, transparent, var(--pf-fill, var(--night)) 14px);
+}
+
+/* celular estreito com o botão Instalar: a barra de XP encurta para não encostar nele */
+@media (max-width: 379px) and (orientation: portrait) {
+  .title:has(.inst-home) {
+    --xp-w: 100px;
+  }
 }

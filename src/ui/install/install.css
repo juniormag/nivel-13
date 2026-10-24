@@ -114,3 +114,57 @@
 .inst-step-glyph svg {
   display: block;
 }
+
+/* acesso fixo no título: chip pequeno ao lado dos três pontos */
+.inst-home {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  padding: 0 7px 0 5px;
+  background: var(--night);
+  color: var(--gold-hi);
+  box-shadow:
+    0 -2px 0 0 var(--gold-1),
+    0 2px 0 0 var(--gold-1),
+    -2px 0 0 0 var(--gold-1),
+    2px 0 0 0 var(--gold-1);
+}
+.inst-home-icon {
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
+.inst-home-icon img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+  -webkit-user-drag: none;
+}
+.inst-home-icon i {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  display: grid;
+  place-items: center;
+  font: 700 10px/1 var(--f-hud);
+  font-style: normal;
+  color: var(--void);
+  background: var(--gold-hi);
+}
+.inst-home-text {
+  font-family: var(--f-hud);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+@media (hover: hover) {
+  .inst-home:hover {
+    background: var(--dusk);
+  }
+}

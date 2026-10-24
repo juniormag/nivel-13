@@ -10,6 +10,7 @@ import { currentLevel, levelsDone, stats, useSave, XP_MAX, xpTotal } from '../..
 import { CommandMenu, type MenuItem } from '../../ui/CommandMenu'
 import { useElectionCountdown } from '../../ui/Countdown'
 import { Hearts } from '../../ui/Hearts'
+import { InstallButton } from '../../ui/install/InstallButton'
 import { Minimap } from '../../ui/Minimap'
 import { slideFrom } from '../../ui/motion'
 import { Tap } from '../../ui/PixelButton'
@@ -93,6 +94,7 @@ export default function Title() {
       </motion.header>
 
       <motion.div className="t-topright" variants={slideFrom(10)} initial="hidden" animate="show">
+        <InstallButton />
         <Hearts n={3} max={3} label="3 vidas por fase" />
         <Tap className="dots" aria-label="Sobre, fontes e ajustes" onClick={() => go('sobre')}>
           <i />

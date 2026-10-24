@@ -101,12 +101,15 @@ interface InstallState {
   /** instalou nesta sessão (appinstalled) */
   installed: boolean
   standalone: boolean
+  /** pedidos de abrir o tutorial vindos de um botão (o InstallPrompt escuta) */
+  openReq: number
 }
 
 export const useInstall = create<InstallState>(() => ({
   deferred: null,
   installed: false,
   standalone: false,
+  openReq: 0,
 }))
 
 let booted = false
@@ -184,4 +187,15 @@ export const hasUrlParam = () => {
   } catch {
     return false
   }
+}
+
+/** Botão fixo (título): pedido nativo quando o Chrome deixa; senão abre o tutorial. Precisa vir de um toque. */
+export async function requestInstall() {
+  ev('install', 'home')
+  if (useInstall.getState().deferred) {
+    const r = await promptNative()
+    if (r === 'accepted') markDone()
+    if (r !== 'unavailable') return
+  }
+  useInstall.setState((s) => ({ openReq: s.openReq + 1 }))
 }
