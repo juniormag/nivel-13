@@ -4,7 +4,21 @@
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js'
 import { inBrazil, LAT0, LAT1, LON0, LON1 } from '../content/brazil'
 import type { GameCtx, MicroGame } from '../engine/types'
-import { bake, bakeRotated, Debris, Embers, energyDot, label, P, ramp, Sparkles, stop } from './kit-b'
+import {
+  bake,
+  bakeRotated,
+  Debris,
+  Embers,
+  Explosions,
+  energyDot,
+  joy,
+  label,
+  P,
+  ramp,
+  ScorePops,
+  Sparkles,
+  stop,
+} from './kit-b'
 
 interface Shot {
   a: number
@@ -50,6 +64,10 @@ export default function escudo(): MicroGame {
   const debris = new Debris(60)
   let embers: Embers
   let sparkles: Sparkles
+  let scores: ScorePops
+  let booms: Explosions
+  /** bloqueios seguidos (bônus +2 por passo, até +20) */
+  let streak = 0
   let cx = 0
   let cy = 0
   let R = 30
@@ -195,18 +213,33 @@ export default function escudo(): MicroGame {
       )
     embers.blast(x, y, 120, 40)
     if (perfect) {
-      c.addScore(45, x + ox * 10, y + oy * 10)
-      c.fx.float('PERFEITO', x + Math.round(ox * 12), y + Math.round(oy * 12) - 8, P.goldHi)
+      streak++
+      scores.score(
+        45 + Math.min(20, (streak - 1) * 2),
+        x + Math.round(ox * 12),
+        y + Math.round(oy * 12),
+        streak,
+        embers,
+      )
+      scores.add('PERFEITO', x + Math.round(ox * 12), y + Math.round(oy * 12) - 10, P.goldHi, false)
+      joy(c, 2, 160)
       stop(c, 60)
       c.fx.burst(x, y, P.goldHi, 14, 70)
       c.fx.ring(x, y, P.gold, 18)
       sparkles.spawn(x, y, 9)
-      c.sfx('coin')
+      c.sfx('perfect', { x, combo: streak })
     } else {
-      c.addScore(30, x + ox * 10, y + oy * 10)
+      streak++
+      scores.score(
+        30 + Math.min(20, (streak - 1) * 2),
+        x + Math.round(ox * 12),
+        y + Math.round(oy * 12),
+        streak,
+        embers,
+      )
       c.fx.burst(x, y, P.gold, 8, 50)
       c.fx.ring(x, y, P.goldHi, 10)
-      c.sfx('tap')
+      c.sfx('shield', { x, combo: streak })
     }
   }
 
@@ -235,6 +268,8 @@ export default function escudo(): MicroGame {
       trails.blendMode = 'add'
       embers = new Embers(c, { x0: 0, y0: c.top, x1: c.W, y1: c.bottom }, { ambient: 22 }).listen()
       sparkles = new Sparkles(c.reduced)
+      scores = new ScorePops(c)
+      booms = new Explosions(c)
       const tag = label('SANTOS', P.stone3)
       tag.x = Math.min(c.W - 20, santos.x + 16)
       tag.y = santos.y + 8
@@ -252,6 +287,8 @@ export default function escudo(): MicroGame {
         debris.root,
         tag,
         sparkles.root,
+        booms.root,
+        scores.root,
       )
     },
     update(dt) {
@@ -277,7 +314,7 @@ export default function escudo(): MicroGame {
         s.r -= s.sp * dt
         const ca = Math.cos(s.a)
         const sa = Math.sin(s.a)
-        if (prev > R && s.r <= R) {
+        if (prev > R - s.sp * 0.05 && s.r <= R && s.r > R - s.sp * 0.05 - s.sp * dt) {
           const d = Math.abs(angDiff(s.a, ang))
           if (d < ARC / 2 + GRACE) {
             s.sp = 0
@@ -289,7 +326,8 @@ export default function escudo(): MicroGame {
           s.sp = 0
           const x = Math.round(cx + ca * s.r)
           const y = Math.round(cy + sa * s.r)
-          c.fx.burst(x, y, P.redHot, 14, 60)
+          streak = 0
+          booms.spawn(x, y, 6)
           c.fx.ring(x, y, P.red, 16)
           hurt.push({ x, y, t: c.time })
           c.hit(x, y)
@@ -335,6 +373,8 @@ export default function escudo(): MicroGame {
       drawShield()
       embers.update(dt, c.time)
       sparkles.update(dt)
+      scores.update(dt)
+      booms.update(dt)
       debris.update(dt)
     },
     down(x, y) {

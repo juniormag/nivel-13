@@ -1,11 +1,12 @@
 // Estrutura comum das telas: mundo ao fundo, folha emoldurada com título, rodapé legal.
 import { MotionConfig, motion } from 'motion/react'
-import { type ReactNode, useEffect } from 'react'
+import { Component, type ReactNode, useEffect } from 'react'
 import { go } from '../app/nav'
+import { sfx } from '../audio/audio'
 import { CONFIG, responsavelText } from '../config'
 import { sprite } from '../lib/sprites'
 import type { Avatar } from '../state/save'
-import { pageIn, stagger } from './motion'
+import { pageIn, stagger, steps } from './motion'
 import { Tap } from './PixelButton'
 import type { FrameTone } from './PixelFrame'
 import { PixelIcon } from './PixelIcon'
@@ -17,6 +18,20 @@ export const AVATAR_NAMES: Record<Avatar, string> = {
   onca: 'Onça',
   arara: 'Arara',
   capivara: 'Capivara',
+}
+
+/** Se o mundo 3D falhar (GPU, WebGL), a interface continua de pé sobre o fundo escuro. */
+class WorldBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  componentDidCatch(err: unknown) {
+    console.error('[WorldStage]', err)
+  }
+  render() {
+    return this.state.failed ? <div className="world-fallback" aria-hidden="true" /> : this.props.children
+  }
 }
 
 /** Raiz de toda tela: respeita prefers-reduced-motion em todo motion filho. */
@@ -36,7 +51,11 @@ export function Screen({
 }) {
   return (
     <MotionConfig reducedMotion="user">
-      {world !== undefined && <WorldStage progress={world} celebrate={celebrate} />}
+      {world !== undefined && (
+        <WorldBoundary>
+          <WorldStage progress={world} celebrate={celebrate} />
+        </WorldBoundary>
+      )}
       {world !== undefined && dim && <div className="world-dim" aria-hidden="true" />}
       <main className={`scr${className ? ` ${className}` : ''}`}>{children}</main>
       <PixelWipe />
@@ -68,7 +87,10 @@ export function Page({
   useEffect(() => {
     if (!onClose) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !e.defaultPrevented) onClose()
+      if (e.key === 'Escape' && !e.defaultPrevented) {
+        sfx('back')
+        onClose()
+      }
     }
     addEventListener('keydown', onKey)
     return () => removeEventListener('keydown', onKey)
@@ -85,7 +107,7 @@ export function Page({
         {eyebrow && <div className="eyebrow">{eyebrow}</div>}
         <h1 id="page-title">{title}</h1>
         {onClose && (
-          <Tap className="btn btn--ghost page-close" aria-label={closeLabel} onClick={onClose}>
+          <Tap className="btn btn--ghost page-close" aria-label={closeLabel} commit="back" onClick={onClose}>
             ✕
           </Tap>
         )}
@@ -114,14 +136,29 @@ export function PortraitFrame({ avatar, className }: { avatar: Avatar; className
   )
 }
 
-/** Faixa de estrelas (0 a 3) com rótulo acessível. */
-export function Stars({ n, className }: { n: number; className?: string }) {
+/** Faixa de estrelas (0 a 3) com rótulo acessível. Com `reveal`, cada estrela cai com som em tríade. */
+export function Stars({ n, reveal, className }: { n: number; reveal?: boolean; className?: string }) {
+  useEffect(() => {
+    if (!reveal) return
+    const ts = Array.from({ length: n }, (_, k) =>
+      window.setTimeout(() => sfx('star', { combo: k }), 420 + k * 200),
+    )
+    return () => {
+      for (const t of ts) clearTimeout(t)
+    }
+  }, [reveal, n])
   return (
     <div className={`stars${className ? ` ${className}` : ''}`} role="img" aria-label={`${n} de 3 estrelas`}>
       {[0, 1, 2].map((k) => (
-        <span key={k} className={k < n ? '' : 'off'}>
+        <motion.span
+          key={k}
+          className={k < n ? '' : 'off'}
+          initial={reveal && k < n ? { opacity: 0, scale: 1.6 } : false}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.42 + k * 0.2, duration: 0.15, ease: steps(3) }}
+        >
           ★
-        </span>
+        </motion.span>
       ))}
     </div>
   )

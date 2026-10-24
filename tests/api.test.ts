@@ -1,7 +1,7 @@
 // Testes da API (app Hono do Worker) contra SQLite em memória, pelo mesmo adaptador do servidor local.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openD1 } from '../server/d1-sqlite.mjs'
-import app, { dayBR, type Env } from '../worker/src/index.ts'
+import { app, dayBR, type Env } from '../worker/src/index.ts'
 
 let env: Env
 let db: ReturnType<typeof openD1>['db']
@@ -276,10 +276,13 @@ describe('/daily', () => {
     expect((await stats()).daily).toEqual({ date: d, plays: 2, avg: 3.5 })
   })
 
-  it('aceita ontem e amanhã (fuso), rejeita fora da janela', async () => {
+  it('aceita até 2 dias atrás (sem rede) e amanhã (fuso), rejeita fora da janela', async () => {
+    expect((await post('/daily', { id: 'aaaaaa', date: dayBR(-2), score: 3 })).status).toBe(200)
     expect((await post('/daily', { id: 'aaaaaa', date: dayBR(-1), score: 3 })).status).toBe(200)
     expect((await post('/daily', { id: 'aaaaaa', date: dayBR(1), score: 3 })).status).toBe(200)
     expect((await post('/daily', { id: 'aaaaaa', date: dayBR(-3), score: 3 })).status).toBe(400)
+    expect((await post('/daily', { id: 'aaaaaa', date: dayBR(2), score: 3 })).status).toBe(400)
+    expect((await post('/daily', { id: 'aaaaaa', date: '2026-02-31', score: 3 })).status).toBe(400)
     expect((await post('/daily', { id: 'aaaaaa', date: '2026-13-99', score: 3 })).status).toBe(400)
   })
 

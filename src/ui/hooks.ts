@@ -1,14 +1,19 @@
 // Ganchos pequenos da interface.
 import { useEffect, useRef, useState } from 'react'
-import { sfx } from '../audio/audio'
+import { type Sfx, sfx } from '../audio/audio'
 import { prefersReduced } from './motion'
 
 /**
  * Número que sobe até o alvo em vez de pular (regra 33): 300 a 600 ms com ease-out.
  * `from` define o ponto de partida na primeira montagem.
  */
-export function useCountUp(target: number, opts: { from?: number; ms?: number; tick?: boolean } = {}) {
-  const { from = target, ms = 520, tick = false } = opts
+export function useCountUp(
+  target: number,
+  opts: { from?: number; ms?: number; tick?: Sfx | boolean | null; done?: Sfx | null } = {},
+) {
+  const { from = target, ms = 520, done = null } = opts
+  // true continua valendo (som 'tick'), como na primeira versão deste gancho
+  const tick: Sfx | null = opts.tick === true ? 'tick' : opts.tick || null
   const [v, setV] = useState(prefersReduced() ? target : from)
   const cur = useRef(v)
   useEffect(() => {
@@ -30,13 +35,14 @@ export function useCountUp(target: number, opts: { from?: number; ms?: number; t
       setV(val)
       if (tick && now - lastTick > 90 && k < 1) {
         lastTick = now
-        sfx('tick')
+        sfx(tick)
       }
       if (k < 1) raf = requestAnimationFrame(step)
+      else if (done) sfx(done)
     }
     raf = requestAnimationFrame(step)
     return () => cancelAnimationFrame(raf)
-  }, [target, ms, tick])
+  }, [target, ms, tick, done])
   return v
 }
 

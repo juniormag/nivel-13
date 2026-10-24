@@ -3,6 +3,7 @@
 import { Container, Graphics, type Sprite, type Text, type Texture } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
 import {
+  Combo,
   clamp01,
   curve,
   ENERGY,
@@ -42,6 +43,7 @@ interface Win {
   crackT: number
   /** cor da última luz (para apagar na mesma cor) */
   kind: 'gold' | 'red'
+  off: Texture
   pane: Sprite
   spr: Sprite
   pix: Text
@@ -90,7 +92,11 @@ function golpeTex() {
 
 /** quadros de luz da janela: apagada, acesa boa (ouro) e acesa de golpe (sangue) */
 function windowTex(w: number, h: number, kind: 'off' | 'gold' | 'red', lvl: number) {
-  return gridTex(`whack-win${w}x${h}${kind}${lvl}`, () => {
+  return gridTex(`whack-win${w}x${h}${kind}${lvl}`, () => windowGrid(w, h, kind, lvl))
+}
+
+function windowGrid(w: number, h: number, kind: 'off' | 'gold' | 'red', lvl: number) {
+  {
     const g = new Grid(w, h, -1)
     const ramp =
       kind === 'gold'
@@ -113,6 +119,31 @@ function windowTex(w: number, h: number, kind: 'off' | 'gold' | 'red', lvl: numb
     // peitoril
     for (let x = 0; x < w; x++) g.set(x, h - 1, P.stone1)
     return g
+  }
+}
+
+/** janela apagada com vida: 0 vazia, 1 cortinas, 2 persiana, 3 vaso de planta */
+function offTex(w: number, h: number, deco: number) {
+  return gridTex(`whack-off${w}x${h}d${deco}`, () => {
+    const g = windowGrid(w, h, 'off', 1)
+    if (deco === 1)
+      for (let y = 0; y < h - 1; y++) {
+        const cw = Math.max(2, Math.round(w * 0.22 - (y < h / 2 ? 0 : 1)))
+        for (let x = 0; x < cw; x++) {
+          g.set(x, y, x === cw - 1 ? P.blood0 : P.blood1)
+          g.set(w - 1 - x, y, x === cw - 1 ? P.blood0 : P.blood1)
+        }
+      }
+    else if (deco === 2)
+      for (let y = 1; y < h * 0.55; y += 2) for (let x = 0; x < w; x++) g.set(x, y, P.hazeDark)
+    else if (deco === 3) {
+      const px = Math.round(w * 0.25)
+      g.rect(px, h - 5, 4, 4, P.emberDark)
+      g.rect(px, h - 5, 4, 1, P.gold0)
+      g.ellipse(px + 1.5, h - 8, 3, 2.5, P.vine1)
+      g.set(px, h - 9, P.green)
+    }
+    return g
   })
 }
 
@@ -121,6 +152,7 @@ export default function whack(): MicroGame {
   const root = new Container()
   const items = new Container()
   let field: Field
+  let combo: Combo
   const wins: Win[] = []
   const tap = new TapBuffer(0.1)
   let spawn = 0.8
@@ -197,15 +229,18 @@ export default function whack(): MicroGame {
     const cy = w.y + w.h / 2
     if (it.good) {
       c.addScore(60, cx, w.y - 4)
+      combo.hit(cx, w.y - 12)
       c.fx.ring(cx, cy, P.goldHi, 22)
       field.blast(cx, cy, 16, 60, GOLD, { add: true })
       field.blast(cx, cy, 8, 40, [P.sparkle, P.blue1, P.blue0])
       field.sparkle(cx + 6, cy - 6)
-      c.sfx('coin')
+      c.sfx('coin', { x: cx, combo: combo.n })
     } else {
       w.crackT = c.time
+      combo.reset()
       field.blast(cx, cy, 14, 60, [P.stoneHi, P.stone3, P.stone2], { grav: 180 })
       field.blast(cx, cy, 10, 50, ENERGY, { add: true })
+      c.sfx('shatter', { x: cx })
       c.hit(cx, cy)
     }
     return true
@@ -219,6 +254,7 @@ export default function whack(): MicroGame {
       c.stage.addChild(root)
       field = new Field(c)
       field.trail = GOLD
+      combo = new Combo(c, field, 1.5)
       good = carteiraTex()
       bad = golpeTex()
       const portrait = c.W < c.H
@@ -243,8 +279,22 @@ export default function whack(): MicroGame {
           pix.visible = false
           pix.x = Math.round(x + cw / 2)
           pix.y = y + 5
-          const pane = spr(lit('off', 1), x, y, 0, 0)
-          wins.push({ x, y, w: cw, h: ch, item: null, light: 0, crackT: -1, kind: 'gold', pane, spr: s, pix })
+          const off = offTex(cw, ch, Math.floor(c.rnd() * 4))
+          const pane = spr(off, x, y, 0, 0)
+          wins.push({
+            off,
+            x,
+            y,
+            w: cw,
+            h: ch,
+            item: null,
+            light: 0,
+            crackT: -1,
+            kind: 'gold',
+            pane,
+            spr: s,
+            pix,
+          })
         }
       drawFacade()
       const panes = new Container()
@@ -253,16 +303,64 @@ export default function whack(): MicroGame {
         items.addChild(w.spr)
       }
       for (const w of wins) items.addChild(w.pix)
-      const halo = spr(glowTex(22, ENERGY), bx + bw / 2, by - 8)
-      halo.blendMode = 'add'
-      halo.alpha = 0.35
+      // vizinhos em silhueta (plano de trás) e postes no primeiro plano: profundidade
+      const back = new Graphics()
+      let nx = 0
+      while (nx < c.W) {
+        const w2 = 14 + Math.floor(c.rnd() * 18)
+        const h2 = Math.round(bh * (0.45 + c.rnd() * 0.45))
+        if (nx + w2 < bx - 2 || nx > bx + bw + 2) {
+          back.rect(nx, by + bh - h2, w2, h2).fill(P.night)
+          back.rect(nx, by + bh - h2, w2, 1).fill(P.hazeDark)
+          for (let k = 0; k < (w2 * h2) / 70; k++)
+            back
+              .rect(
+                nx + 2 + Math.floor(c.rnd() * (w2 - 4)),
+                by + bh - h2 + 3 + Math.floor(c.rnd() * (h2 - 5)),
+                1,
+                1,
+              )
+              .fill(c.rnd() < 0.7 ? P.gold1 : P.ember)
+        }
+        nx += w2 + 2
+      }
+      const front = new Graphics()
+      for (const lx of [Math.round(bx - 10), Math.round(bx + bw + 9)]) {
+        front.rect(lx, by + bh - 26, 1, 27).fill(P.void)
+        front.rect(lx - 2, by + bh - 27, 5, 2).fill(P.void)
+        front.rect(lx - 1, by + bh - 25, 3, 1).fill(P.goldHi)
+      }
+      const lamps = [Math.round(bx - 10), Math.round(bx + bw + 9)].map((lx) => {
+        const s = spr(glowTex(6, [P.white, P.goldHi, P.gold, P.gold1, P.gold0]), lx, by + bh - 24)
+        s.blendMode = 'add'
+        s.alpha = 0.5
+        return s
+      })
+      // luz do letreiro escorrendo na fachada (pontilhado vermelho logo abaixo)
+      const spill = new Graphics()
+      for (let x = Math.round(bx + bw / 2 - 20); x < bx + bw / 2 + 20; x++)
+        if (x % 2 === 0) spill.rect(x, by + 1, 1, 1).fill(P.crimson)
       neon = label('VAGAS', P.redHot)
       neon.x = Math.round(bx + bw / 2)
       neon.y = by - 8
       beacon = spr(glowTex(3, ENERGY), bx + bw - 10, by - 17)
       beacon.blendMode = 'add'
       const shadow = spr(shadowTex(Math.round(bw + 20)), bx + bw / 2, by + bh + 1)
-      root.addChild(shadow, halo, facade, panes, items, cracks, field.root, neon, beacon)
+      root.addChild(
+        back,
+        shadow,
+        facade,
+        spill,
+        panes,
+        items,
+        cracks,
+        field.root,
+        neon,
+        beacon,
+        front,
+        ...lamps,
+        combo.text,
+      )
     },
     update(dt) {
       const d = curve(c.time, 25)
@@ -271,14 +369,11 @@ export default function whack(): MicroGame {
         spawn = lerp(0.8, 0.34, d)
         const free = wins.filter((w) => !w.item && w.light < 0.05)
         const w = free[Math.floor(c.rnd() * free.length)]
-        // a luz acende 0,15 s antes de o item subir: a cor já avisa (ouro = vaga, sangue = golpe)
-        if (w)
-          w.item = {
-            good: c.rnd() > lerp(0.22, 0.36, d),
-            t0: c.time + 0.15,
-            life: lerp(1.5, 0.85, d),
-            hitT: -1,
-          }
+        // a luz acende antes de o item subir e a cor já avisa: ouro = vaga (0,15 s), sangue = golpe (0,3 s)
+        if (w) {
+          const good = c.rnd() > lerp(0.22, 0.36, d)
+          w.item = { good, t0: c.time + (good ? 0.15 : 0.3), life: lerp(1.5, 0.85, d), hitT: -1 }
+        }
       }
       tap.poll(c.time, hitAt)
       for (const w of wins) {
@@ -295,7 +390,7 @@ export default function whack(): MicroGame {
         if (cur) w.kind = cur.good ? 'gold' : 'red'
         const flick = !!cur && c.time < cur.t0 && frameAt(c.time, 30, 2) === 0
         const lvl = flick ? 2 : cur ? 4 : Math.round(w.light * 4)
-        w.pane.texture = lvl <= 0 ? lit('off', 1) : lit(w.kind, lvl)
+        w.pane.texture = lvl <= 0 ? w.off : lit(w.kind, lvl)
         if (!cur || c.time < cur.t0) {
           w.spr.visible = false
           w.pix.visible = false
@@ -331,6 +426,7 @@ export default function whack(): MicroGame {
       neon.alpha = c.rnd() < 0.01 ? 0.4 : 1
       beacon.alpha = frameAt(c.time, 1.5, 2) ? 0.7 : 0.1
       if (c.rnd() < 0.08) field.ember(bx + c.rnd() * bw, by + bh, ENERGY)
+      combo.update()
       field.update(dt)
     },
     move(x, y) {

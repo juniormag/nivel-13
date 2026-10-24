@@ -81,9 +81,9 @@ export const STATEMENTS: Statement[] = [
   },
   {
     id: 's11',
-    text: 'Quase todos os remédios do Farmácia Popular são de graça.',
+    text: 'Todos os remédios do Farmácia Popular são de graça.',
     fato: true,
-    exp: 'Desde julho de 2024, 95% dos itens são gratuitos.',
+    exp: 'Desde fevereiro de 2025, os 41 itens do programa são 100% gratuitos.',
     src: 'Ministério da Saúde',
   },
   {

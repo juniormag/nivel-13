@@ -54,6 +54,21 @@ The schema uses `CREATE TABLE IF NOT EXISTS`, so running it again deletes nothin
    ```
    The second call must echo the site origin. With any other origin the header is absent.
 
+## 2b. Chuta Aí: `/c/:n` preview and purge
+
+- **New tables.** The Chuta Aí schema (chute, duelo, grupo, events) is in the same `worker/schema.sql`. On an existing database, run `pnpm db:init:remote` again: it only creates what is missing.
+- **`SITE_URL` and `RESPONSAVEL`** in `worker/wrangler.toml`. `/c/:n` sends people to `SITE_URL/?c=n&…`, uses `SITE_URL/og/c-{n}.png` as the image (or `SITE_URL/og.png` when that file does not exist) and puts "Propaganda eleitoral · RESPONSAVEL · AI label" in `og:description`.
+- **Where `/c/:n` lives.** The shared link must reach the Worker:
+  - with a custom domain (recommended): Worker routes for `your-domain/api/*` and `your-domain/c/*` (see step 4), and the link is `https://your-domain/c/5`;
+  - without a custom domain: the link uses the Worker URL, `https://nivel13-api.YOUR-ACCOUNT.workers.dev/c/5`, which redirects to the site.
+  Check the preview by pasting the link into a WhatsApp chat (Android and iOS).
+- **Purge.** `[triggers] crons` runs daily at 00:17 Brasília time: it cleans the `rate` table and, from `PURGE_AT` (30 Nov 2026), deletes **every** table. The cron ships with `pnpm deploy:api`; check it under Workers & Pages, nivel13-api, Settings, Triggers. To test locally:
+  ```bash
+  npx wrangler@4 dev --config worker/wrangler.toml --test-scheduled
+  curl "http://localhost:8787/__scheduled?cron=17+3+*+*+*"
+  ```
+- **Deleting one device's data** (LGPD request): the game calls `POST /api/apagar`. There is no other way to tie a request to a device, because we store no personal data.
+
 ## 3. Site (Pages)
 
 Build variables (details in the README):
@@ -82,7 +97,7 @@ The first time, Wrangler asks whether it may create the `nivel13` project.
 ## 4. Custom domain (optional)
 
 - Attach the domain to the Pages project (Custom domains) and add it to `ALLOWED_ORIGIN` and `VITE_SITE_URL`.
-- To serve the API on the same domain and skip CORS, add a Worker route for `your-domain/api/*` (in `worker/wrangler.toml`, `routes = [{ pattern = "your-domain/api/*", zone_name = "your-domain" }]`) and build with `VITE_API_URL=/api`.
+- To serve the API and the preview on the same domain and skip CORS, add Worker routes for `your-domain/api/*` and `your-domain/c/*` (in `worker/wrangler.toml`, `routes = [{ pattern = "your-domain/api/*", zone_name = "your-domain" }, { pattern = "your-domain/c/*", zone_name = "your-domain" }]`) and build with `VITE_API_URL=/api`.
 
 ## 5. After publishing
 
@@ -102,4 +117,4 @@ The first time, Wrangler asks whether it may create the `nivel13` project.
 
 ## Local development
 
-`pnpm dev:api` runs the same Hono app on Node with `node:sqlite` on port 8787 (database in `server/.data/dev.sqlite`; `DB_FILE=:memory:` for a throwaway one). `pnpm dev` proxies `/api` there. In dev, `ALLOWED_ORIGIN` is `*`.
+`pnpm dev:api` runs the same Hono app on Node with `node:sqlite` on port 8787 (database in `server/.data/dev.sqlite`; `DB_FILE=:memory:` for a throwaway one). `pnpm dev` proxies `/api` there. In dev, `ALLOWED_ORIGIN` is `*` and `SITE_URL` is `http://localhost:4313`. Vite does not proxy `/c/*`: to see the preview in dev, open `http://localhost:8787/c/5`.

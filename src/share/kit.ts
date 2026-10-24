@@ -1,7 +1,8 @@
 // Kit de pixel art dos cards: duas grades (arte ×6 e texto fino ×3), fontes em bitmap,
 // tinta com contorno e sombra, quantização para a paleta e exportação PNG.
-import silkExtUrl from '@fontsource/silkscreen/files/silkscreen-latin-ext-400-normal.woff2?url'
+
 import silkUrl from '@fontsource/silkscreen/files/silkscreen-latin-400-normal.woff2?url'
+import silkExtUrl from '@fontsource/silkscreen/files/silkscreen-latin-ext-400-normal.woff2?url'
 import { PALETTE, type PaletteKey } from '../lib/palette'
 
 export type Ink = PaletteKey
@@ -117,7 +118,8 @@ export interface Mask {
   base: number
 }
 
-const at = (m: Mask, x: number, y: number) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 0 : (m.d[y * m.w + x] ?? 0))
+const at = (m: Mask, x: number, y: number) =>
+  x < 0 || y < 0 || x >= m.w || y >= m.h ? 0 : (m.d[y * m.w + x] ?? 0)
 
 /** Silkscreen a 8 px cai exatamente na grade: cada pixel da fonte é um pixel lógico. */
 // Família privada: não depende do CSS global estar carregado.
@@ -134,10 +136,12 @@ export function loadFonts() {
     try {
       const faces = [
         new FontFace(FAMILY, `url(${silkUrl}) format('woff2')`, {
-          unicodeRange: 'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122',
+          unicodeRange:
+            'U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122',
         }),
         new FontFace(FAMILY, `url(${silkExtUrl}) format('woff2')`, {
-          unicodeRange: 'U+0100-02AF, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF',
+          unicodeRange:
+            'U+0100-02AF, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF',
         }),
       ]
       for (const f of faces) document.fonts.add(f)
@@ -270,7 +274,8 @@ export function scaleMask(m: Mask, k: number): Mask {
   const w = m.w * k
   const h = m.h * k
   const d = new Uint8Array(w * h)
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) d[y * w + x] = at(m, Math.floor(x / k), Math.floor(y / k))
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) d[y * w + x] = at(m, Math.floor(x / k), Math.floor(y / k))
   return { w, h, d, cap: m.cap * k, base: m.base * k }
 }
 
@@ -299,7 +304,8 @@ export function paint(g: CanvasRenderingContext2D, m0: Mask, x: number, y: numbe
     at(m, xx + 1, yy) ||
     at(m, xx, yy - 1) ||
     at(m, xx, yy + 1) ||
-    (p.thick && (at(m, xx - 1, yy - 1) || at(m, xx + 1, yy - 1) || at(m, xx - 1, yy + 1) || at(m, xx + 1, yy + 1)))
+    (p.thick &&
+      (at(m, xx - 1, yy - 1) || at(m, xx + 1, yy - 1) || at(m, xx - 1, yy + 1) || at(m, xx + 1, yy + 1)))
   const pad = 1 + (p.shadowDy ?? 1)
   if (p.shadow) {
     const sd = p.shadowDy ?? 1
@@ -404,7 +410,13 @@ export function frame(g: CanvasRenderingContext2D, x: number, y: number, w: numb
 }
 
 /** Brilho de 4 pontas: núcleo branco, braços dourados, pontas em ouro. */
-export function sparkle(g: CanvasRenderingContext2D, x: number, y: number, size: number, hot: Ink = 'goldHi') {
+export function sparkle(
+  g: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  hot: Ink = 'goldHi',
+) {
   const s = Math.max(0, Math.round(size))
   const cx = Math.round(x)
   const cy = Math.round(y)
@@ -445,7 +457,8 @@ export function star(g: CanvasRenderingContext2D, cx: number, cy: number, R: num
   }
   const S = Math.ceil(R) + 2
   const mask = new Map<string, boolean>()
-  for (let y = -S; y <= S; y++) for (let x = -S; x <= S; x++) if (inside(x + 0.5, y + 0.5 + R * 0.06)) mask.set(`${x},${y}`, true)
+  for (let y = -S; y <= S; y++)
+    for (let x = -S; x <= S; x++) if (inside(x + 0.5, y + 0.5 + R * 0.06)) mask.set(`${x},${y}`, true)
   const has = (x: number, y: number) => mask.has(`${x},${y}`)
   // contorno
   for (let y = -S - 1; y <= S + 1; y++)

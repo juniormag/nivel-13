@@ -15,7 +15,9 @@ import {
   flash,
   goldPulse,
   hintPulse,
+  joy,
   P,
+  ScorePops,
   Sparkles,
   shakeEl,
   stop,
@@ -135,6 +137,8 @@ export default function linha(): MicroGame {
   const timers = new Timers()
   let embers: Embers
   let sparkles: Sparkles
+  let pops: ScorePops
+  let streak = 0
   const debris = new Debris(60)
   let next = 0
   let mistakes = 0
@@ -185,9 +189,9 @@ export default function linha(): MicroGame {
 
   function impact() {
     impacted = true
-    c.sfx('boom')
+    c.sfx('stamp', { x: blockX })
     stop(c, 90)
-    c.fx.shake(2, 160)
+    joy(c, 2, 160)
     c.fx.ring(blockX, blockY, P.goldHi, 30)
     c.fx.ring(blockX, blockY, P.redHot, 16)
     c.fx.burst(blockX, blockY - 2, P.goldHi, 8, 60)
@@ -221,8 +225,9 @@ export default function linha(): MicroGame {
       ).onfinish = () => btn.classList.add('used')
       next++
       const pts = Math.max(60, 160 - mistakes * 10)
-      c.addScore(pts, blockX, blockY - 22)
-      c.sfx('good')
+      streak++
+      pops.score(pts, blockX, blockY - 22, streak, embers)
+      c.sfx('good', { x: blockX, combo: streak })
       strike()
       tiltV -= 0.6
       markNext()
@@ -245,6 +250,7 @@ export default function linha(): MicroGame {
       }
     } else {
       mistakes++
+      streak = 0
       btn.classList.remove('bad')
       void btn.offsetWidth
       btn.classList.add('bad')
@@ -457,7 +463,8 @@ export default function linha(): MicroGame {
       const area = { x0: 0, y0: blockY - 60, x1: c.W, y1: c.bottom }
       embers = new Embers(c, area, { ambient: 18 }).listen()
       sparkles = new Sparkles(c.reduced)
-      root.addChild(debris.root, embers.root, sparkles.root)
+      pops = new ScorePops(c)
+      root.addChild(debris.root, embers.root, sparkles.root, pops.root)
       markNext()
       cards[0]?.focus({ preventScroll: true })
     },
@@ -465,6 +472,7 @@ export default function linha(): MicroGame {
       timers.update(dt)
       embers.update(dt, c.time)
       sparkles.update(dt)
+      pops.update(dt)
       debris.update(dt)
       // martelo: antecipação 90 ms → smear 30 ms → impacto (segura no hit-stop) → quique → repouso
       const s = c.time - strikeT

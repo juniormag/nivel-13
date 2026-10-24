@@ -51,20 +51,19 @@ export function CommandMenu({
   )
   const refs = useRef<(HTMLButtonElement | null)[]>([])
 
-  // voltando para a tela: o foco volta no item que abriu a tela anterior
+  // voltando para a tela: o foco volta no item que abriu a tela anterior (só na montagem)
+  const restore = useRef({ saved, active })
   useEffect(() => {
-    if (saved && lastInputKeyboard) {
-      const t = window.setTimeout(() => refs.current[active]?.focus({ preventScroll: true }), 60)
-      return () => clearTimeout(t)
-    }
-    // só na montagem
-    // biome-ignore lint/correctness/useExhaustiveDependencies: restaura uma vez
+    const { saved: had, active: at } = restore.current
+    if (!had || !lastInputKeyboard) return
+    const t = window.setTimeout(() => refs.current[at]?.focus({ preventScroll: true }), 60)
+    return () => clearTimeout(t)
   }, [])
 
   const move = (to: number, focus = true) => {
     const n = (to + items.length) % items.length
     if (n !== active) {
-      sfx('tick')
+      sfx('select')
       if (focus) haptic('move')
     }
     setActive(n)
@@ -88,7 +87,7 @@ export function CommandMenu({
         move(active + (e.key === 'ArrowDown' ? 1 : -1))
       } else if (e.key === 'Enter') {
         e.preventDefault()
-        sfx('tap')
+        sfx('confirm')
         select(active)
       }
     }
@@ -143,7 +142,7 @@ function CmdItem({
   onSelect: () => void
   onNav: (key: string) => boolean
 }) {
-  const press = usePress<HTMLButtonElement>(onSelect)
+  const press = usePress<HTMLButtonElement>(onSelect, { commit: 'confirm' })
   return (
     <button
       ref={ref}

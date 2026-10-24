@@ -37,7 +37,7 @@
   cursor: pointer;
   font-family: var(--f-hud);
   font-size: 14px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   line-height: 1.15;
   padding: 12px 18px;
@@ -118,7 +118,7 @@
 
 .kbd {
   font-family: var(--f-hud);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1;
   min-width: 18px;
   height: 18px;
@@ -160,8 +160,8 @@
 .eyebrow {
   font-family: var(--f-hud);
   text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-size: 12px;
+  letter-spacing: 0.08em;
   color: var(--red-hot);
   margin-bottom: 8px;
 }
@@ -202,7 +202,7 @@
 }
 .countdown {
   font-family: var(--f-hud);
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   color: var(--gold);
 }
@@ -214,7 +214,7 @@
   cursor: pointer;
   font-family: var(--f-hud);
   font-size: 12px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 8px 14px;
   background: var(--night);
@@ -249,8 +249,8 @@
 }
 .field label {
   font-family: var(--f-hud);
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--stone-3);
 }
@@ -367,7 +367,7 @@ select.input {
 .intro .lvl {
   font-family: var(--f-hud);
   font-size: 12px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.1em;
   color: var(--red-hot);
   text-transform: uppercase;
 }
@@ -382,9 +382,9 @@ select.input {
 }
 .intro .where {
   font-family: var(--f-hud);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--stone-3);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
 }
 .intro p {
@@ -398,10 +398,10 @@ select.input {
   gap: 8px 16px;
   margin: 0 0 20px;
   font-family: var(--f-hud);
-  font-size: 11px;
+  font-size: 12px;
   color: var(--stone-3);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   flex-wrap: wrap;
 }
 .count {
@@ -460,8 +460,8 @@ select.input {
 }
 .fcard .tag {
   font-family: var(--f-hud);
-  font-size: 11px;
-  letter-spacing: 0.14em;
+  font-size: 12px;
+  letter-spacing: 0.08em;
   color: var(--stone-3);
   text-transform: uppercase;
   margin-bottom: 10px;
@@ -469,7 +469,7 @@ select.input {
 .fcard .verdict {
   font-family: var(--f-hud);
   font-size: 22px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   margin: 10px 0 6px;
 }
 .fcard .verdict.ok {
@@ -621,7 +621,7 @@ select.input {
   display: block;
   font-family: var(--f-hud);
   color: var(--gold);
-  font-size: 11px;
+  font-size: 12px;
   margin-bottom: 4px;
 }
 .tl-card.used {
@@ -651,9 +651,9 @@ select.input {
 .boss-claim small {
   display: block;
   font-family: var(--f-hud);
-  font-size: 10px;
+  font-size: 12px;
   color: var(--red-hot);
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   margin-bottom: 6px;
   text-transform: uppercase;
 }
@@ -726,8 +726,8 @@ select.input {
 }
 .map-panel .lvl {
   font-family: var(--f-hud);
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  letter-spacing: 0.07em;
   color: var(--red-hot);
 }
 .map-panel h3 {

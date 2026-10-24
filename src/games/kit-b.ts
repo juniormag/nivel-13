@@ -829,7 +829,12 @@ export class Explosions {
     for (let i = 0; i < n; i++) {
       const a = this.c.rnd() * Math.PI * 2
       const d = r * (0.2 + this.c.rnd() * 0.7)
-      puffs.push({ dx: Math.cos(a) * d, dy: Math.sin(a) * d * 0.7, r: r * (0.33 + this.c.rnd() * 0.17), rise: 6 + this.c.rnd() * 4 })
+      puffs.push({
+        dx: Math.cos(a) * d,
+        dy: Math.sin(a) * d * 0.7,
+        r: r * (0.33 + this.c.rnd() * 0.17),
+        rise: 6 + this.c.rnd() * 4,
+      })
     }
     this.list.push({ g, x: Math.round(x), y: Math.round(y), r, frames: 0, t: 0, last: -1, puffs })
   }
@@ -838,7 +843,9 @@ export class Explosions {
     for (let y = -R; y <= R; y++) {
       const hw = Math.round(Math.sqrt(Math.max(0, R * R - y * y)))
       if (mask === 0) g.rect(cx - hw, cy + y, hw * 2 + 1, 1)
-      else for (let x = -hw; x <= hw; x++) if ((((x + y) % mask) + mask) % mask === 0) g.rect(cx + x, cy + y, 1, 1)
+      else
+        for (let x = -hw; x <= hw; x++)
+          if ((((x + y) % mask) + mask) % mask === 0) g.rect(cx + x, cy + y, 1, 1)
     }
   }
   update(dt: number) {
@@ -901,7 +908,8 @@ interface Pop {
   big: boolean
 }
 /** cor do número pela sequência: pedra → ouro → brasa → vermelho quente */
-export const tierColor = (combo: number): Col => (combo >= 10 ? P.redHot : combo >= 6 ? P.emberBright : combo >= 3 ? P.gold : P.stoneHi)
+export const tierColor = (combo: number): Col =>
+  combo >= 10 ? P.redHot : combo >= 6 ? P.emberBright : combo >= 3 ? P.gold : P.stoneHi
 
 export class ScorePops {
   readonly root = new Container()
@@ -916,7 +924,8 @@ export class ScorePops {
     const col = tierColor(combo)
     this.add(`+${n}`, x, y, col, combo >= 3)
     if (combo >= 2) this.add(`x${combo}`, x + 14, y - 7, combo >= 6 ? P.redHot : P.gold, false)
-    if (embers && combo >= 6) for (let i = 0; i < Math.min(12, combo); i++) embers.spark(x + (this.c.rnd() - 0.5) * 10, y, 10, 0, -90)
+    if (embers && combo >= 6)
+      for (let i = 0; i < Math.min(12, combo); i++) embers.spark(x + (this.c.rnd() - 0.5) * 10, y, 10, 0, -90)
   }
   add(text: string, x: number, y: number, color: Col, big: boolean) {
     const t = label(text, color, 8)
@@ -941,3 +950,13 @@ export class ScorePops {
 
 /** tremor "feliz": só vertical (x-craft §23) */
 export const joy = (c: GameCtx, px = 2, ms = 180) => c.fx.shake(px, ms, { x: 0, y: 1 })
+
+/** impacto do motor (1 quadro branco e depois a cor) contando no limite de 3 clarões por segundo */
+export function impact(c: GameCtx, color: Col) {
+  if (c.reduced) return
+  const now = performance.now()
+  lastFlashes = lastFlashes.filter((t) => now - t < 1000)
+  if (lastFlashes.length >= 2) return
+  lastFlashes.push(now, now)
+  c.fx.impact(color)
+}

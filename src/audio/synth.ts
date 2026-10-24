@@ -89,12 +89,15 @@ export function tone(g: Graph, dest: AudioNode, t: number, p: ToneP): Oscillator
   if (p.type === 'p12') o.setPeriodicWave(g.p12)
   else if (p.type === 'p25') o.setPeriodicWave(g.p25)
   else o.type = p.type ?? 'square'
-  o.frequency.setValueAtTime(p.f, t)
+  // nada acima de Nyquist (pitch alto + combo alto não pode estourar)
+  const top = ctx.sampleRate * 0.45
+  const fq = (v: number) => Math.min(top, Math.max(1, v))
+  o.frequency.setValueAtTime(fq(p.f), t)
   const gl = p.glide ?? end - t
   if (p.curve && p.curve.length > 1) {
-    o.frequency.setValueCurveAtTime(p.curve, t, gl)
+    o.frequency.setValueCurveAtTime(p.curve.map(fq), t, gl)
   } else if (p.to !== undefined && p.to > 0) {
-    o.frequency.exponentialRampToValueAtTime(p.to, t + gl)
+    o.frequency.exponentialRampToValueAtTime(fq(p.to), t + gl)
   }
   if (p.detune) o.detune.value = p.detune
   const nodes: AudioNode[] = []

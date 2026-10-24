@@ -159,14 +159,14 @@ export function buildGraph(ctx: BaseAudioContext, opts: GraphOpts = {}): Graph {
   }
 
   const music = ctx.createGain()
-  music.gain.value = 0.42
+  music.gain.value = 0.52
   const duck = ctx.createGain()
   duck.gain.value = 1
   music.connect(duck)
   duck.connect(bus)
 
   const sfx = ctx.createGain()
-  sfx.gain.value = 0.9
+  sfx.gain.value = 1.1
   sfx.connect(bus)
 
   const room = ctx.createGain()

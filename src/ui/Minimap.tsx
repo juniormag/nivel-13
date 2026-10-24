@@ -101,7 +101,7 @@ export function Minimap({
       className={`minimap pf pf--hud${className ? ` ${className}` : ''}`}
       aria-label={lv ? `Próxima fase em ${lv.where}` : 'Mapa'}
     >
-      <canvas ref={ref} aria-hidden="true" />
+      <canvas ref={ref} />
       <span className="mm-north" aria-hidden="true">
         <b>N</b>
         <i />

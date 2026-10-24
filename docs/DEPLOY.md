@@ -54,6 +54,21 @@ O schema usa `CREATE TABLE IF NOT EXISTS`, então rodar de novo não apaga nada.
    ```
    A segunda chamada precisa devolver a origem do site. Com outra origem, o cabeçalho não aparece.
 
+## 2b. Chuta Aí: preview `/c/:n` e expurgo
+
+- **Tabelas novas.** O schema do Chuta Aí (chute, duelo, grupo, eventos) está no mesmo `worker/schema.sql`. Num banco que já existe, rode `pnpm db:init:remote` de novo: só cria o que falta.
+- **`SITE_URL` e `RESPONSAVEL`** em `worker/wrangler.toml`. `/c/:n` manda a pessoa para `SITE_URL/?c=n&…`, usa `SITE_URL/og/c-{n}.png` como imagem (ou `SITE_URL/og.png` se esse arquivo não existir) e põe "Propaganda eleitoral · RESPONSAVEL · rótulo de IA" no `og:description`.
+- **Onde fica `/c/:n`.** O link compartilhado precisa cair no Worker:
+  - com domínio próprio (recomendado): rotas do Worker para `seu-dominio/api/*` e `seu-dominio/c/*` (ver o passo 4), e o link fica `https://seu-dominio/c/5`;
+  - sem domínio próprio: o link usa a URL do Worker, `https://nivel13-api.SUA-CONTA.workers.dev/c/5`, que redireciona para o site.
+  Confira o preview colando o link numa conversa do WhatsApp (Android e iOS).
+- **Expurgo.** `[triggers] crons` roda todo dia às 00:17 de Brasília: limpa a tabela `rate` e, a partir de `PURGE_AT` (30/11/2026), apaga **todas** as tabelas. O cron é publicado junto com `pnpm deploy:api`; confira em Workers & Pages, nivel13-api, Settings, Triggers. Para testar localmente:
+  ```bash
+  npx wrangler@4 dev --config worker/wrangler.toml --test-scheduled
+  curl "http://localhost:8787/__scheduled?cron=17+3+*+*+*"
+  ```
+- **Apagar dados de um aparelho** (pedido pela LGPD): o jogo chama `POST /api/apagar`. Não há outro jeito de ligar um pedido a um aparelho, porque não guardamos dado pessoal.
+
 ## 3. Site (Pages)
 
 Variáveis do build (detalhes no README):
@@ -82,7 +97,7 @@ Na primeira vez o Wrangler pergunta se pode criar o projeto `nivel13`.
 ## 4. Domínio próprio (opcional)
 
 - Ligue o domínio ao projeto Pages (Custom domains) e acrescente-o em `ALLOWED_ORIGIN` e em `VITE_SITE_URL`.
-- Para servir a API no mesmo domínio e dispensar CORS, crie uma rota do Worker para `seu-dominio/api/*` (em `worker/wrangler.toml`, `routes = [{ pattern = "seu-dominio/api/*", zone_name = "seu-dominio" }]`) e faça o build com `VITE_API_URL=/api`.
+- Para servir a API e o preview no mesmo domínio e dispensar CORS, crie rotas do Worker para `seu-dominio/api/*` e `seu-dominio/c/*` (em `worker/wrangler.toml`, `routes = [{ pattern = "seu-dominio/api/*", zone_name = "seu-dominio" }, { pattern = "seu-dominio/c/*", zone_name = "seu-dominio" }]`) e faça o build com `VITE_API_URL=/api`.
 
 ## 5. Depois de publicar
 
@@ -102,4 +117,4 @@ Na primeira vez o Wrangler pergunta se pode criar o projeto `nivel13`.
 
 ## Desenvolvimento local
 
-`pnpm dev:api` sobe a mesma app Hono em Node com `node:sqlite` na porta 8787 (banco em `server/.data/dev.sqlite`; `DB_FILE=:memory:` para descartável). `pnpm dev` faz proxy de `/api` para lá. Em dev, `ALLOWED_ORIGIN` é `*`.
+`pnpm dev:api` sobe a mesma app Hono em Node com `node:sqlite` na porta 8787 (banco em `server/.data/dev.sqlite`; `DB_FILE=:memory:` para descartável). `pnpm dev` faz proxy de `/api` para lá. Em dev, `ALLOWED_ORIGIN` é `*` e `SITE_URL` é `http://localhost:4313`. O Vite não faz proxy de `/c/*`: para ver o preview em dev, abra `http://localhost:8787/c/5`.

@@ -3,7 +3,20 @@
 // em vermelho e balançando (dá para reconhecer pelo movimento), prateleiras de farmácia ao fundo.
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
-import { bake, Debris, Embers, easeOutBack, P, ramp, Sparkles, squashTo, stop } from './kit-b'
+import {
+  bake,
+  Debris,
+  Embers,
+  Explosions,
+  easeOutBack,
+  joy,
+  P,
+  ramp,
+  ScorePops,
+  Sparkles,
+  squashTo,
+  stop,
+} from './kit-b'
 
 type Kind = 'remedio' | 'casa' | 'fake'
 interface Item {
@@ -15,6 +28,8 @@ interface Item {
   s: Sprite
   phase: number
   alive: boolean
+  /** tempo de sobreposição com a cesta: boato só conta após 3 quadros (50 ms) */
+  over: number
 }
 
 const DUR = 25
@@ -143,6 +158,8 @@ export default function pegar(): MicroGame {
   const debris = new Debris(60)
   let embers: Embers
   let sparkles: Sparkles
+  let scores: ScorePops
+  let booms: Explosions
   let items: Item[] = []
   let bx = 0
   let prevBx = 0
@@ -179,6 +196,7 @@ export default function pegar(): MicroGame {
       s,
       phase: c.rnd() * 6,
       alive: true,
+      over: 0,
     })
   }
 
@@ -189,21 +207,30 @@ export default function pegar(): MicroGame {
       badT = c.time
       c.fx.burst(it.x, it.y, P.redHot, 12, 60)
       debris.burst(it.x, it.y, [P.stone3, P.red, P.stoneHi], 8, 60, c.rnd, floorY, 0.9)
+      c.sfx('shatter', { x: it.x })
       c.hit(it.x, it.y)
       return
     }
     combo++
     catchT = c.time
     const pts = it.kind === 'casa' ? 50 : 25
-    c.addScore(pts, it.x, by - 16)
+    // sequência: +1 ponto por passo, até +15; número muda de cor e solta brasas (Balatro)
+    scores.score(pts + Math.min(15, combo - 1), Math.round(it.x), by - 18, combo, embers)
     c.fx.burst(it.x, by - 4, it.kind === 'casa' ? P.goldHi : P.leafHi, 8, 50)
     sparkles.spawn(Math.round(bx + (it.x > bx ? 8 : -8)), by - 6, it.kind === 'casa' ? 8 : 0)
     for (let i = 0; i < 4; i++) embers.spark(it.x, by - 4, 30)
-    c.sfx('coin')
+    c.sfx('coin', { x: it.x, combo })
     if (it.kind === 'casa') stop(c, 50)
     if (combo > 0 && combo % 5 === 0) {
-      c.fx.float(`COMBO ${combo}`, Math.round(bx), by - 28, P.goldHi)
+      scores.add(
+        `SEQUÊNCIA ${combo}`,
+        Math.round(Math.max(40, Math.min(c.W - 40, bx))),
+        by - 34,
+        P.goldHi,
+        true,
+      )
       c.fx.ring(Math.round(bx), by - 2, P.gold, 22)
+      joy(c, 2, 200)
     }
   }
 
@@ -239,8 +266,21 @@ export default function pegar(): MicroGame {
         { ambient: 14, ramp: [P.white, P.leafHi, P.green, P.vine1] },
       ).listen()
       sparkles = new Sparkles(c.reduced)
+      scores = new ScorePops(c)
+      booms = new Explosions(c)
       sign.blendMode = 'add'
-      root.addChild(props, sign, shadows, itemLayer, basket, debris.root, embers.root, sparkles.root)
+      root.addChild(
+        props,
+        sign,
+        shadows,
+        itemLayer,
+        basket,
+        debris.root,
+        embers.root,
+        sparkles.root,
+        booms.root,
+        scores.root,
+      )
     },
     update(dt) {
       const k = ramp(c.time, DUR, 8)
@@ -260,11 +300,16 @@ export default function pegar(): MicroGame {
         it.y += it.vy * dt
         if (it.kind === 'fake') it.x = it.x0 + Math.sin(c.time * 5 + it.phase) * 4
         // pegar: faixa vertical generosa e 2 px de folga lateral (regra 31)
-        if (it.y > by - 9 && it.y < by + 4 && Math.abs(it.x - bx) < 19) caught(it)
+        const inBasket = it.y > by - 9 && it.y < by + 4 && Math.abs(it.x - bx) < 19
+        if (inBasket) it.over += dt
+        else it.over = 0
+        // item bom conta na hora; boato precisa ficar 3 quadros dentro (perdão, x-craft §24)
+        if (inBasket && (it.kind !== 'fake' || it.over >= 0.05)) caught(it)
         else if (it.y > floorY - 2) {
           it.alive = false
           if (it.kind === 'fake') {
             debris.burst(it.x, floorY - 2, [P.stone3, P.stone2, P.red], 6, 40, c.rnd, floorY, 1)
+            booms.spawn(it.x, floorY - 3, 4)
             c.fx.ring(it.x, floorY - 1, P.leafHi, 8)
           } else c.fx.burst(it.x, floorY - 2, P.stone2, 4, 25)
         }
@@ -316,6 +361,8 @@ export default function pegar(): MicroGame {
 
       embers.update(dt, c.time)
       sparkles.update(dt)
+      scores.update(dt)
+      booms.update(dt)
       debris.update(dt)
     },
     down(x) {

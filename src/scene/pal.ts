@@ -33,8 +33,9 @@ export class Buf {
   readonly img: ImageData
   readonly d: Uint32Array
   constructor(w: number, h: number) {
-    this.w = Math.max(1, Math.ceil(w))
-    this.h = Math.max(1, Math.ceil(h))
+    // nunca 0, fracionário ou NaN (aba escondida, resize no meio da transição)
+    this.w = Number.isFinite(w) ? Math.max(1, Math.min(8192, Math.ceil(w))) : 1
+    this.h = Number.isFinite(h) ? Math.max(1, Math.min(8192, Math.ceil(h))) : 1
     this.img = new ImageData(this.w, this.h)
     this.d = new Uint32Array(this.img.data.buffer)
   }

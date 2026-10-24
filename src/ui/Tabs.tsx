@@ -50,6 +50,7 @@ export function Tabs<T extends string>({
             tabIndex={t.id === value ? 0 : -1}
             className="tab"
             vibe="move"
+            sound="select"
             onClick={() => onChange(t.id)}
             onKeyDown={(e) => {
               if (e.key === 'ArrowRight') go(i + 1)

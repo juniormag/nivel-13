@@ -4,6 +4,7 @@
 // destrói a cabeça: hit-stop de 180 ms com quadro branco → vermelho, explosão de papel, anel e tremor.
 // A última cabeça dispara a explosão em cascata do corpo.
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js'
+import { stinger } from '../audio/audio'
 import type { GameCtx, MicroGame } from '../engine/types'
 import { shuffle } from '../lib/rng'
 import {
@@ -12,16 +13,19 @@ import {
   Debris,
   domRect,
   Embers,
+  Explosions,
   easeInQuad,
   easeOutBack,
   easeOutQuad,
   el,
   energyDot,
-  flash,
   goldPulse,
   hintPulse,
+  impact,
+  joy,
   P,
   type Painter,
+  ScorePops,
   Sparkles,
   shakeEl,
   stop,
@@ -70,10 +74,11 @@ const PER = 14
 const WIND = 0.3
 const LUNGE = 0.08
 const RECOVER = 0.32
-const HW = 20
-const HH = 17
-const BHW = 24
-const BHH = 20
+// tamanhos das cabeças (normal e ativa); crescem quando há espaço (celular em pé tem ~170 px livres)
+let HW = 20
+let HH = 17
+let BHW = 24
+let BHH = 20
 
 interface Head {
   alive: boolean
@@ -101,7 +106,7 @@ function seeded(seed: number) {
 function headTex(v: number, open: boolean, big: boolean): Texture {
   const w = big ? BHW : HW
   const h = big ? BHH : HH
-  return bake(`hydra-head${v}${open ? 'o' : ''}${big ? 'b' : ''}`, w + 2, h + 2, (p) => {
+  return bake(`hydra-head${v}${open ? 'o' : ''}-${w}x${h}`, w + 2, h + 2, (p) => {
     const r = seeded(31 + v * 17)
     const cx = Math.floor((w + 2) / 2)
     const cy = Math.floor((h + 2) / 2)
@@ -181,8 +186,13 @@ function bodyTex(w: number, h: number): Texture {
     const cx = w / 2
     const cy = h * 0.55
     // recortes empilhados: de trás (escuros) para a frente (claros)
+    // massa escura por baixo: o corpo lê como uma coisa só
+    p.ellipse(Math.round(cx), Math.round(cy + 3), Math.round(w * 0.34), Math.round(h * 0.32), P.stone0)
+    p.ellipse(Math.round(cx), Math.round(cy + 4), Math.round(w / 3), Math.round(h / 4), P.blood1)
+    p.ellipse(Math.round(cx), Math.round(cy + 4), Math.round(w / 6), Math.round(h / 8), P.crimsonDeep)
+    const dens = (w * h) / 260
     for (let layer = 0; layer < 3; layer++) {
-      const n = 14 + layer * 6
+      const n = Math.round(dens * (0.8 + layer * 0.45))
       for (let k = 0; k < n; k++) {
         const a = r() * Math.PI * 2
         const rr = (0.95 - layer * 0.25) * Math.sqrt(r())
@@ -234,6 +244,11 @@ export default function chefe(): MicroGame {
   const debris = new Debris(120)
   let embers: Embers
   let sparkles: Sparkles
+  let booms: Explosions
+  let pops: ScorePops
+  /** cabeças derrubadas de primeira, sem errar */
+  let streak = 0
+  let missedThis = false
   let heads: Head[] = []
   let round = 0
   let roundT = 0
@@ -247,7 +262,8 @@ export default function chefe(): MicroGame {
   let targetBodyY = 0
   let floorY = 0
   let bw = 120
-  const bh = 34
+  let bh = 34
+  let neckH = 36
   let born = 0
   let flinchT = -10
   let dying = -1
@@ -257,7 +273,7 @@ export default function chefe(): MicroGame {
 
   function headRest(i: number) {
     const n = heads.length
-    const spread = Math.min(c.W * 0.86, 240)
+    const spread = Math.min(c.W - BHW - 10, 250)
     const base = bodyX - spread / 2 + (spread / (n - 1)) * i
     const hd = heads[i]
     const ph = hd?.phase ?? 0
@@ -268,7 +284,7 @@ export default function chefe(): MicroGame {
     // pressão: a cabeça ativa desce até 6 px conforme o tempo acaba
     const press = active && !busy ? (roundT / PER) * 6 : 0
     const fl = c.time - flinchT < 0.3 ? -Math.round(Math.sin(((c.time - flinchT) / 0.3) * Math.PI) * 4) : 0
-    return { x: base + swayX, y: bodyY - 36 - arch + swayY + press + fl + sinkY }
+    return { x: base + swayX, y: bodyY - neckH - arch + swayY + press + fl + sinkY }
   }
 
   /** posição atual da cabeça incluindo o bote */
@@ -305,7 +321,7 @@ export default function chefe(): MicroGame {
     if (!hd?.alive || attacking) return
     attacking = true
     hd.attackT = c.time
-    c.sfx('tick')
+    c.sfx('whoosh', { x: Math.round(headRest(round).x) })
     timers.after(WIND + LUNGE, () => {
       const p = headPos(round)
       c.fx.ring(Math.round(p.x), Math.round(p.y + 8), P.redHot, 22)
@@ -328,7 +344,7 @@ export default function chefe(): MicroGame {
     const p = headPos(i)
     hd.x = p.x
     hd.y = p.y
-    c.sfx('boom')
+    c.sfx('impact', { x: Math.round(hd.x) })
     // golpe pesado: congela 180 ms com a cabeça em branco e depois vermelho
     stop(c, 180)
     // assim que a simulação volta: explosão de papel
@@ -340,12 +356,12 @@ export default function chefe(): MicroGame {
     hd.s.visible = false
     const x = Math.round(hd.x)
     const y = Math.round(hd.y)
+    // 1 quadro branco e depois quase só fumaça; o papel voa em pedaços
+    impact(c, P.redHot)
+    booms.spawn(x, y, 12)
     c.fx.shake(4, 280)
-    c.fx.ring(x, y, P.goldHi, 44)
-    c.fx.ring(x, y, P.redHot, 26)
-    c.fx.burst(x, y, P.stoneHi, 18, 90)
-    c.fx.burst(x, y, P.red, 10, 70)
-    flash(c, P.white, 60, 0.18)
+    c.fx.ring(x, y, P.redHot, 30)
+    c.fx.burst(x, y, P.stoneHi, 10, 90)
     debris.burst(x, y, [P.stoneHi, P.stone3, P.red, P.stone2], 18, 110, c.rnd, floorY, 2.6)
     // pescoço desaba em pedaços
     const i = heads.indexOf(hd)
@@ -382,8 +398,9 @@ export default function chefe(): MicroGame {
     if (!ui.isConnected) return
     const r = domRect(c, ui)
     const uiTop = r.y
-    const mid = (c.top + uiTop) / 2
-    targetBodyY = Math.round(Math.min(uiTop - bh / 2 - 4, Math.max(c.top + 64, mid + 22)))
+    // corpo perto da interface; cabeças e barra de tempo sempre abaixo do HUD
+    const minY = c.top + neckH + 8 + BHH / 2 + 12
+    targetBodyY = Math.round(Math.max(minY, uiTop - bh / 2 - 12))
     hitY = Math.round(uiTop - 6)
   }
 
@@ -392,6 +409,7 @@ export default function chefe(): MicroGame {
     if (!r) return
     roundT = 0
     busy = false
+    missedThis = false
     const choices = shuffle([{ t: r.right, ok: true }, ...r.wrong.map((t) => ({ t, ok: false }))], c.rnd)
     opts = choices.map((ch, k) => {
       const b = el('button', { class: 'boss-opt', 'aria-keyshortcuts': String(k + 1) }, ch.t)
@@ -449,7 +467,15 @@ export default function chefe(): MicroGame {
         claimEl.style.opacity = '0.6'
       }
       const p = headPos(round)
-      c.addScore(200 + Math.round((1 - roundT / PER) * 120), Math.round(p.x), Math.round(p.y) - 14)
+      if (!missedThis) streak++
+      else streak = 0
+      pops.score(
+        200 + Math.round((1 - roundT / PER) * 120),
+        Math.round(p.x),
+        Math.round(p.y) - 16,
+        streak,
+        embers,
+      )
       killHead(round)
       timers.after(0.9, () => {
         round++
@@ -459,6 +485,8 @@ export default function chefe(): MicroGame {
     } else {
       b.classList.add('no')
       b.disabled = true
+      missedThis = true
+      streak = 0
       shakeEl(b)
       attack()
     }
@@ -475,29 +503,33 @@ export default function chefe(): MicroGame {
         const x = Math.round(bodyX + (c.rnd() - 0.5) * bw * 0.8)
         const y = Math.round(bodyY + sinkY + (c.rnd() - 0.6) * bh * 0.7)
         const big = k / 10
-        c.fx.burst(x, y, k % 2 ? P.goldHi : P.redHot, 10 + Math.round(big * 8), 60 + big * 50)
+        booms.spawn(x, y, 6 + Math.round(big * 8))
+        c.fx.burst(x, y, k % 2 ? P.goldHi : P.redHot, 6 + Math.round(big * 4), 60 + big * 50)
         c.fx.ring(x, y, k % 2 ? P.gold : P.red, 14 + Math.round(big * 22))
         debris.burst(x, y, [P.stoneHi, P.stone3, P.red], 6, 90 + big * 60, c.rnd, floorY, 2.2)
         c.fx.shake(2 + Math.round(big * 2), 160)
         embers.blast(x, y, 180, 70)
-        if (k % 3 === 0) c.sfx('boom')
+        if (k % 3 === 0) c.sfx('boom', { x })
         if (k % 2 === 0) stop(c, 40)
       })
     timers.after(1.5, () => {
       const x = Math.round(bodyX)
       const y = Math.round(bodyY + sinkY)
       stop(c, 200)
-      flash(c, P.goldHi, 220, 0.3)
+      impact(c, P.goldHi)
+      booms.spawn(x, y, 24)
+      joy(c, 3, 300)
       c.fx.ring(x, y, P.goldHi, 110)
       c.fx.ring(x, y, P.red, 70)
-      c.fx.burst(x, y, P.sparkle, 24, 120)
+      c.fx.burst(x, y, P.sparkle, 16, 120)
       debris.burst(x, y, [P.stoneHi, P.stone3, P.red, P.gold], 30, 160, c.rnd, floorY, 3)
       for (let k = 0; k < 8; k++)
         sparkles.spawn(Math.round(x + (c.rnd() - 0.5) * c.W * 0.8), Math.round(y - c.rnd() * 60), 14)
       c.fx.float('A GRANDE FAKE CAIU', x, Math.round(y - 30), P.goldHi)
       body.visible = false
       bodyFlash.visible = false
-      c.sfx('level')
+      c.sfx('boom', { volume: 1.4 })
+      stinger('win')
     })
     timers.after(2.6, () => c.finish())
   }
@@ -514,8 +546,9 @@ export default function chefe(): MicroGame {
       const ay = bodyY - 8 + sinkY
       const hx = p.x
       const hy = p.y + 6
-      for (let s = 0; s <= 9; s++) {
-        const t = s / 9
+      const segN = Math.max(9, Math.round(Math.hypot(hx - ax, hy - ay) / 4))
+      for (let s = 0; s <= segN; s++) {
+        const t = s / segN
         const ctrlX = ax + (hx - ax) * 0.3
         const ctrlY = ay - (ay - hy) * 0.9
         const x =
@@ -545,7 +578,6 @@ export default function chefe(): MicroGame {
     init(ctx) {
       c = ctx
       c.stage.addChild(root)
-      bw = Math.round(Math.min(c.W * 0.64, 150))
       bodyX = Math.round(c.W / 2)
       ui = el('div', { class: 'boss-ui' })
       c.layer.append(ui)
@@ -566,10 +598,21 @@ export default function chefe(): MicroGame {
         }
       })
       renderRound()
+      // mede o espaço livre acima da pergunta e escolhe o tamanho da hidra
+      const free = domRect(c, ui).y - c.top
+      const large = free >= 140 || c.W >= 300
+      HW = large ? 26 : 20
+      HH = large ? 22 : 17
+      BHW = large ? 30 : 24
+      BHH = large ? 26 : 20
+      bh = large ? 46 : 34
+      neckH = large ? Math.min(58, Math.round(free * 0.32)) : 36
+      bw = Math.round(Math.min(c.W * (large ? 0.74 : 0.64), large ? 190 : 150))
+      measureUi()
       bodyY = targetBodyY
       floorY = bodyY + Math.round(bh / 2) + 2
       body.texture = bodyTex(bw, bh)
-      bodyFlash.texture = solid('hydra-body', body.texture, P.white)
+      bodyFlash.texture = solid('hydra-body', body.texture, P.crimson)
       bodyFlash.visible = false
       for (const g of ghosts) {
         g.visible = false
@@ -583,6 +626,9 @@ export default function chefe(): MicroGame {
         { ambient: 30, sparks: 40 },
       ).listen()
       sparkles = new Sparkles(c.reduced)
+      booms = new Explosions(c)
+      pops = new ScorePops(c)
+      headLayer.sortableChildren = true
       root.addChild(
         shadow,
         embers.root,
@@ -596,8 +642,11 @@ export default function chefe(): MicroGame {
         bar,
         debris.root,
         sparkles.root,
+        booms.root,
+        pops.root,
       )
       born = c.time
+      stinger('boss')
     },
     update(dt) {
       timers.update(dt)
@@ -622,7 +671,9 @@ export default function chefe(): MicroGame {
       body.y = Math.round(bodyY - bh / 2) + sinkY + breathe
       bodyFlash.x = body.x
       bodyFlash.y = body.y
-      bodyFlash.visible = body.visible && dying >= 0 && Math.floor(c.time * 12) % 3 === 0
+      // corpo esquentando: silhueta carmim a 3 Hz (sem clarão branco grande, WCAG 2.3.1)
+      bodyFlash.visible = body.visible && dying >= 0 && Math.floor(c.time * 6) % 2 === 0
+      bodyFlash.alpha = 0.7
 
       // sombra pontilhada no chão
       shadow.clear()
@@ -659,6 +710,7 @@ export default function chefe(): MicroGame {
         const open = winding || lunging || (t >= 0 && t < WIND + LUNGE + 0.12) || c.time - hd.biteT < 0.22
         const big = active
         hd.s.texture = headTex(i, open, big)
+        hd.s.zIndex = active ? 10 : i
         const w = big ? BHW + 2 : HW + 2
         const h = big ? BHH + 2 : HH + 2
         hd.s.x = Math.round(p.x - w / 2)
@@ -720,6 +772,8 @@ export default function chefe(): MicroGame {
       embers.update(dt, c.time)
       sparkles.update(dt)
       debris.update(dt)
+      booms.update(dt)
+      pops.update(dt)
     },
     key(k, down) {
       if (!down) return

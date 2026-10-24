@@ -26,7 +26,12 @@ export default function Final() {
       setCelebrate(true)
       sfx('fanfare')
     }, 1400)
-    return () => clearTimeout(t)
+    // a coroa pousa cerca de 1,2 s depois da celebração começar (WorldStage)
+    const c = window.setTimeout(() => sfx('crown'), 2600)
+    return () => {
+      clearTimeout(t)
+      clearTimeout(c)
+    }
   }, [])
 
   return (
@@ -71,23 +76,20 @@ export default function Final() {
               Compartilhar minha conquista
             </PixelButton>
           </motion.div>
-          <motion.div variants={rise}>
+          <motion.div className="fin-row" variants={rise}>
             <PixelButton
-              wide
               onClick={() =>
                 void shareText('Joguei o Nível 13: 13 fases curtas, tudo com fonte. Duvido você terminar:')
               }
             >
-              Desafiar amigos no WhatsApp
+              Desafiar no WhatsApp
             </PixelButton>
-          </motion.div>
-          <motion.div variants={rise}>
-            <PixelButton tone="gold" wide onClick={() => go('votar')}>
+            <PixelButton tone="gold" onClick={() => go('votar')}>
               Entrar no movimento
             </PixelButton>
           </motion.div>
           <motion.div variants={rise}>
-            <PixelButton tone="ghost" wide onClick={() => go('title')}>
+            <PixelButton tone="ghost" commit="back" wide onClick={() => go('title')}>
               Início
             </PixelButton>
           </motion.div>

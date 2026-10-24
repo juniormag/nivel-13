@@ -40,7 +40,7 @@ export function layoutFor(W: number, H: number): Layout {
   const portrait = W / H < 0.8
   if (portrait) {
     const ppu = Math.max(10, Math.floor((W * 0.64) / 10))
-    const baseY = Math.round(H * 0.5)
+    const baseY = Math.round(Math.min(H * 0.46, ppu * 15.5))
     const horizon = Math.round(baseY - ppu * 3.4)
     return {
       W,

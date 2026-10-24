@@ -57,7 +57,7 @@ export function FactCard({
         </span>
         <div>
           <div className="fc-kicker">{f.kicker}</div>
-          <h3 id={id}>{f.title}</h3>
+          <h2 id={id}>{f.title}</h2>
         </div>
       </motion.header>
       <motion.div variants={rise}>
@@ -70,7 +70,7 @@ export function FactCard({
         {f.body}
       </motion.p>
       <motion.div variants={rise}>
-        <h4 className="fc-src-title">Fontes</h4>
+        <h3 className="fc-src-title">Fontes</h3>
         <ul className="fc-sources">
           {f.sources.map((s) => (
             <li key={s.url}>

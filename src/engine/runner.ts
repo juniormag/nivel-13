@@ -1,6 +1,6 @@
 // Runner: cria o app PixiJS em resolução lógica, roda o laço, aplica juice e expõe o estado ao HUD.
 import { Application, Container, Sprite, Texture } from 'pixi.js'
-import { sfx } from '../audio/audio'
+import { hitstop as audioHitstop, setIntensity, sfx } from '../audio/audio'
 import { mulberry32 } from '../lib/rng'
 import { type PixelFit, computeFit, ditherGradient, offscreen } from '../lib/pixel'
 import { type SkillKind, usePlay } from '../state/play'
@@ -98,6 +98,8 @@ export class Runner {
   hearts: number
   score = 0
   ended = false
+  private lastIntensity = -1
+  private lastTick = -1
   private running = false
   private rnd = mulberry32((Date.now() & 0xffff) ^ 1313)
   private listeners: [string, EventListener][] = []
@@ -172,8 +174,9 @@ export class Runner {
       finish() {
         self.end(true)
       },
-      sfx(n) {
-        sfx(n)
+      sfx(n, opts) {
+        // x chega em pixels lógicos; o áudio quer 0..1 para o pan
+        sfx(n, opts?.x !== undefined ? { ...opts, x: Math.max(0, Math.min(1, opts.x / self.fit.W)) } : opts)
       },
       tex(name) {
         return tex(name)
@@ -214,12 +217,13 @@ export class Runner {
     if (this.shield) {
       this.shield = false
       usePlay.setState({ shield: false })
-      sfx('power')
+      sfx('shield', { x: cx / this.fit.W })
       this.juice.ring(cx, cy, 0x4fae3f, 30)
       this.juice.float('ESCUDO', cx, cy, 0x4fae3f)
       return
     }
-    sfx('bad')
+    sfx('bad', { x: cx / this.fit.W })
+    audioHitstop(70)
     this.juice.impact(0xff4a3d)
     this.juice.shake(4, 220, { x: 1, y: 0.6 })
     this.juice.hitstop(70)
@@ -245,10 +249,10 @@ export class Runner {
       ok = true
     }
     if (!ok) {
-      sfx('tick')
+      sfx('error')
       return false
     }
-    sfx('power')
+    sfx(kind === 'foco' ? 'slowmo' : kind === 'proteger' ? 'shield' : kind === 'checar' ? 'spark' : 'power')
     const cx = this.fit.W / 2
     const cy = this.fit.H / 2
     this.juice.ring(cx, cy, kind === 'proteger' ? 0x4fae3f : kind === 'foco' ? 0xf5c04a : 0xff3b3b, 60)
@@ -283,6 +287,16 @@ export class Runner {
       const d = this.o.game.duration
       if (d > 0) {
         const left = Math.max(0, d - this.time)
+        // trilha adaptativa: a intensidade sobe com o tempo da fase
+        const frac = 1 - left / d
+        if (Math.abs(frac - this.lastIntensity) > 0.05) {
+          this.lastIntensity = frac
+          setIntensity(0.4 + 0.6 * frac)
+        }
+        if (Math.ceil(left) !== this.lastTick && left <= 5 && left > 0) {
+          this.lastTick = Math.ceil(left)
+          sfx('tick')
+        }
         usePlay.setState({ timeLeft: left })
         if (left <= 0) this.end(this.o.game.timeUp ? this.o.game.timeUp() : true)
       }

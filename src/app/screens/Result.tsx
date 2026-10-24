@@ -2,7 +2,7 @@
 // Momentos de compartilhar: 3 estrelas e, na fase 3, a economia do IR.
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
-import { playMusic } from '../../audio/audio'
+import { playMusic, stinger } from '../../audio/audio'
 import { factById } from '../../content/facts'
 import { LEVELS } from '../../content/levels'
 import { ShareSheet } from '../../share/ShareSheet'
@@ -37,6 +37,8 @@ function useEconomiaAno(monthly: number | null, enabled: boolean) {
   return ano
 }
 
+const cardKey = (lv: { n: number } | undefined, i: number) => (lv ? `${lv.n}:${i}` : '')
+
 export default function Result() {
   const params = useNav((s) => s.params)
   const n = Number(params.level ?? 1)
@@ -48,13 +50,20 @@ export default function Result() {
   const ano = useEconomiaAno(save.irMonthly, lv?.kind === 'ir')
 
   useEffect(() => {
-    if (!lv) go('map')
-    playMusic('title')
+    if (!lv) {
+      go('map')
+      return
+    }
+    playMusic('victory')
+    stinger('win')
   }, [lv])
+  // a cada carta, o foco vai para a próxima ação
+  const card = cardKey(lv, i)
   useEffect(() => {
+    if (!card) return
     const t = window.setTimeout(() => next.current?.focus({ preventScroll: true }), 260)
     return () => clearTimeout(t)
-  }, [i])
+  }, [card])
 
   if (!lv) return null
   const facts = lv.facts.map(factById).filter((f) => !!f)
@@ -72,9 +81,9 @@ export default function Result() {
             Fase {n} concluída · {done}/13
           </div>
           <h1>{lv.title}</h1>
-          <Stars n={stars} />
+          <Stars n={stars} reveal />
           <div className="res-xp">
-            <XPBar value={xpTotal(save)} max={XP_MAX} label="Experiência total" />
+            <XPBar value={xpTotal(save)} max={XP_MAX} label="Experiência total" sound />
           </div>
         </motion.header>
 
@@ -125,7 +134,7 @@ export default function Result() {
         )}
 
         <motion.div className="actions res-nav" variants={rise}>
-          <PixelButton tone="ghost" onClick={() => go('map')}>
+          <PixelButton tone="ghost" commit="back" onClick={() => go('map')}>
             Mapa
           </PixelButton>
           {isLast ? (

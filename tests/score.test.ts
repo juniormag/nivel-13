@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_TOTAL, curve, emoji, haversineKm, roundScore, total } from '../src/lib/score'
+import { curve, emoji, haversineKm, MAX_TOTAL, roundScore, total } from '../src/lib/score'
 
 describe('score', () => {
   it('curva: dentro da tolerância é 100, longe demais é o piso 5', () => {

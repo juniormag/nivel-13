@@ -41,7 +41,7 @@ Sem a API, o jogo funciona inteiro no aparelho: só o placar ao vivo fica indisp
 | `pnpm typecheck` | `tsc` do jogo, do Worker (`worker/tsconfig.json`) e dos testes (`tests/tsconfig.json`) |
 | `pnpm lint` | Biome no repositório inteiro |
 | `pnpm format` | Biome formatando no lugar |
-| `pnpm test` | Vitest: API, rng, save e conta do IR |
+| `pnpm test` | Vitest: API, cliente da API, rng, save, pontuação, rodadas e conta do IR |
 | `pnpm test:watch` | Vitest em modo observação |
 | `pnpm e2e` | Playwright: fumaça no Chromium em 390×844 (sobe jogo e API se não estiverem rodando) |
 | `pnpm build` | `dist/` estático |
@@ -63,7 +63,7 @@ Lidas no build pelo Vite (`src/config.ts`). Em dev, use um `.env.local` (não ve
 | `VITE_ELECTION_AT` | não | Abertura das urnas em ISO 8601. Padrão: `2026-10-25T08:00:00-03:00`. |
 | `VITE_ELECTION_LABEL` | não | Texto da data. Padrão: "domingo, 25 de outubro, das 8h às 17h". |
 
-Variáveis do Worker (em `worker/wrangler.toml` ou como segredo): `ALLOWED_ORIGIN` (URL do site; lista separada por vírgula), `RATE_PER_MIN` (padrão 40) e o segredo `SALT`. Detalhes em [`docs/DEPLOY.md`](docs/DEPLOY.md).
+Variáveis do Worker (em `worker/wrangler.toml` ou como segredo): `ALLOWED_ORIGIN` (URL do site; lista separada por vírgula), `SITE_URL` (destino de `/c/:n` e base do `og:image`), `RESPONSAVEL` (o mesmo de `VITE_RESPONSAVEL`, vai no preview), `RATE_PER_MIN` (padrão 40), `PURGE_AT` (expurgo, padrão 30/11/2026) e o segredo `SALT`. Detalhes em [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## Publicar
 
@@ -89,10 +89,12 @@ npx wrangler@4 pages deploy dist --project-name nivel13
 - [ ] **Nenhuma recompensa ligada a voto:** o placar não dá prêmio nem ponto por voto (art. 299 do Código Eleitoral).
 - [ ] **Privacidade (LGPD):** a escolha no movimento é guardada como HMAC do id do aparelho mais a UF, sem apelido (art. 11). O `SALT` de produção é longo, aleatório e não está no repositório.
 - [ ] **CORS fechado:** `ALLOWED_ORIGIN` aponta só para a URL do site, nunca `*`.
+- [ ] **Expurgo anunciado:** a tela Sobre diz que tudo é apagado em 30/11/2026, e `PURGE_AT` no `wrangler.toml` bate com isso. Existe o botão de apagar meus dados (`api.apagar()`).
+- [ ] **Preview do link** (`/c/:n`) com `RESPONSAVEL` preenchido: o `og:description` leva "Propaganda eleitoral · responsável · rótulo de IA". Validar com o jurídico (VIRAL-DESIGN §3.6).
 
 ## API e privacidade
 
-A API (`worker/src/index.ts`) é uma app Hono. O mesmo código roda no Cloudflare Workers e em Node (`server/dev-api.mjs`).
+A API é uma app Hono: `worker/src/index.ts` (placar), `worker/src/viral.ts` (Chuta Aí), `worker/src/og.ts` (preview `/c/:n`) e `worker/src/worker.ts` (entrada do Worker). O mesmo código roda no Cloudflare Workers e em Node (`server/dev-api.mjs`). Especificação do Chuta Aí em [`docs/VIRAL-DESIGN.md`](docs/VIRAL-DESIGN.md) §5.3 e §5.5.
 
 | Rota | Método | O que faz |
 |---|---|---|
@@ -101,14 +103,28 @@ A API (`worker/src/index.ts`) é uma app Hono. O mesmo código roda no Cloudflar
 | `/api/complete` | POST | marca o jogo como terminado; a corrente de quem convidou ganha 1 só na primeira conclusão (no máximo 300 por dia) |
 | `/api/like` | POST | 👍 num fato, um por aparelho; devolve `{ ok, likes }` |
 | `/api/movimento` | POST | `vou`, `virei` ou `pensando`, guardado sob HMAC do id, com UF e sem apelido |
-| `/api/daily` | POST | resultado do Desafio do Dia (0 a 5), um por aparelho e dia; aceita só ontem, hoje e amanhã |
+| `/api/daily` | POST | resultado do Desafio do Dia (0 a 5), um por aparelho e dia; aceita de 2 dias atrás até amanhã |
 | `/api/stats` | GET | números agregados do placar; nunca devolve ids |
+| `/api/chute` | POST | partida do Chuta Aí `{ id, date, s, b?, via? }`: total calculado no servidor (pesos 2-2-3-3-3), 1 por aparelho e dia, histograma sem id; devolve `{ ok, pct, plays, total }`. A primeira partida vinda de duelo ou grupo vira elo da corrente |
+| `/api/chute/:date` | GET | "Brasil chutou": `{ plays, hist[5][21], totals[14] }`, com cache público de 60 s |
+| `/api/duelo` | POST | cria o Tira-teima `{ id, date, s }` → `{ code }` (6 letras; até 20 por aparelho e dia) |
+| `/api/duelo/:code` | GET | `{ date, n, s, total, name, avatar }` de quem desafiou, sem id |
+| `/api/duelo/:code/resp` | POST | responde `{ id, s }` → `{ ok, them, me }`; 1 por aparelho, o dono não responde |
+| `/api/duelo/mine?id=` | GET | `[{ code, accepts, wins }]` |
+| `/api/grupo` | POST | cria o placar do grupo `{ id }` → `{ code, nome }` (nome gerado, bicho + 2 dígitos; até 10 grupos por aparelho) |
+| `/api/grupo/:code/entrar`, `/sair` | POST | entra (até 50 membros) ou sai; o último a sair apaga o grupo |
+| `/api/grupo/:code?date=&id=` | GET | `{ nome, date, n, hoje, semana, membros }` com apelido, avatar, total e sequência; nunca UF, voto ou id |
+| `/api/apagar` | POST | LGPD: apaga tudo do aparelho (jogador, partidas, duelos, grupos, curtidas, desafio e movimento via HMAC) |
+| `/api/ev` | POST | contador de evento da lista de §5.5 `{ e, k? }`, sem id |
+| `/c/:n` | GET | página com OG para o WhatsApp que manda para `SITE_URL/?c=n&…`; `og:image` é `/og/c-{n}.png` ou `/og.png` |
 
-Regras: nenhum dado pessoal (o id é aleatório e gerado no aparelho); validação manual de todo campo (corpo até 2 KB); limite por IP e por minuto, com o IP guardado só como HMAC; CORS a partir de `ALLOWED_ORIGIN`; `cache-control: no-store` em toda resposta. O schema do D1 fica em `worker/schema.sql`.
+Regras: nenhum dado pessoal (o id é aleatório e gerado no aparelho) e nenhum id em resposta nenhuma; validação manual de todo campo (corpo até 2 KB); limite por IP e por minuto (40 escritas, 60 leituras por código, 120 leituras de agregados), com o IP guardado só como HMAC; CORS a partir de `ALLOWED_ORIGIN`; `cache-control: no-store` salvo onde dito acima. O placar do grupo nunca consulta a tabela de movimento. Um cron diário apaga **todos** os dados a partir de 30/11/2026 (`PURGE_AT`). O schema do D1 fica em `worker/schema.sql`.
 
 ## Testes
 
-- `tests/api.test.ts`: a app Hono contra SQLite em memória (pelo mesmo adaptador do servidor local, `server/d1-sqlite.mjs`): todas as rotas, corrente, privacidade, CORS, limite de taxa e validação.
+- `tests/api.test.ts`: a app Hono contra SQLite em memória (pelo mesmo adaptador do servidor local, `server/d1-sqlite.mjs`): rotas do placar, corrente, privacidade, CORS, limite de taxa e validação.
+- `tests/viral.test.ts`: Chuta Aí, Brasil chutou, duelo, grupo, apagar, eventos, `/c/:n` e expurgo. Toda resposta é conferida para não conter id de aparelho.
+- `tests/api-client.test.ts`: o cliente `src/lib/api.ts` falando com a app de verdade (o `fetch` do teste entrega o pedido ao Hono).
 - `tests/rng.test.ts`, `tests/save.test.ts`: lógica pura (mulberry32, shuffle, ações do save e sequência do diário).
 - `tests/ir.test.ts`: a conta do IR (R$ 5.000 dá R$ 312,89 por mês e R$ 4.067,57 por ano). Fica pulado enquanto `src/games/ir.ts` não exportar `economiaIR`, `reducao` e `tabela`.
 - `tests/e2e/smoke.spec.ts`: abre o título, entra na fase 1, vê a introdução, toca na tela e falha se aparecer erro no console.

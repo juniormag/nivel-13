@@ -1,6 +1,6 @@
 // Contrato dos minijogos. Todo jogo implementa MicroGame e desenha em `c.stage` (PixiJS, modo retido).
 import type { Container, Texture } from 'pixi.js'
-import type { Sfx } from '../audio/audio'
+import type { Sfx, SfxOpts } from '../audio/audio'
 
 export interface Juice {
   /** partículas pixel com gravidade */
@@ -37,7 +37,8 @@ export interface GameCtx {
   addScore(n: number, x?: number, y?: number): void
   hit(x?: number, y?: number): void
   finish(): void
-  sfx(name: Sfx): void
+  /** opts.x em pixels lógicos (o motor converte para pan 0..1), combo, pitch em semitons */
+  sfx(name: Sfx, opts?: SfxOpts): void
   /** textura nomeada (sprites de src/lib/sprites.ts ou gerados pelo jogo) */
   tex(name: string): Texture
   readonly time: number

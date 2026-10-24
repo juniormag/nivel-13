@@ -317,7 +317,7 @@ canvas {
 }
 .cmd-hint {
   margin-left: auto;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   padding: 3px 6px;
   color: var(--stone-3);
@@ -395,14 +395,14 @@ canvas {
 .skill-key {
   min-width: 22px;
   height: 22px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .skill-corner {
   display: none;
   position: absolute;
   right: 2px;
   bottom: 2px;
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1;
   padding: 2px 3px;
   background: var(--void);
@@ -435,7 +435,7 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.06em;
   color: var(--stone-3);
   text-shadow: var(--shadow-text);
@@ -487,7 +487,7 @@ canvas {
   align-items: center;
   gap: 3px;
   font-family: var(--f-hud);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1;
   color: var(--stone-hi);
 }
@@ -531,9 +531,9 @@ canvas {
   position: absolute;
   margin: calc(var(--mm-pad, 6px) - 22px) 0 0 calc(var(--mm-pad, 6px) + 10px);
   font-family: var(--f-hud);
-  font-size: 10px;
+  font-size: 12px;
   line-height: 1;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--stone-hi);
   white-space: nowrap;
@@ -573,7 +573,7 @@ canvas {
   font-family: var(--f-hud);
   font-weight: 400;
   font-size: 18px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   margin: 0 40px 14px 0;
 }
@@ -611,7 +611,7 @@ canvas {
   cursor: pointer;
   font-family: var(--f-hud);
   font-size: 13px;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 8px 16px;
   min-height: 44px;
@@ -693,12 +693,12 @@ canvas {
 }
 .fc-kicker {
   font-family: var(--f-hud);
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--gold);
 }
-.factcard h3 {
+.factcard h2 {
   font-family: var(--f-hud);
   font-weight: 400;
   font-size: 18px;
@@ -711,8 +711,8 @@ canvas {
 .fc-status {
   display: inline-block;
   font-family: var(--f-hud);
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-size: 12px;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 5px 8px;
   margin-bottom: 12px;
@@ -744,8 +744,8 @@ canvas {
 .fc-src-title {
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 11px;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--stone-3);
   margin: 0 0 6px;
@@ -813,8 +813,8 @@ canvas {
 }
 .cd-block small {
   font-family: var(--f-hud);
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--stone-3);
   margin-top: 6px;
@@ -934,17 +934,18 @@ canvas {
   gap: 4px;
 }
 .play-skills .skill-name {
-  font-size: 9px;
+  font-size: 12px;
 }
 .play-skills .skill-key {
   display: none;
 }
 .play-skills .skill-corner {
   display: block;
-  font-size: 8px;
+  font-size: 12px;
 }
 .play-skills .skill-lock {
-  font-size: 7px;
+  font-size: 12px;
+  letter-spacing: 0;
 }
 .skill.is-na .skill-icon {
   filter: grayscale(1) brightness(0.45);
@@ -978,13 +979,13 @@ canvas {
     bottom: calc(16px + var(--safe-b));
   }
   .play-skills .skill-name {
-    font-size: 11px;
+    font-size: 12px;
   }
   .play-skills .skill-corner {
-    font-size: 10px;
+    font-size: 12px;
   }
   .play-skills .skill-lock {
-    font-size: 9px;
+    font-size: 12px;
   }
 }
 
@@ -1035,4 +1036,17 @@ canvas {
 }
 .skill[data-pressed] .skill-tile {
   background: var(--dusk);
+}
+
+/* habilidade bloqueada: "FASE" em cima do número, cabe no ladrilho */
+.skill-lock {
+  flex-direction: column;
+  line-height: 1.1;
+  text-align: center;
+}
+@media (max-width: 999px), (max-height: 639px) {
+  .play-skills .skill-name,
+  .play-skills .skill-lock span:first-child {
+    display: none;
+  }
 }

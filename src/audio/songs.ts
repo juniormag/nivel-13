@@ -57,6 +57,7 @@ const title: Song = {
   bpm: 84,
   bars: 8,
   swing: 0,
+  gain: 1.12,
   gate: { harm: 0, bass: 0, perc: 0.15, lead: 0.3, extra: 0.55 },
   verb: { harm: 0.35, lead: 0.4, extra: 0.3, perc: 0.12 },
   tick(s) {
@@ -78,7 +79,7 @@ const title: Song = {
       // rufo de tímpano antes da volta
       if (s.I > 0.45 && s.bar === 7 && i >= 12) I.timp(g, out.perc, t, 40, 0.25 + (i - 12) * 0.12)
     }
-    if (on.lead) playLead(s, TITLE_L, I.pluckLead, 1)
+    if (on.lead) playLead(s, TITLE_L, I.pluckLead, 1.4)
     if (on.extra && i % 2 === 0) {
       const pat = [0, 1, 2, 1, 2, 0, 1, 2]
       I.pluck(g, out.extra, t, at(c.v, at(pat, i / 2)) + 12, 0.7)
@@ -139,7 +140,7 @@ const game: Song = {
     }
     if (on.extra && i % 2 === 1) {
       const pat = [2, 1, 0, 1, 2, 1, 0, 2]
-      I.pluck(g, out.extra, t, at(c.v, at(pat, (i - 1) / 2)) + 12, 0.55)
+      I.pluck(g, out.extra, t, at(c.v, at(pat, (i - 1) / 2)) + 12, 0.9)
     }
   },
 }
@@ -190,7 +191,7 @@ const boss: Song = {
       if (s.I >= 0.8) playLead(s, BOSS_L, I.brassHit, 0.8, -12)
     }
     if (on.extra) {
-      if ([0, 2, 5, 8, 10, 13].includes(i)) I.agogo(g, out.extra, t, 0.8, i !== 5 && i !== 13)
+      if ([0, 2, 5, 8, 10, 13].includes(i)) I.agogo(g, out.extra, t, 1.6, i !== 5 && i !== 13)
     }
   },
 }
@@ -240,6 +241,7 @@ const map: Song = {
   bpm: 100,
   bars: 4,
   swing: 0.05,
+  gain: 1.15,
   gate: { harm: 0, bass: 0, perc: 0.1, lead: 0.45, extra: 0.7 },
   verb: { harm: 0.25, lead: 0.3, extra: 0.2, perc: 0.06 },
   tick(s) {
@@ -247,7 +249,7 @@ const map: Song = {
     const { g, t, i, out, on } = s
     if (on.harm && i % 2 === 0) {
       const pat = [0, 1, 2, 1, 0, 2, 1, 2]
-      I.pluck(g, out.harm, t, at(c.v, at(pat, i / 2)) + 12, 0.8)
+      I.pluck(g, out.harm, t, at(c.v, at(pat, i / 2)) + 12, 1.4)
     }
     if (on.bass) {
       if (i === 0 || i === 8) I.bass(g, out.bass, t, c.b, s.s16 * 3, 0.85)
@@ -277,6 +279,7 @@ const daily: Song = {
   bpm: 108,
   bars: 4,
   swing: 0.08,
+  gain: 1.1,
   gate: { perc: 0, bass: 0, harm: 0.2, lead: 0.35, extra: 0.6 },
   verb: { lead: 0.2, harm: 0.15, extra: 0.15, perc: 0.05 },
   tick(s) {

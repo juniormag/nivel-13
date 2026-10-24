@@ -34,10 +34,10 @@ export function christ(h: number) {
   const armT = h >= 16 ? 2 : 1
   // cabeça
   b.rect(cx - 1, top, 2, 2, 'sparkle')
-  b.set(cx, top, 'goldHi')
+  b.set(cx, top + 1, 'stone3')
   // braços abertos
-  b.rect(cx - (span >> 1), armY, span, armT, 'goldHi')
-  b.rect(cx, armY, span >> 1, armT, 'gold')
+  b.rect(cx - (span >> 1), armY, span, armT, 'sparkle')
+  b.rect(cx + 1, armY, span >> 1, armT, 'stone3')
   b.set(cx - (span >> 1), armY + armT, 'gold1')
   b.set(cx + (span >> 1), armY + armT, 'gold1')
   if (armT > 1) b.rect(cx - (span >> 1) + 1, armY + armT, span - 2, 1, 'gold1')
@@ -48,13 +48,13 @@ export function christ(h: number) {
     const t = (y - bodyTop) / (bodyBot - bodyTop)
     const half = 1 + Math.round(t * (h >= 16 ? 1.6 : 1))
     for (let x = cx - half; x <= cx + half - 1; x++) {
-      const k: K = x < cx - 1 ? 'sparkle' : x < cx ? 'goldHi' : x < cx + 1 ? 'gold' : 'gold1'
+      const k: K = x < cx - 1 ? 'sparkle' : x < cx ? 'stoneHi' : x < cx + 1 ? 'stone3' : 'stone2'
       b.set(x, y, k)
     }
   }
   // pedestal
-  b.rect(cx - 2, bodyBot, 4, 2, 'gold1')
-  b.rect(cx - 2, bodyBot, 2, 1, 'gold')
+  b.rect(cx - 2, bodyBot, 4, 2, 'stone2')
+  b.rect(cx - 2, bodyBot, 2, 1, 'goldHi')
   haloAround(b, 'gold1', 'gold0', 0.6)
   return { c: b.canvas(), ax: cx, ay: H - pad }
 }
@@ -86,12 +86,11 @@ export function flagFrames(w: number, h: number, n = 6) {
         const inGlobe = rx * rx + ry * ry < 0.24 * 0.24
         const band = inGlobe && Math.abs(ry - rx * 0.35 + 0.02) < 0.045
         let k: K
-        if (inGlobe) k = band ? 'stoneHi' : 'blue0'
+        if (inGlobe) k = band ? 'stoneHi' : rx + ry * 0.4 > 0.06 ? 'blue0' : 'blue1'
         else if (du + dv < 1) k = 'gold'
         else k = 'green'
         // estrelinhas
         if (inGlobe && !band && ((x * 7 + y * 13) % 11 === 0)) k = 'stoneHi'
-        if (inGlobe && !band && rx < -0.08 && ry < 0) k = k === 'blue0' && (x + y) % 3 === 0 ? 'blue1' : k
         // luz: dobra virada para a lua clareia, a outra escurece (hue shift)
         if (shade > 0) k = k === 'green' ? 'leafHi' : k === 'gold' ? 'goldHi' : k === 'blue0' ? 'blue1' : k
         if (shade < 0) k = k === 'green' ? 'vine1' : k === 'gold' ? 'gold1' : k === 'blue0' ? 'night' : k === 'stoneHi' ? 'stone2' : k
@@ -143,6 +142,8 @@ export function crown(w: number, sq = 1) {
     b.set(cxp + 1, ty, 'gold')
     b.set(cxp, ty - 1, 'goldHi')
   }
+  // reflexo vermelho dos anéis embaixo do aro
+  for (let x = 1; x < W0 - 1; x++) b.set(ox + x, bandY + bandH - 1, x % 5 === 2 ? 'redHot' : 'crimson')
   // gemas vermelhas no aro
   for (let s = 0; s < 3; s++) {
     const gx = ox + Math.round(((s * 2 + 0.5) / spikes) * (W0 - 1))

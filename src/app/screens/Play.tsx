@@ -172,10 +172,11 @@ export default function Play() {
     const tick = () => {
       if (n === 0) {
         setCount(null)
+        sfx('go')
         void runnerRef.current?.start()
         return
       }
-      sfx('tick')
+      sfx('countdown')
       setCount(n)
       n--
       window.setTimeout(tick, 420)

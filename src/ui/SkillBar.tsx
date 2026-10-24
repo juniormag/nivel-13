@@ -85,7 +85,8 @@ function SkillItem({
         <PixelIcon src={skillIcon(s.kind)} className="skill-icon" />
         {locked && (
           <span className="skill-lock" aria-hidden="true">
-            FASE {s.unlock}
+            <span>FASE</span>
+            <span>{s.unlock}</span>
           </span>
         )}
         <span className="skill-corner" aria-hidden="true">

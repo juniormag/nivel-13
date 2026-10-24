@@ -9,17 +9,20 @@ export function XPBar({
   max,
   label = 'Experiência',
   showText = true,
+  sound,
   className,
 }: {
   value: number
   max: number
   label?: string
   showText?: boolean
+  /** som de contagem ('score' por passo e 'total' no fim) */
+  sound?: boolean
   className?: string
 }) {
   // sobe a partir do último valor mostrado nesta sessão (na primeira vez, de zero)
   const from = lastShown.get(label) ?? 0
-  const v = useCountUp(value, { from, ms: 600 })
+  const v = useCountUp(value, { from, ms: 600, tick: sound ? 'score' : null, done: sound ? 'total' : null })
   lastShown.set(label, v)
   const pct = Math.max(0, Math.min(100, (v / max) * 100))
   return (

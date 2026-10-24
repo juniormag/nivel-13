@@ -29,7 +29,6 @@ export default function Title() {
   const xp = xpTotal(s)
   const st = stats(s)
   const date = todayBR()
-  const playedToday = !!s.daily.results[date]
   const n = dailyNumber(date)
   const cd = useElectionCountdown()
 
@@ -63,11 +62,11 @@ export default function Title() {
       onSelect: () => go(s.onboarded ? 'map' : 'onboard'),
     },
     {
-      id: 'daily',
-      label: 'Desafio do dia',
-      hint: `#${n}${playedToday ? ' ✓' : ''}`,
-      hintLabel: `número ${n}${playedToday ? ', feito hoje' : ''}`,
-      onSelect: () => go('daily'),
+      id: 'chuta',
+      label: 'Chuta Aí!',
+      hint: `#${n}`,
+      hintLabel: `desafio do dia número ${n}`,
+      onSelect: () => go('chuta'),
     },
     { id: 'placar', label: 'Placar da virada', onSelect: () => go('placar') },
     {

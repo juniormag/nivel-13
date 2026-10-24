@@ -259,7 +259,7 @@ export const SFX: Record<Sfx, Recipe> = {
     room: 0.2,
     hall: 0,
     gap: 120,
-    gain: 1.4,
+    gain: 0.9,
     play(v, t, { k }) {
       // zumbido grave em dois pulsos ("é-é"), sem drama
       v.noise(t, { filter: 'highpass', f: 3000, d: 0.006, g: 0.16 })
@@ -778,7 +778,7 @@ export const SFX: Record<Sfx, Recipe> = {
     play(v, t, c) {
       // estrela 1, 2, 3 = lá, dó#, mi (combo 0, 1, 2); continua subindo pela tríade
       const triad = [0, 4, 7]
-      const m = 81 + (triad[c.combo % 3] ?? 0) + 12 * Math.floor(c.combo / 3)
+      const m = 81 + (triad[c.combo % 3] ?? 0) + 12 * Math.min(1, Math.floor(c.combo / 3))
       const k = c.k
       v.noise(t, { f: 1500, to: 9000, q: 1, a: 0.02, d: 0.12, g: 0.2 })
       v.tone(t, { type: 'sine', f: 110, to: 55, d: 0.12, g: 0.4 })

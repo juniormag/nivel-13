@@ -8,7 +8,10 @@ import { type Haptic, haptic } from './prefs'
 const SLOP = 8
 
 export interface PressOpts {
+  /** som no pointer-down */
   sound?: Sfx | null
+  /** som ao confirmar (soltar dentro do alvo): 'confirm' na ação principal, 'back' em voltar/fechar */
+  commit?: Sfx | null
   vibe?: Haptic | null
   disabled?: boolean
 }
@@ -17,7 +20,7 @@ export function usePress<E extends HTMLElement>(
   onCommit: ((e: MouseEvent<E>) => void) | undefined,
   opts: PressOpts = {},
 ) {
-  const { sound = 'tap', vibe = 'confirm', disabled } = opts
+  const { sound = 'tap', vibe = 'confirm', commit = null, disabled } = opts
   const [pressed, setPressed] = useState(false)
   const start = useRef<{ x: number; y: number; id: number } | null>(null)
   const cancelled = useRef(false)
@@ -74,6 +77,7 @@ export function usePress<E extends HTMLElement>(
         return
       }
       if (disabled) return
+      if (commit) sfx(commit)
       onCommit?.(e)
     },
   }

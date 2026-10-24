@@ -40,14 +40,14 @@ interface Bird {
 
 const CLOUD_RAMP: K[] = ['emberBright', 'redGlow', 'redHot', 'red', 'crimson', 'crimsonDeep', 'blood1', 'blood0']
 
-interface Puff {
+export interface Puff {
   x: number
   y: number
   r: number
   flat: number
 }
 
-function bank(rnd: () => number, x0: number, x1: number, yb: number, hb: number, n: number): Puff[] {
+export function bank(rnd: () => number, x0: number, x1: number, yb: number, hb: number, n: number): Puff[] {
   const out: Puff[] = []
   for (let i = 0; i < n; i++) {
     const f = (i + rnd() * 0.6) / n
@@ -64,12 +64,12 @@ function bank(rnd: () => number, x0: number, x1: number, yb: number, hb: number,
 }
 
 /** Nuvem cúmulo: cada sopro tem sua borda iluminada sobre o corpo do sopro de trás. */
-function cloudLayer(w: number, h: number, puffs: Puff[], lit: 'top' | 'bottom', dim: number, seed: number) {
+export function cloudLayer(w: number, h: number, puffs: Puff[], lit: 'top' | 'bottom', dim: number, seed: number, stretch = 1.35) {
   const b = new Buf(w, h)
   const nz = makeNoise(seed)
   const order = puffs.slice().sort((a, c) => (lit === 'top' ? a.y - c.y : c.y - a.y))
   for (const p of order) {
-    const rx = p.r * 1.35
+    const rx = p.r * stretch
     const ry = p.r
     const ex = Math.ceil(rx * 1.2)
     const ey = Math.ceil(ry * 1.2)
@@ -89,9 +89,9 @@ function cloudLayer(w: number, h: number, puffs: Puff[], lit: 'top' | 'bottom', 
         s += u * 0.12 + (nz.n2(xx / 3, y / 3, w / 3) - 0.5) * 0.2
         const edge = (e - d) * ry
         const toLight = lit === 'top' ? v < 0.05 : v > -0.05
-        let idx = dim + 1.4 + clamp01(s) * 4.8
+        let idx = dim + 2 + clamp01(s) * 5.5
         if (toLight && edge < 1.4 && Math.abs(u) < 0.9) idx = dim
-        else if (toLight && edge < 2.8) idx = Math.min(idx, dim + 1.3)
+        else if (toLight && edge < 2.6) idx = Math.min(idx, dim + 2)
         const i0 = Math.floor(idx)
         const k = CLOUD_RAMP[Math.min(CLOUD_RAMP.length - 1, dith(xx, y, idx - i0) ? i0 + 1 : i0)] ?? 'blood0'
         b.set(xx, y, k)
@@ -100,7 +100,7 @@ function cloudLayer(w: number, h: number, puffs: Puff[], lit: 'top' | 'bottom', 
   return b
 }
 
-function moonCanvas(r: number, grow: number) {
+export function moonBuf(r: number, grow: number) {
   const cor = Math.ceil(r * 1.05 * grow) + 3
   const S = (r + cor) * 2
   const b = new Buf(S, S)
@@ -149,8 +149,9 @@ function moonCanvas(r: number, grow: number) {
       if (!dith(x, y, dens * 1.05)) continue
       b.set(x, y, dens > 0.62 ? 'crimson' : dens > 0.32 ? 'crimsonDeep' : 'blood1')
     }
-  return b.canvas()
+  return b
 }
+const moonCanvas = (r: number, grow: number) => moonBuf(r, grow).canvas()
 
 export class Backdrop {
   L!: Layout
@@ -240,10 +241,9 @@ export class Backdrop {
       const base = L.portrait ? hz - L.ppu * 1.7 : hz - H * 0.075
       for (let i = 0; i < 4; i++) {
         const x0 = (i / 4) * CW + r2() * CW * 0.08
-        far.push(...bank(r2, x0, x0 + CW * (0.16 + r2() * 0.1), base - r2() * H * 0.05, H * 0.035, 9))
+        far.push(...bank(r2, x0, x0 + CW * (0.18 + r2() * 0.1), base - r2() * H * 0.04, H * 0.05, 7))
       }
-      far.push(...bank(r2, CW * 0.3, CW * 0.62, base - H * 0.13, H * 0.03, 8))
-      this.cloudsFar = cloudLayer(CW, LH, far, 'bottom', 2.2, 11).canvas()
+      this.cloudsFar = cloudLayer(CW, LH, far.map((f) => ({ ...f, flat: 0.75 })), 'bottom', 2.6, 11, 3.2).canvas()
 
       const near: Puff[] = []
       if (L.portrait) {
@@ -337,20 +337,26 @@ export class Backdrop {
       const cx = X(L.corc.x)
       const peak = Y(L.corc.peak)
       const half = L.corc.half
+      const humps: [number, number, number][] = [
+        [0, 1, half * 0.55],
+        [-half * 0.75, 0.62, half * 0.6],
+        [-half * 1.35, 0.3, half * 0.55],
+        [half * 0.7, 0.72, half * 0.55],
+        [half * 1.4, 0.5, half * 0.7],
+      ]
       const cTop = (x: number) => {
-        if (Math.abs(x - cx) <= 1) return peak
-        if (x < cx) {
-          const u = (cx - x) / (half * 1.7)
-          if (u >= 1) return hz + 2
-          const bump = (nz.fbm(x / 9, 9, 3) - 0.5) * 6 * u
-          return Math.round(peak + 1 + (hz + 2 - peak) * u ** 0.72 + bump)
+        const H0 = hz + 2 - peak
+        let hgt = 0
+        for (const [dx, hh, w] of humps) {
+          const u = (x - cx - dx) / w
+          if (u > -1.6 && u < 1.6) hgt = Math.max(hgt, H0 * hh * Math.max(0, 1 - (u / 1.6) ** 2) ** 0.85)
         }
-        const u = (x - cx) / (half * 1.3)
-        const bump = (nz.fbm(x / 9, 19, 3) - 0.5) * 6 * Math.min(1, u)
-        return Math.round(peak + 1 + (hz - peak) * Math.min(1, u) ** 0.85 * 0.85 + bump)
+        if (hgt <= 0) return hz + 2
+        hgt += (nz.fbm(x / 8, 9, 3) - 0.5) * 5 * Math.min(1, Math.abs(x - cx) / half)
+        return Math.round(hz + 2 - hgt)
       }
       const mh = hz - peak
-      for (let x = Math.max(0, Math.floor(cx - half * 1.7)); x < LW; x++) {
+      for (let x = Math.max(0, Math.floor(cx - half * 2.4)); x < LW; x++) {
         const top = cTop(x)
         if (top > hz) continue
         const left = x < cx
@@ -358,59 +364,60 @@ export class Backdrop {
           const dy = y - top
           const n = nz.fbm(x / 9, y / 9, 3)
           const gully = nz.n2((x + y * 0.55) / 2.5, y / 10) > 0.68
-          let v = (left ? 0.55 : 0.22) + (n - 0.5) * 0.7 - (dy / mh) * 0.35
+          const litF = clamp01((cx - x) / (half * 0.6) + 0.35)
+          let v = 0.22 + litF * 0.3 + (n - 0.5) * 0.6 - (dy / mh) * 0.4
           if (gully) v -= 0.25
           let k: K = v > 0.62 ? (dith(x, y, 0.5) ? 'emberDark' : 'blood1') : v > 0.4 ? 'blood1' : v > 0.18 ? 'blood0' : 'night'
           if (dy === 0) k = left ? 'crimsonDeep' : 'blood1'
           // mata no pé e no topo
-          const veg = (y > peak + mh * 0.45 || dy < 3) && nz.n2(x / 3, y / 3) > 0.62
-          if (veg && dy > 0) k = dith(x, y, 0.5) ? 'vine0' : k
+          const veg = y > peak + mh * 0.5 && nz.n2(x / 4, y / 4) > 0.7
+          if (veg && dy > 1 && dith(x, y, 0.5)) k = 'vine0'
           // holofotes no cume
           const sd = Math.hypot(x - cx, (y - peak) * 1.3)
-          if (sd < 7 && dith(x, y, (1 - sd / 7) * 0.8)) k = sd < 3.5 ? 'gold1' : 'gold0'
+          if (sd < 5 && dith(x, y, (1 - sd / 5) * 0.6)) k = sd < 2.5 ? 'gold1' : 'gold0'
           b.set(x, y, k)
         }
       }
       // favela e bairros acesos na encosta baixa
-      for (let i = 0; i < W * 1.2; i++) {
+      for (let i = 0; i < W * 0.7; i++) {
         const x = Math.round(cx - half * 1.6 + rnd() * half * 3)
-        const y = Math.round(hz - rnd() * mh * 0.42)
+        const y = Math.round(hz - rnd() * mh * 0.28)
         if (x < 0 || x >= LW || y < cTop(x) + 3) continue
         if (nz.n2(x / 5, y / 5) < 0.5) continue
         const v = rnd()
         b.set(x, y, v > 0.85 ? 'goldHi' : v > 0.55 ? 'gold' : v > 0.25 ? 'ember' : 'emberDark')
       }
-      // estrada em zigue-zague, iluminada
+      // estrada em zigue-zague, iluminada: desce pela face esquerda abrindo as curvas
       {
-        let px = cx - 2
-        let py = peak + 4
-        let dir = -1
-        let run = 0
-        let seg = 0
-        let i = 0
-        while (py < hz && seg < 14) {
-          const lim = cTop(Math.round(px)) + 2
+        const y0 = peak + 5
+        const y1 = hz - 2
+        const n = Math.round((y1 - y0) * 9)
+        let lastX = -1
+        let lastY = -1
+        let dist = 0
+        for (let i = 0; i <= n; i++) {
+          const v = i / n
+          const tri = 1 - 2 * Math.abs(((v * 5.5 + 0.25) % 1) * 2 - 1)
+          const amp = 2 + v * half * 0.32
+          const px = Math.round(cx - 1 - v * half * 0.9 + tri * amp)
+          let py = Math.round(y0 + v * (y1 - y0))
+          const lim = cTop(px) + 2
           if (py < lim) py = lim
+          if (px === lastX && py === lastY) continue
+          dist += 1
+          lastX = px
+          lastY = py
           b.set(px, py, 'gold0')
-          if (i % 2 === 0) {
-            const v = rnd()
+          if (dist % 2 === 0) {
+            const r0 = rnd()
             this.lamps.push({
-              x: Math.round(px) - PAD,
-              y: Math.round(py) - PY,
-              k: v > 0.7 ? 'goldHi' : v > 0.3 ? 'gold' : 'emberBright',
+              x: px - PAD,
+              y: py - PY,
+              k: r0 > 0.7 ? 'goldHi' : r0 > 0.3 ? 'gold' : 'emberBright',
               ph: rnd() * 6.28,
               d: DEPTH.skyline,
               sp: 1 + rnd() * 2,
             })
-          }
-          i++
-          px += dir
-          py += 0.42
-          run++
-          if (run > 3 + seg * 1.3) {
-            dir = -dir
-            run = 0
-            seg++
           }
         }
       }
@@ -527,9 +534,9 @@ export class Backdrop {
         const t0 = top(x)
         for (let y = Math.max(0, t0); y < LH; y++) {
           const n = nz.n2(x / 3, y / 3)
-          let k: K = n > 0.7 ? 'night' : n < 0.18 ? 'blood0' : 'void'
+          let k: K = n > 0.72 ? 'night' : 'void'
           const gd = Math.hypot((x - glow.x) * 0.8, (y - by) * 1.6) / glow.r
-          if (gd < 1 && dith(x, y, (1 - gd) * 0.7)) k = gd < 0.45 ? 'crimsonDeep' : 'blood1'
+          if (gd < 0.8) k = gd < 0.35 ? 'blood1' : dith(x, y, (0.8 - gd) * 2.5) ? 'blood0' : k
           hill.set(x, y, k)
         }
       }
@@ -550,9 +557,13 @@ export class Backdrop {
           const rx = u * (0.6 + rnd() * 0.9)
           const ry = rx * 0.65
           const yy = top(xx) + row * u * 1.05 + rnd() * u * 0.4
-          if (yy < LH + ry) rocks.push({ x: xx, y: yy, rx, ry, fade: Math.min(0.9, row * 0.22), seed: Math.floor(rnd() * 1e6), lip: false })
+          if (yy < LH + ry) rocks.push({ x: xx, y: yy, rx, ry, fade: Math.min(0.82, 0.25 + row * 0.12), seed: Math.floor(rnd() * 1e6), lip: false })
           xx += rx * (1.5 + rnd() * 1.2)
         }
+      }
+      for (const r of rocks) {
+        const dist = Math.hypot((r.x - bx) / 1.3, r.y - by) / (u * 9)
+        r.fade = Math.min(0.8, Math.max(r.fade, (dist - 0.45) * 0.9))
       }
       rocks.sort((a, c) => a.y - c.y)
       for (const r of rocks) {
@@ -761,7 +772,7 @@ export function drawRock(b: Buf, cx: number, cy: number, rx: number, ry: number,
         nzv = 0.57
       }
       const lam = nx * LX + ny * LY + nzv * LZ
-      let val = 0.18 + lam * 0.85 - fade * 0.55 + (bayer(x, y) - 0.5) * 0.12
+      let val = 0.08 + lam * 0.72 - fade * 0.75
       let k: K = stone[Math.max(0, Math.min(5, Math.floor(val * 6)))] ?? 'void'
       if (glow) {
         const gx = glow.x - x
@@ -770,7 +781,7 @@ export function drawRock(b: Buf, cx: number, cy: number, rx: number, ry: number,
         const gl = clamp01(1 - gd / glow.r)
         const facing = (nx * gx + ny * gy) / (gd || 1)
         const amt = gl * (0.35 + Math.max(0, facing) * 0.9) - fade * 0.6
-        if (amt > 0.25 && dith(x, y, (amt - 0.25) * 2.2)) {
+        if (amt > 0.38 || (amt > 0.3 && dith(x, y, (amt - 0.3) * 8))) {
           val = amt * 0.9 + lam * 0.4
           k = redR[Math.max(0, Math.min(5, Math.floor(val * 6)))] ?? 'blood0'
         }

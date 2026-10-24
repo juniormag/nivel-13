@@ -5,6 +5,7 @@
 //   await __sfx.renderAll()                  tabela de todos os efeitos e stingers
 //   await __sfx.renderMusic('game', 8, 0.6)  mede a trilha
 //   __sfx.panel()  ou  abra a página com ?sfx  painel com botões
+
 import {
   audioState,
   duck,
@@ -16,6 +17,7 @@ import {
   STINGER_NAMES,
   type Stinger,
   setIntensity,
+  setMuted,
   sfx,
   stinger,
   type Track,
@@ -214,6 +216,19 @@ export function install() {
       sfx(name, opts)
     },
     {
+      /** o módulo de áudio vivo (o mesmo que o jogo usa) */
+      api: {
+        sfx,
+        stinger,
+        playMusic,
+        setIntensity,
+        setMuted,
+        duck,
+        hitstop,
+        unlockAudio,
+        audioState,
+        SFX_NAMES,
+      },
       list: SFX_NAMES,
       stingers: STINGER_NAMES,
       tracks: TRACKS,

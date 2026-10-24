@@ -5,14 +5,16 @@ import { FACTS } from '../content/facts'
 import { LEVELS } from '../content/levels'
 import { STATEMENTS } from '../content/statements'
 import { mulberry32 } from '../lib/rng'
+import { MAX_TOTAL } from '../lib/score'
 import { skillIcon, sprite } from '../lib/sprites'
 import { getSave, shareLink, stats, XP_MAX, xpTotal } from '../state/save'
-import { heroStill } from './hero'
+import { heroStill, sceneLayout } from './hero'
 import {
   type Align,
   CAP,
   canvas,
   compose,
+  drawRows,
   frame,
   free,
   type Ink,
@@ -31,7 +33,7 @@ import {
   toBlob,
   wrap,
 } from './kit'
-import { drawCrown } from './monument2d'
+import { chuteHook, chuteLink } from './text'
 import type { Format, Moment } from './types'
 
 /** Ampliação inteira: 1 pixel lógico = 6 pixels do PNG. A camada fina usa ×3. */
@@ -54,11 +56,17 @@ export const FORMAT_LABEL: Record<Format, string> = {
 const WHITE: Ink[] = ['white', 'stoneHi', 'stoneHi', 'stone3']
 const GOLD: Ink[] = ['goldHi', 'gold', 'gold', 'gold1']
 const RED: Ink[] = ['redGlow', 'redHot', 'red', 'crimson']
-const big = (fill: Ink[], k: number): Paint => ({ fill, outline: 'void', shadow: 'blood0', shadowDy: Math.max(1, k) })
+const big = (fill: Ink[], k: number): Paint => ({
+  fill,
+  outline: 'void',
+  shadow: 'blood0',
+  shadowDy: Math.max(1, k),
+})
 const small = (fill: Ink | Ink[]): Paint => ({ fill, outline: 'void' })
 const fineInk = (fill: Ink): Paint => ({ fill })
 
-const fmtInt = (n: number) => new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(Math.round(n))
+const fmtInt = (n: number) =>
+  new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(Math.round(n))
 export const fmtBRL = (n: number) => `R$ ${fmtInt(n)}`
 
 // ---------------------------------------------------------------- contexto do card
@@ -78,6 +86,25 @@ interface Card {
   story: boolean
   rnd: () => number
   heroKind?: 'hero' | '2d'
+  /** modo camada: não desenha a cena e só registra os escurecimentos (o clipe aplica por quadro) */
+  chrome: boolean
+  ops: ShadeOp[]
+  /** deslocamento da cena (still desenhado em y = drop) */
+  drop: number
+}
+
+export interface ShadeOp {
+  x: number
+  y: number
+  w: number
+  h: number
+  amount: (t: number) => number
+}
+
+/** Escurecimento: aplica já ou registra no modo camada. */
+function cshade(c: Card, op: ShadeOp) {
+  if (c.chrome) c.ops.push(op)
+  else shade(c.g, op.x, op.y, op.w, op.h, op.amount)
 }
 
 /**
@@ -183,7 +210,9 @@ function playerBadge(c: Card, x: number, y: number, level: number) {
   rect(c.g, tx, y + 9, fw, 1, 'redGlow')
   fineFrame(c, tx, y + 9, bw, 3, 'stone3')
   const name = s.name.trim()
-  const label = name ? name.toLocaleUpperCase('pt-BR').slice(0, 14) : `${fmtInt(level >= 13 ? XP_MAX : xpTotal())} XP`
+  const label = name
+    ? name.toLocaleUpperCase('pt-BR').slice(0, 14)
+    : `${fmtInt(level >= 13 ? XP_MAX : xpTotal())} XP`
   fine(c, label, tx, y + 15, 'stone3')
 }
 
@@ -226,6 +255,8 @@ interface FooterOpts {
   note?: { lines: string[]; first?: Ink }
   /** y mínimo (story) */
   min?: number
+  /** link desenhado (padrão: a corrente `?r=`) */
+  link?: string
 }
 
 function footerHeight(c: Card, o: FooterOpts) {
@@ -243,21 +274,27 @@ function footer(c: Card, o: FooterOpts = {}) {
     ? Math.min(STORY_FOOTER_MAX - hgt, Math.max(STORY_FOOTER, o.min ?? 0))
     : Math.round(c.H - 4 - hgt)
   // placa escura sob o rodapé para leitura
-  shade(c.g, 0, Math.max(0, y - 8), c.W, Math.min(c.H, hgt + 14), (t) => 0.75 * Math.min(1, t * 3))
+  cshade(c, {
+    x: 0,
+    y: Math.max(0, y - 8),
+    w: c.W,
+    h: Math.min(c.H, hgt + 14),
+    amount: (t) => 0.75 * Math.min(1, t * 3),
+  })
   if (o.note) {
     const pw = c.x1 - c.x0 - 6
     const ph = o.note.lines.length * LEGAL_LH + 3
     panel(c, c.cx - pw / 2, y, pw, ph, 'stone2')
-    o.note.lines.forEach((l, i) =>
-      fine(c, l, c.cx, y + 2 + i * LEGAL_LH, i === 0 ? (o.note?.first ?? 'stoneHi') : 'stoneHi', 'center'),
-    )
+    o.note.lines.forEach((l, i) => {
+      fine(c, l, c.cx, y + 2 + i * LEGAL_LH, i === 0 ? (o.note?.first ?? 'stoneHi') : 'stoneHi', 'center')
+    })
     y += ph + 4
   }
   if (o.cta) {
     text(c.g, o.cta, c.cx, y, small(GOLD), { align: 'center' })
     y += CAP + 4
   }
-  const link = shareLink().replace(/^https?:\/\//, '')
+  const link = (o.link ?? shareLink()).replace(/^https?:\/\//, '')
   const m = linkMask(link)
   if (m.w + 8 <= c.x1 - c.x0) {
     const x = Math.round(c.cx - (m.w + 6) / 2)
@@ -276,27 +313,60 @@ function footer(c: Card, o: FooterOpts = {}) {
 
 /** Escurece topo e base para o texto ler sobre a cena (a quantização posteriza depois). */
 function vignette(c: Card, top: number, bottomFrom: number, strength = 0.8) {
-  if (top > 0) shade(c.g, 0, 0, c.W, top, (t) => strength * (1 - t) ** 1.1)
+  if (top > 0) cshade(c, { x: 0, y: 0, w: c.W, h: top, amount: (t) => strength * (1 - t) ** 1.1 })
   const from = Math.max(0, Math.min(c.H - 1, Math.round(bottomFrom)))
-  shade(c.g, 0, from, c.W, c.H - from, (t) => strength * Math.min(1, t * 1.6) ** 0.8)
+  cshade(c, { x: 0, y: from, w: c.W, h: c.H - from, amount: (t) => strength * Math.min(1, t * 1.6) ** 0.8 })
 }
 
+/** O still é renderizado mais alto que o card (retrato garantido, folga para deslocar). */
+export const SCENE_EXTRA = 40
+
 interface SceneGeo {
+  /** pé do monumento */
   base: number
+  /** topo da pedra */
   top: number
+  /** topo de tudo (coroa ou bandeira) */
+  peak: number
 }
 
 /**
- * Cena do herói. `extra` renderiza o still mais alto e corta a base: o monumento desce e
- * sobra céu em cima para o texto, sem deformar nada.
+ * Cena do herói com o pé do monumento em `base` (y lógico do card). O still é desenhado
+ * deslocado para baixo; o alto do céu é quase preto, então a faixa acrescentada não tem emenda.
  */
-async function scene(c: Card, o: { progress?: number; crown?: boolean; extra?: number } = {}): Promise<SceneGeo> {
-  const hs = c.H + (o.extra ?? 0)
-  const still = await heroStill(c.W, hs, { progress: o.progress ?? 1, crown: o.crown ?? false })
+async function scene(
+  c: Card,
+  o: { progress?: number; crown?: boolean; base?: number; monument?: boolean } = {},
+): Promise<SceneGeo> {
+  // altura extra garante composição retrato também no feed (4:5)
+  const hs = c.H + SCENE_EXTRA
+  if (c.chrome) {
+    const lay = await sceneLayout(c.W, hs)
+    c.drop = Math.round((o.base ?? lay.base) - lay.base)
+    const base = lay.base + c.drop
+    return { base, top: base - Math.round(lay.ppu * 8.6), peak: base - Math.round(lay.ppu * 11) }
+  }
+  const still = await heroStill(c.W, hs, {
+    progress: o.progress ?? 1,
+    crown: o.crown ?? false,
+    monument: o.monument,
+  })
   c.heroKind = still.kind
-  c.g.drawImage(still.c, 0, 0)
-  if (still.info) return { base: still.info.base, top: still.info.top - (o.crown ? still.info.crownW : 0) }
-  return { base: Math.round(hs * 0.54), top: Math.round(hs * 0.28) }
+  const drop = Math.round((o.base ?? still.base) - still.base)
+  c.drop = drop
+  rect(c.g, 0, 0, c.W, c.H, 'void')
+  c.g.drawImage(still.c, 0, drop)
+  for (let i = 0; i < drop * 0.5; i++) {
+    const x = Math.floor(c.rnd() * c.W)
+    const y = Math.floor(c.rnd() * drop)
+    rect(c.g, x, y, 1, 1, c.rnd() > 0.85 ? 'stone2' : 'stone0')
+  }
+  const base = still.base + drop
+  if (still.info) {
+    const top = still.info.top + drop
+    return { base, top, peak: o.crown ? still.info.crownY + drop - still.info.crownW : top }
+  }
+  return { base, top: base - Math.round(still.ppu * 8.6), peak: base - Math.round(still.ppu * 11) }
 }
 
 /**
@@ -355,23 +425,28 @@ function wrapParts(s: string, maxW: number) {
 
 // ---------------------------------------------------------------- momentos
 
-async function cardNivel13(c: Card) {
+/** Pé do monumento no card do nível 13 (o clipe usa o mesmo enquadramento). */
+const N13_BASE = { story: 192, feed: 134, square: 120 } as const
+
+async function cardNivel13(c: Card, clipBase = false) {
   const st = c.story
-  const sc = await scene(c, { crown: true, progress: 1, extra: st ? 62 : 34 })
+  const sc = await scene(c, { crown: !clipBase, progress: 1, base: N13_BASE[c.fmt] })
   vignette(c, st ? 90 : 40, sc.base - 2, 0.85)
   foreground(c)
   playerBadge(c, c.x0, c.y0, 13)
   statsPanel(c, c.x1, c.y0 + 1, 72)
-  sprinkle(c, st ? 7 : 5, { x0: c.x0, x1: c.x1, y0: sc.top - 6, y1: sc.base - 16 })
   let y = sc.base + 3
-  y = head(c, 'CHEGUEI AO', y, WHITE, 1)
-  y = head2(c, 'NÍVEL', '13', y - 2, WHITE, RED, 3)
+  if (!clipBase) {
+    sprinkle(c, st ? 7 : 5, { x0: c.x0, x1: c.x1, y0: sc.peak, y1: sc.base - 16 })
+    y = head(c, 'CHEGUEI AO', y, WHITE, 1)
+    y = head2(c, 'NÍVEL', '13', y - 2, WHITE, RED, 3)
+  } else y += 33
   footer(c, { cta: 'VOCÊ CHEGA? JOGUE:', min: y + 1 })
 }
 
 async function cardStars3(c: Card, m: Extract<Moment, { kind: 'stars3' }>) {
   const st = c.story
-  const sc = await scene(c, { crown: false, progress: Math.min(1, m.level / 13), extra: st ? 50 : 34 })
+  const sc = await scene(c, { crown: false, progress: Math.min(1, m.level / 13), base: st ? 186 : 132 })
   vignette(c, st ? 130 : 80, sc.base - 2, 0.85)
   foreground(c)
   let y = c.y0 + 2
@@ -424,7 +499,7 @@ function irContent() {
 
 async function cardIR(c: Card, m: Extract<Moment, { kind: 'ir' }>) {
   const st = c.story
-  const sc = await scene(c, { crown: false, progress: 1, extra: st ? 60 : 44 })
+  const sc = await scene(c, { crown: false, progress: 1, base: st ? 190 : 134 })
   vignette(c, st ? 150 : 90, sc.base - 2, 0.9)
   foreground(c)
   let y = c.y0 + (st ? 2 : 0)
@@ -457,7 +532,7 @@ async function cardIR(c: Card, m: Extract<Moment, { kind: 'ir' }>) {
   const w = (c.x1 - c.x0 - 10) * 2
   footer(c, {
     note: { lines: [...wrap(title.toUpperCase(), w), ...wrap(law.toUpperCase(), w)], first: 'goldHi' },
-    cta: st ? 'FAÇA A SUA CONTA:' : undefined,
+    cta: 'FAÇA A SUA CONTA:',
     min: sc.base + 2,
   })
 }
@@ -467,7 +542,7 @@ const CROSS = ['XX...XX', '.XX.XX.', '..XXX..', '.XX.XX.', 'XX...XX']
 
 async function cardDaily(c: Card, m: Extract<Moment, { kind: 'daily' }>) {
   const st = c.story
-  const sc = await scene(c, { crown: false, progress: 1, extra: st ? 64 : 44 })
+  const sc = await scene(c, { crown: false, progress: 1, base: st ? 194 : 136 })
   vignette(c, st ? 130 : 90, sc.base - 2, 0.85)
   foreground(c)
   const n = Math.max(1, m.grid.length)
@@ -520,7 +595,7 @@ async function cardDaily(c: Card, m: Extract<Moment, { kind: 'daily' }>) {
 
 async function cardMovimento(c: Card, m: Extract<Moment, { kind: 'movimento' }>) {
   const st = c.story
-  const sc = await scene(c, { crown: false, progress: 1, extra: st ? 40 : 30 })
+  const sc = await scene(c, { crown: false, progress: 1, base: st ? 182 : 128 })
   vignette(c, st ? 120 : 70, sc.base - 2, 0.85)
   foreground(c)
   let y = c.y0 + (st ? 4 : 0)
@@ -540,37 +615,224 @@ async function cardMovimento(c: Card, m: Extract<Moment, { kind: 'movimento' }>)
     text(c.g, l, c.cx, y + 3, small(GOLD), { align: 'center' })
     y += CAP + 3
   }
-  footer(c, { cta: st ? 'CONFIRA OS FATOS NO JOGO:' : undefined, min: y + 7 })
+  footer(c, { cta: 'CONFIRA OS FATOS NO JOGO:', min: y + 7 })
 }
 
 async function cardConvite(c: Card) {
   const st = c.story
-  const sc = await scene(c, { crown: false, progress: 1, extra: st ? 56 : 40 })
+  const sc = await scene(c, { crown: false, progress: 1, base: st ? 186 : 130 })
   vignette(c, st ? 110 : 70, sc.base - 2, 0.85)
   foreground(c)
   let y = c.y0 + (st ? 2 : 0)
   y = head(c, 'VOCÊ CHEGA AO', y, WHITE, st ? 2 : 1)
-  y = head2(c, 'NÍVEL', '13?', y, WHITE, RED, 3)
-  // a coroa espera no alto: só quem termina as 13 fases a coloca no monumento
-  const cw = st ? 27 : 21
-  const cy = Math.max(y + 22, sc.top - 6)
-  if (cy < sc.top + 4) {
-    drawCrown(c.g, c.cx + 12, cy, cw)
-    sprinkle(c, 3, { x0: c.cx - 20, x1: c.cx + 44, y0: cy - 24, y1: cy }, 2)
-  }
-  y = sc.base + 3
-  const items = st ? ['13 FASES', 'FATOS COM FONTE', 'UM DESAFIO POR DIA'] : ['13 FASES · FATOS COM FONTE']
+  head2(c, 'NÍVEL', '13?', y, WHITE, RED, 3)
+  sprinkle(c, st ? 5 : 3, { x0: c.x0, x1: c.x1, y0: sc.top - 4, y1: sc.base - 14 })
+  // o que é o jogo, num painel de HUD
+  y = sc.base + 2
+  const items = st ? ['13 FASES · FATOS COM FONTE', 'UM DESAFIO POR DIA'] : ['13 FASES · FATOS COM FONTE']
+  const ph = items.length * (CAP + 3) + 5
+  panel(c, c.x0 + 2, y, c.x1 - c.x0 - 4, ph, 'red')
   for (const l of items) {
-    text(c.g, l, c.cx, y, small(l === '13 FASES' ? ['redHot', 'red'] : 'stoneHi'), { align: 'center' })
+    text(c.g, l, c.cx, y + 3, small('stoneHi'), { align: 'center' })
     y += CAP + 3
   }
-  footer(c, { cta: 'JOGUE NO CELULAR:', min: y })
+  footer(c, { cta: 'JOGUE NO CELULAR:', min: y + 7 })
+}
+
+const TARGET = [
+  '..XXXXX..',
+  '.X.....X.',
+  'X..XXX..X',
+  'X.X...X.X',
+  'X.X.X.X.X',
+  'X.X...X.X',
+  'X..XXX..X',
+  '.X.....X.',
+  '..XXXXX..',
+]
+
+/** Quadrado da grade do Chuta Aí na cor da nota (🎯 ouro com alvo, 🟩, 🟨, 🟥). */
+function chuteSquare(c: Card, x: number, y: number, size: number, v: number) {
+  const [base, hi, lo]: [Ink, Ink, Ink] =
+    v === 100
+      ? ['gold', 'goldHi', 'gold1']
+      : v >= 70
+        ? ['green', 'leafHi', 'vine1']
+        : v >= 35
+          ? ['gold1', 'gold', 'gold0']
+          : ['red', 'redGlow', 'crimson']
+  rect(c.g, x - 1, y - 1, size + 2, size + 2, 'void')
+  rect(c.g, x, y, size, size, base)
+  rect(c.g, x, y, size, 2, hi)
+  rect(c.g, x, y, 2, size, hi)
+  rect(c.g, x, y + size - 2, size, 2, lo)
+  rect(c.g, x + size - 2, y, 2, size, lo)
+  if (v === 100) {
+    const mk = rowsMask(TARGET)
+    const k = size >= 22 ? 2 : 1
+    paint(
+      c.g,
+      mk,
+      x + Math.round((size - mk.w * k) / 2),
+      y + Math.round((size - mk.h * k) / 2),
+      { fill: 'crimson' },
+      k,
+    )
+    rect(c.g, x + Math.floor(size / 2) - k + 1, y + Math.floor(size / 2) - k + 1, k, k, 'white')
+  }
+}
+
+async function cardChute(c: Card, m: Extract<Moment, { kind: 'chute' }>) {
+  const st = c.story
+  const sc = await scene(c, { crown: false, progress: 1, base: st ? 194 : 136 })
+  vignette(c, st ? 140 : 95, sc.base - 2, 0.88)
+  foreground(c)
+  let y = c.y0 + (st ? 2 : 0)
+  y = tag(c, `CHUTA AÍ #${m.n}`, y)
+  // total gigante em ouro + "/1.300" menor, alinhados pela base
+  const tot = fmtInt(m.total)
+  const den = `/${fmtInt(MAX_TOTAL)}`
+  const kd = 2
+  const wd = silkWidth(den, kd)
+  let k = st ? 5 : 4
+  while (k > 2 && silkWidth(tot, k) + 3 + wd > c.x1 - c.x0) k--
+  const wt = silkWidth(tot, k)
+  const x = Math.round(c.cx - (wt + 3 + wd) / 2)
+  const ty = y + 3
+  text(c.g, tot, x, ty, big(GOLD, k), { k })
+  text(c.g, den, x + wt + 3, ty + CAP * (k - kd), big(WHITE, kd), { k: kd })
+  y = ty + CAP * k + k + 5
+  // as 5 notas
+  const size = st ? 24 : 20
+  const gap = st ? 5 : 4
+  const n = Math.max(1, m.s.length)
+  const gx = Math.round(c.cx - (n * size + (n - 1) * gap) / 2)
+  m.s.forEach((v, i) => {
+    chuteSquare(c, gx + i * (size + gap), y, size, v)
+  })
+  y += size + 6
+  for (const l of wrap(chuteHook(m.s, m.theme, false).toLocaleUpperCase('pt-BR'), c.x1 - c.x0))
+    y = head(c, l, y, WHITE, 1)
+  const streak = getSave().daily.streak
+  if (streak > 1) {
+    const s = `${streak} DIAS`
+    const fire = sprite('fogo')
+    const w = silkWidth(s) + fire.width + 3
+    const fx = Math.round(c.cx - w / 2)
+    c.g.drawImage(fire, fx, y - 2)
+    text(c.g, s, fx + fire.width + 3, y + 1, small(['emberBright', 'ember']))
+  }
+  footer(c, { cta: 'QUANTO VOCÊ CHUTA? JOGUE:', link: chuteLink(m.n, false), min: sc.base + 2 })
+}
+
+const ICONS: Record<'hora' | 'doc' | 'com', string[]> = {
+  hora: [
+    '...ooooo...',
+    '..o.....o..',
+    '.o...w...o.',
+    'o....w....o',
+    'o....w....o',
+    'o....www..o',
+    'o.........o',
+    'o.........o',
+    '.o.......o.',
+    '..o.....o..',
+    '...ooooo...',
+  ],
+  doc: [
+    'ooooooooooooo',
+    'o...........o',
+    'o.ff..lllll.o',
+    'o.ff........o',
+    'o.bb..llll..o',
+    'o.bb........o',
+    'o.....lll...o',
+    'o...........o',
+    'ooooooooooooo',
+  ],
+  com: [
+    '...ff....ff...',
+    '..ffff..ffff..',
+    '..ffff..ffff..',
+    '...ff....ff...',
+    '..............',
+    '.bbbbbb.bbbbbb',
+    'bbbbbbbbbbbbbb',
+    'bbbbbbbbbbbbbb',
+  ],
+}
+const ICON_MAP: Record<string, Ink> = { o: 'stoneHi', w: 'goldHi', f: 'stoneHi', b: 'stone3', l: 'stone2' }
+
+async function cardPlano(c: Card, m: Extract<Moment, { kind: 'plano' }>) {
+  const st = c.story
+  await scene(c, { monument: false, base: st ? 200 : 150 })
+  vignette(c, st ? 200 : 140, c.H - 40, 0.9)
+  foreground(c)
+  let y = c.y0 + (st ? 4 : 0)
+  y = head(c, 'MEU PLANO', y, WHITE, 3)
+  y = head(c, 'DE DOMINGO', y, RED, 2)
+  // a ficha do plano: três linhas com ícone, rótulo fino e valor grande
+  const rows: ['hora' | 'doc' | 'com', string, string][] = [
+    ['hora', 'HORÁRIO', m.hora],
+    ['doc', 'DOCUMENTO', m.doc],
+    ['com', 'COM QUEM', m.com],
+  ]
+  const px = c.x0
+  const pw = c.x1 - c.x0
+  const rowH = st ? 26 : 21
+  const py = y + 3
+  panel(c, px, py, pw, rows.length * rowH + 4, 'stoneHi')
+  rows.forEach(([icon, label, value], i) => {
+    const ry = py + 4 + i * rowH
+    if (i > 0) rect(c.g, px + 4, ry - 3, pw - 8, 1, 'hazeDark')
+    const ic = ICONS[icon]
+    const iw = ic[0]?.length ?? 0
+    drawRows(
+      c.g,
+      ic,
+      ICON_MAP,
+      px + 6 + Math.round((14 - iw) / 2),
+      ry + Math.round((rowH - 6 - ic.length) / 2),
+    )
+    fine(c, label, px + 24, ry, 'stone3')
+    const v = value.trim().toLocaleUpperCase('pt-BR') || '...'
+    const maxW = pw - 28
+    const kv = st ? fitK(v, maxW, 2) : 1
+    const lines = kv === 1 ? wrap(v, maxW).slice(0, 2) : [v]
+    const vy = ry + (kv > 1 ? 9 : 6)
+    lines.forEach((l, li) => {
+      text(c.g, l, px + 24, vy + li * (CAP + 2), small(kv > 1 ? WHITE : 'stoneHi'), { k: kv })
+    })
+  })
+  y = py + rows.length * rowH + 10
+  const lines = wrapParts(CONFIG.electionLabel.toLocaleUpperCase('pt-BR'), c.x1 - c.x0 - 10)
+  const ph = lines.length * (CAP + 3) + 5
+  panel(c, c.x0 + 2, y, c.x1 - c.x0 - 4, ph, 'gold')
+  for (const l of lines) {
+    text(c.g, l, c.cx, y + 3, small(GOLD), { align: 'center' })
+    y += CAP + 3
+  }
+  sprinkle(c, 3, { x0: c.x0, x1: c.x1, y0: y + 8, y1: y + 30 }, 2)
+  footer(c, { cta: 'E VOCÊ, JÁ FEZ O SEU?', min: y + 8 })
 }
 
 // ---------------------------------------------------------------- API
 
-/** Arte do card já ampliada (1080 px de largura). Libere com `free()` quando não usar mais. */
-export async function renderCard(moment: Moment, format: Format): Promise<HTMLCanvasElement> {
+interface Layers {
+  art: HTMLCanvasElement
+  fine: HTMLCanvasElement
+  ops: ShadeOp[]
+  drop: number
+  heroKind?: 'hero' | '2d'
+  W: number
+  H: number
+}
+
+async function renderLayers(
+  moment: Moment,
+  format: Format,
+  opts: { clipBase?: boolean; chrome?: boolean } = {},
+): Promise<Layers> {
   await loadFonts()
   const { w: W, h: H } = FORMAT_SIZE[format]
   const art = canvas(W, H)
@@ -586,10 +848,13 @@ export async function renderCard(moment: Moment, format: Format): Promise<HTMLCa
     cx: W / 2,
     story: format === 'story',
     rnd: mulberry32(1313 + W + H),
+    chrome: !!opts.chrome,
+    ops: [],
+    drop: 0,
   }
   switch (moment.kind) {
     case 'nivel13':
-      await cardNivel13(c)
+      await cardNivel13(c, opts.clipBase)
       break
     case 'stars3':
       await cardStars3(c, moment)
@@ -606,13 +871,44 @@ export async function renderCard(moment: Moment, format: Format): Promise<HTMLCa
     case 'convite':
       await cardConvite(c)
       break
+    case 'chute':
+      await cardChute(c, moment)
+      break
+    case 'plano':
+      await cardPlano(c, moment)
+      break
   }
-  quantize(art.g, W, H)
-  const out = compose(art.c, fineL.c, SCALE)
-  out.dataset.hero = c.heroKind ?? ''
-  free(art.c)
-  free(fineL.c)
+  return { art: art.c, fine: fineL.c, ops: c.ops, drop: c.drop, heroKind: c.heroKind, W, H }
+}
+
+/** Arte do card já ampliada (1080 px de largura). Libere com `free()` quando não usar mais. */
+export async function renderCard(moment: Moment, format: Format): Promise<HTMLCanvasElement> {
+  const L = await renderLayers(moment, format)
+  const g = L.art.getContext('2d')
+  if (g) quantize(g, L.W, L.H)
+  const out = compose(L.art, L.fine, SCALE)
+  out.dataset.hero = L.heroKind ?? ''
+  free(L.art)
+  free(L.fine)
   return out
+}
+
+/** Camadas do clipe do nível 13: HUD + rodapé legal (sem e com a manchete) e os escurecimentos. */
+export interface ClipLayers {
+  W: number
+  H: number
+  /** altura do quadro da cena e onde ele é desenhado no card */
+  sceneH: number
+  drop: number
+  base: Omit<Layers, 'W' | 'H'>
+  final: Omit<Layers, 'W' | 'H'>
+}
+
+export async function nivel13ClipLayers(format: Format = 'story'): Promise<ClipLayers> {
+  const m: Moment = { kind: 'nivel13' }
+  const base = await renderLayers(m, format, { clipBase: true, chrome: true })
+  const final = await renderLayers(m, format, { chrome: true })
+  return { W: base.W, H: base.H, sceneH: base.H + SCENE_EXTRA, drop: base.drop, base, final }
 }
 
 /** PNG do card no formato pedido (story 1080×1920, feed 1080×1350, square 1080×1080). */
@@ -627,19 +923,17 @@ export async function makeCard(moment: Moment, format: Format): Promise<Blob> {
 
 /** Nome de arquivo estável por momento (Chromium só aceita extensões conhecidas). */
 export function cardFileName(moment: Moment, format: Format, ext = 'png') {
-  const base =
-    moment.kind === 'stars3'
-      ? `fase-${moment.level}`
-      : moment.kind === 'daily'
-        ? `fato-ou-fake-${moment.n}`
-        : moment.kind === 'movimento'
-          ? `vou-votar-13`
-          : moment.kind === 'ir'
-            ? 'isencao-ir'
-            : moment.kind === 'nivel13'
-              ? 'nivel-13'
-              : 'convite-nivel-13'
-  return `${base}-${format}.${ext}`
+  const base: Record<Moment['kind'], string> = {
+    stars3: moment.kind === 'stars3' ? `fase-${moment.level}` : '',
+    daily: moment.kind === 'daily' ? `fato-ou-fake-${moment.n}` : '',
+    chute: moment.kind === 'chute' ? `chuta-ai-${moment.n}` : '',
+    movimento: 'vou-votar-13',
+    ir: 'isencao-ir',
+    nivel13: 'nivel-13',
+    convite: 'convite-nivel-13',
+    plano: 'meu-plano-de-domingo',
+  }
+  return `${base[moment.kind]}-${format}.${ext}`
 }
 
 /** Título da fase pelo número (para quem só tem o número em mãos). */

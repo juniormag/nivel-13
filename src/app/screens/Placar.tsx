@@ -127,7 +127,8 @@ export default function Placar() {
         {s.corrente.length ? (
           <motion.ol className="plist" variants={list} initial="hidden" animate="show">
             {s.corrente.map((p, i) => (
-              <motion.li key={`${p.name}-${i}`} className={p.me ? 'is-me' : ''} variants={rise}>
+              // biome-ignore lint/suspicious/noArrayIndexKey: a posição no ranking é a identidade da linha
+              <motion.li key={`${i}-${p.name}`} className={p.me ? 'is-me' : ''} variants={rise}>
                 <span className="pos">{i + 1}º</span>
                 <span>
                   {p.name || 'Anônimo'}

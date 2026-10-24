@@ -14,7 +14,7 @@ export const lead = (g: Graph, d: D, t: number, m: number, len: number, v = 1) =
     a: 0.008,
     hold: Math.max(0, len * 0.7 - 0.01),
     d: 0.09 + len * 0.25,
-    g: 0.14 * v,
+    g: 0.2 * v,
     lp: 4200,
     vib: len > 0.3 ? 16 : 0,
     vibDelay: 0.18,
@@ -29,7 +29,7 @@ export const pluckLead = (g: Graph, d: D, t: number, m: number, len: number, v =
     f: hz(m),
     a: 0.004,
     d: 0.25 + len * 0.9,
-    g: 0.16 * v,
+    g: 0.26 * v,
     lp: 5200,
     lpTo: 900,
     lpT: 0.35 + len * 0.5,
@@ -42,8 +42,8 @@ export const pluckLead = (g: Graph, d: D, t: number, m: number, len: number, v =
 /** Sanfona: dois pulsos desafinados ±9 cents batem como a musette do acordeão. */
 export const sanfona = (g: Graph, d: D, t: number, m: number, len: number, v = 1) => {
   for (const [type, det, gg] of [
-    ['p25', -9, 0.08],
-    ['p12', 9, 0.07],
+    ['p25', -9, 0.12],
+    ['p12', 9, 0.1],
   ] as const) {
     tone(g, d, t, {
       type,
@@ -67,7 +67,7 @@ export const brassHit = (g: Graph, d: D, t: number, m: number, len: number, v = 
       a: 0.015,
       hold: len * 0.6,
       d: 0.08,
-      g: 0.045 * v,
+      g: 0.07 * v,
       lp: 900,
       lpTo: 3000,
       lpT: 0.04,
@@ -78,9 +78,9 @@ export const brassHit = (g: Graph, d: D, t: number, m: number, len: number, v = 
 
 export const bass = (g: Graph, d: D, t: number, m: number, len: number, v = 1) => {
   const hold = Math.max(0, len * 0.65)
-  tone(g, d, t, { type: 'triangle', f: hz(m), a: 0.004, hold, d: 0.12, g: 0.42 * v })
+  tone(g, d, t, { type: 'triangle', f: hz(m), a: 0.004, hold, d: 0.12, g: 0.21 * v })
   // harmônicos para o alto-falante do celular, que não reproduz o fundamental grave
-  tone(g, d, t, { type: 'p25', f: hz(m), a: 0.004, hold, d: 0.08, g: 0.06 * v, lp: 850 })
+  tone(g, d, t, { type: 'p25', f: hz(m), a: 0.004, hold, d: 0.08, g: 0.075 * v, lp: 850 })
 }
 
 export const pad = (g: Graph, d: D, t: number, ms: number[], len: number, v = 1) => {
@@ -93,7 +93,7 @@ export const pad = (g: Graph, d: D, t: number, ms: number[], len: number, v = 1)
         a: Math.min(0.4, len * 0.3),
         hold: Math.max(0, len * 0.7),
         d: 0.6,
-        g: 0.022 * v,
+        g: 0.042 * v,
         lp: 1300,
         q: 0.4,
       })
@@ -102,7 +102,7 @@ export const pad = (g: Graph, d: D, t: number, ms: number[], len: number, v = 1)
 }
 
 export const pluck = (g: Graph, d: D, t: number, m: number, v = 1) => {
-  tone(g, d, t, { type: 'p25', f: hz(m), a: 0.003, d: 0.22, g: 0.09 * v, lp: 3800, lpTo: 500, lpT: 0.16 })
+  tone(g, d, t, { type: 'p25', f: hz(m), a: 0.003, d: 0.22, g: 0.2 * v, lp: 3800, lpTo: 500, lpT: 0.16 })
 }
 
 export const stab = (g: Graph, d: D, t: number, ms: number[], len: number, v = 1) => {

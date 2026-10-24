@@ -3,7 +3,7 @@
 // Outro alvo (preview, deploy): E2E_BASE_URL=https://... pnpm e2e (não sobe o servidor do jogo)
 import { defineConfig, devices } from '@playwright/test'
 
-const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {}
+const env = process.env
 const baseURL = env.E2E_BASE_URL || 'http://localhost:4313'
 
 export default defineConfig({

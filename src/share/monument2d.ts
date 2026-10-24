@@ -42,7 +42,8 @@ function crownSprite(width: number) {
     const hw = Math.max(2, Math.round(W / n / 2))
     for (let r = 0; r <= ph; r++) {
       const half = Math.round((hw * r) / ph)
-      for (let x = px - half; x <= px + half; x++) set(x, top - ph + r, x < px ? 'goldHi' : x === px ? 'gold' : 'gold1')
+      for (let x = px - half; x <= px + half; x++)
+        set(x, top - ph + r, x < px ? 'goldHi' : x === px ? 'gold' : 'gold1')
     }
     // pérola no topo
     const by = top - ph - 2
@@ -165,7 +166,8 @@ export function ring(
       [0, -1],
     ] as const) {
       const k = `${x + dx},${y + dy}`
-      if (!core.has(k) && !halo.has(k) && ((x + dx + y + dy) & 1) === 0) rect(g, x + dx, y + dy, 1, 1, 'crimson')
+      if (!core.has(k) && !halo.has(k) && ((x + dx + y + dy) & 1) === 0)
+        rect(g, x + dx, y + dy, 1, 1, 'crimson')
     }
   for (const [x, y] of halo.values()) rect(g, x, y, 1, 1, half === 'back' ? 'crimson' : 'red')
   let i = 0
@@ -310,7 +312,8 @@ export function draw13Monument(
   for (let x = -6; x < W + 8; x++) {
     const hgt = 1 + Math.floor(hash(x, 99) * 4)
     for (let k = 0; k < hgt; k++) {
-      const col: Ink = k === hgt - 1 ? (hash(x, 7) > 0.5 ? 'green' : 'stone2') : hash(x, k) > 0.5 ? 'stone1' : 'stone0'
+      const col: Ink =
+        k === hgt - 1 ? (hash(x, 7) > 0.5 ? 'green' : 'stone2') : hash(x, k) > 0.5 ? 'stone1' : 'stone0'
       rect(g, x0 + x, baseY - k + 1, 1, 1, col)
     }
     if (hash(x, 3) > 0.7) rect(g, x0 + x, baseY - hgt, 1, 1, 'leafHi')

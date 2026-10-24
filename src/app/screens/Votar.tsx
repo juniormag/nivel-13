@@ -112,6 +112,11 @@ export default function Votar() {
             </PixelButton>
           </motion.div>
         )}
+        <motion.h2 variants={rise}>Antes de domingo</motion.h2>
+        <motion.div className="actions" variants={rise}>
+          <PixelButton onClick={() => go('plano')}>Meu plano de domingo</PixelButton>
+          <PixelButton onClick={() => go('papo')}>Papo de almoço</PixelButton>
+        </motion.div>
         <motion.h2 variants={rise}>Checklist do dia</motion.h2>
         <motion.ul className="plist check" variants={rise}>
           {CHECKLIST.map(([ico, t]) => (

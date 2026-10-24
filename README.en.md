@@ -41,7 +41,7 @@ Without the API the whole game still works on the device; only the live scoreboa
 | `pnpm typecheck` | `tsc` for the game, the Worker (`worker/tsconfig.json`) and the tests (`tests/tsconfig.json`) |
 | `pnpm lint` | Biome on the whole repo |
 | `pnpm format` | Biome formatting in place |
-| `pnpm test` | Vitest: API, rng, save and the income-tax math |
+| `pnpm test` | Vitest: API, API client, rng, save, scoring, rounds and the income-tax math |
 | `pnpm test:watch` | Vitest in watch mode |
 | `pnpm e2e` | Playwright: Chromium smoke test at 390×844 (starts the game and API if they are not running) |
 | `pnpm build` | static `dist/` |
@@ -63,7 +63,7 @@ Read at build time by Vite (`src/config.ts`). In dev, use an untracked `.env.loc
 | `VITE_ELECTION_AT` | no | Polls opening time in ISO 8601. Default: `2026-10-25T08:00:00-03:00`. |
 | `VITE_ELECTION_LABEL` | no | Date label. Default: "domingo, 25 de outubro, das 8h às 17h". |
 
-Worker variables (in `worker/wrangler.toml` or as a secret): `ALLOWED_ORIGIN` (site URL; comma-separated list allowed), `RATE_PER_MIN` (default 40) and the `SALT` secret. Details in [`docs/DEPLOY.en.md`](docs/DEPLOY.en.md).
+Worker variables (in `worker/wrangler.toml` or as a secret): `ALLOWED_ORIGIN` (site URL; comma-separated list allowed), `SITE_URL` (where `/c/:n` redirects and the `og:image` base), `RESPONSAVEL` (same as `VITE_RESPONSAVEL`, shown in the preview), `RATE_PER_MIN` (default 40), `PURGE_AT` (purge date, default 30 Nov 2026) and the `SALT` secret. Details in [`docs/DEPLOY.en.md`](docs/DEPLOY.en.md).
 
 ## Deploy
 
@@ -89,10 +89,12 @@ npx wrangler@4 pages deploy dist --project-name nivel13
 - [ ] **No reward tied to voting:** the scoreboard gives no prize or points for a vote (art. 299 of the Electoral Code).
 - [ ] **Privacy (LGPD):** the movement choice is stored as an HMAC of the device id plus the state, with no nickname (art. 11). The production `SALT` is long, random and not in the repo.
 - [ ] **CORS closed:** `ALLOWED_ORIGIN` points only at the site URL, never `*`.
+- [ ] **Purge announced:** the Sobre screen says everything is deleted on 30 Nov 2026, and `PURGE_AT` in `wrangler.toml` matches. A "delete my data" button exists (`api.apagar()`).
+- [ ] **Link preview** (`/c/:n`) with `RESPONSAVEL` set: `og:description` carries "Propaganda eleitoral · responsible party · AI label". Validate with legal (VIRAL-DESIGN §3.6).
 
 ## API and privacy
 
-The API (`worker/src/index.ts`) is a Hono app. The same code runs on Cloudflare Workers and on Node (`server/dev-api.mjs`).
+The API is a Hono app: `worker/src/index.ts` (scoreboard), `worker/src/viral.ts` (Chuta Aí), `worker/src/og.ts` (`/c/:n` preview) and `worker/src/worker.ts` (Worker entry). The same code runs on Cloudflare Workers and on Node (`server/dev-api.mjs`). Chuta Aí spec in [`docs/VIRAL-DESIGN.md`](docs/VIRAL-DESIGN.md) §5.3 and §5.5 (Portuguese).
 
 | Route | Method | What it does |
 |---|---|---|
@@ -101,14 +103,28 @@ The API (`worker/src/index.ts`) is a Hono app. The same code runs on Cloudflare 
 | `/api/complete` | POST | marks the game as finished; the inviter's chain gains 1 only on the first completion (at most 300 per day) |
 | `/api/like` | POST | 👍 on a fact, one per device; returns `{ ok, likes }` |
 | `/api/movimento` | POST | `vou`, `virei` or `pensando`, stored under an HMAC of the id, with state and no nickname |
-| `/api/daily` | POST | Daily Challenge result (0 to 5), one per device per day; only yesterday, today and tomorrow are accepted |
+| `/api/daily` | POST | Daily Challenge result (0 to 5), one per device per day; accepted from 2 days ago to tomorrow |
 | `/api/stats` | GET | aggregated scoreboard numbers; never returns ids |
+| `/api/chute` | POST | a Chuta Aí game `{ id, date, s, b?, via? }`: total computed on the server (weights 2-2-3-3-3), one per device per day, id-free histogram; returns `{ ok, pct, plays, total }`. A device's first game coming from a duel or group link counts as an invite-chain link |
+| `/api/chute/:date` | GET | "Brasil chutou": `{ plays, hist[5][21], totals[14] }`, public cache for 60 s |
+| `/api/duelo` | POST | creates a Tira-teima `{ id, date, s }` → `{ code }` (6 letters; up to 20 per device per day) |
+| `/api/duelo/:code` | GET | challenger's `{ date, n, s, total, name, avatar }`, no id |
+| `/api/duelo/:code/resp` | POST | answers `{ id, s }` → `{ ok, them, me }`; once per device, the owner cannot answer |
+| `/api/duelo/mine?id=` | GET | `[{ code, accepts, wins }]` |
+| `/api/grupo` | POST | creates a group board `{ id }` → `{ code, nome }` (generated name, animal + 2 digits; up to 10 groups per device) |
+| `/api/grupo/:code/entrar`, `/sair` | POST | join (up to 50 members) or leave; the last one out deletes the group |
+| `/api/grupo/:code?date=&id=` | GET | `{ nome, date, n, hoje, semana, membros }` with nickname, avatar, total and streak; never state, vote or id |
+| `/api/apagar` | POST | LGPD: deletes everything from the device (player, games, duels, groups, likes, daily and movement via HMAC) |
+| `/api/ev` | POST | event counter from the §5.5 list `{ e, k? }`, no id |
+| `/c/:n` | GET | OG page for WhatsApp that redirects to `SITE_URL/?c=n&…`; `og:image` is `/og/c-{n}.png` or `/og.png` |
 
-Rules: no personal data (the id is random and generated on the device); manual validation of every field (body up to 2 KB); per-IP, per-minute rate limit, with the IP stored only as an HMAC; CORS from `ALLOWED_ORIGIN`; `cache-control: no-store` on every response. The D1 schema lives in `worker/schema.sql`.
+Rules: no personal data (the id is random and generated on the device) and no id in any response; manual validation of every field (body up to 2 KB); per-IP, per-minute rate limits (40 writes, 60 reads by code, 120 aggregate reads), with the IP stored only as an HMAC; CORS from `ALLOWED_ORIGIN`; `cache-control: no-store` except where noted above. The group board never queries the movement table. A daily cron deletes **all** data from 30 Nov 2026 (`PURGE_AT`). The D1 schema lives in `worker/schema.sql`.
 
 ## Tests
 
-- `tests/api.test.ts`: the Hono app against in-memory SQLite (through the same adapter as the local server, `server/d1-sqlite.mjs`): every route, invite chain, privacy, CORS, rate limit and validation.
+- `tests/api.test.ts`: the Hono app against in-memory SQLite (through the same adapter as the local server, `server/d1-sqlite.mjs`): scoreboard routes, invite chain, privacy, CORS, rate limit and validation.
+- `tests/viral.test.ts`: Chuta Aí, Brasil chutou, duel, group, deletion, events, `/c/:n` and purge. Every response is checked to contain no device id.
+- `tests/api-client.test.ts`: the `src/lib/api.ts` client talking to the real app (the test `fetch` hands each request to Hono).
 - `tests/rng.test.ts`, `tests/save.test.ts`: pure logic (mulberry32, shuffle, save actions and the daily streak).
 - `tests/ir.test.ts`: the income-tax math (R$ 5,000 gives R$ 312.89 per month and R$ 4,067.57 per year). Skipped while `src/games/ir.ts` does not export `economiaIR`, `reducao` and `tabela`.
 - `tests/e2e/smoke.spec.ts`: opens the title, enters level 1, sees the intro, taps the screen and fails on any console error.

@@ -5,6 +5,7 @@ import { Container, Graphics, type Sprite, type Text, type Texture } from 'pixi.
 import { px } from '../engine/textures'
 import type { GameCtx, MicroGame } from '../engine/types'
 import {
+  Combo,
   clamp01,
   coinFrames,
   curve,
@@ -121,7 +122,7 @@ export default function ritmo(): MicroGame {
   const bar = new Graphics()
   let piggy: Sprite
   let piggyPop = -1
-  let comboT: Text
+  let comboFx: Combo
   let recOn: Texture
   let recOff: Texture
   // buffer de 100 ms para toque adiantado
@@ -158,6 +159,7 @@ export default function ritmo(): MicroGame {
     best.s.visible = false
     combo++
     jar++
+    comboFx.hit(px0, py0 - 20)
     const perfect = bd < 0.075
     const x = laneX[lane]
     const pts = (perfect ? 100 : 60) + Math.min(combo, 20) * 2
@@ -165,7 +167,7 @@ export default function ritmo(): MicroGame {
     c.fx.ring(x, lineY, perfect ? P.goldHi : P.stoneHi, perfect ? 20 : 14)
     field.blast(x, lineY, perfect ? 18 : 8, perfect ? 70 : 45, perfect ? GOLD : ENERGY, { add: true })
     if (perfect) field.sparkle(x + 8, lineY - 8)
-    c.sfx(perfect ? 'coin' : 'good')
+    c.sfx(perfect ? 'perfect' : 'good', { x, combo })
     const j = judges[lane]
     if (j) {
       j.at = now
@@ -247,9 +249,15 @@ export default function ritmo(): MicroGame {
         recGlow.push(g)
         const r = spr(recOff, laneX[lane2], lineY)
         rec.push(r)
-        const arrow = label(lane2 ? '→' : '←', P.stone2)
-        arrow.x = laneX[lane2]
-        arrow.y = lineY + 20
+        // seta em pixel (a fonte não tem ←/→): chevron de 3×5
+        const arrow = new Graphics()
+        const ax = laneX[lane2]
+        const ay = lineY + 19
+        for (let i = 0; i < 3; i++) {
+          const x = lane2 ? ax - 1 + i : ax + 1 - i
+          arrow.rect(x, ay - 2 + i, 1, 1).rect(x, ay + 2 - i, 1, 1)
+        }
+        arrow.fill(P.stone2)
         const jt = label('', P.goldHi)
         jt.visible = false
         jt.y = lineY + 20
@@ -260,10 +268,8 @@ export default function ritmo(): MicroGame {
       for (const n of notes) root.addChild(n.s)
       const shadow = spr(shadowTex(26), px0, py0 + 11)
       piggy = spr(piggyTex(), px0, py0)
-      comboT = label('', P.emberBright)
-      comboT.x = px0
-      comboT.y = py0 - 18
-      root.addChild(shadow, piggy, bar, comboT)
+      comboFx = new Combo(c, field, 2.2)
+      root.addChild(shadow, piggy, bar, comboFx.text)
       for (let i = 0; i < 8; i++) {
         const s = spr(coins[0] as Texture, 0, 0)
         s.visible = false
@@ -292,6 +298,7 @@ export default function ritmo(): MicroGame {
           n.judged = true
           n.missT = now
           combo = 0
+          comboFx.reset()
           misses++
           missFlash[n.lane] = now
           if (misses % 4 === 0) c.hit(laneX[n.lane], lineY)
@@ -365,6 +372,7 @@ export default function ritmo(): MicroGame {
         f.s.y = Math.round(lerp(f.y0, py0 - 6, k) - Math.sin(k * Math.PI) * 18)
         f.s.texture = coins[frameAt(now, 14, coins.length)] as Texture
         if (k >= 1) {
+          c.sfx('coin', { x: px0, volume: 0.4, pitch: 7 })
           f.t = -1
           f.s.visible = false
           piggyPop = now
@@ -374,7 +382,7 @@ export default function ritmo(): MicroGame {
       }
       const [sx, sy] = popScale(piggyPop < 0 ? 1 : now - piggyPop)
       setSquash(piggy, sx, sy)
-      comboT.text = combo > 3 ? `${combo}x` : ''
+      comboFx.update()
       if (c.rnd() < 0.06) field.ember(c.rnd() * c.W, c.bottom, ENERGY)
       field.update(dt)
     },

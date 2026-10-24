@@ -10,12 +10,15 @@ import {
   css,
   Debris,
   Embers,
+  easeInQuad,
   easeOutQuad,
   energyDot,
+  joy,
   label,
   P,
   ptex,
   ramp,
+  ScorePops,
   Sparkles,
   squashTo,
   stop,
@@ -129,6 +132,9 @@ export default function raiox(): MicroGame {
   const debris = new Debris(40)
   let embers: Embers
   let sparkles: Sparkles
+  let scores: ScorePops
+  /** joias retidas em sequência (bônus de +5 por passo, até +30) */
+  let streak = 0
   let rayLabel: Text
   let bags: Bag[] = []
   let spawn = 0.4
@@ -140,7 +146,18 @@ export default function raiox(): MicroGame {
   let beltOff = 0
   let revealAll = 0
   let jewelsIn = 0
-  let pops: { s: Sprite; t: number; x: number; y: number }[] = []
+  let pops: { s: Sprite; t: number; x: number; y: number; slot: number }[] = []
+  // painel "RETIDAS" no alto: cada joia retida voa até um espaço do painel
+  const monitor = new Graphics()
+  let monLabel: Text
+  let monX = 0
+  let monY = 0
+  let monW = 0
+  let SLOTS = 9
+  let filled = 0
+  let reserved = 0
+  let slotPop = -10
+  const slotPos = (i: number) => ({ x: monX + 50 + (i % SLOTS) * 7, y: monY + 8 })
 
   function makeBag(): Bag {
     const jewel = c.rnd() < 0.34
@@ -190,31 +207,34 @@ export default function raiox(): MicroGame {
     const y = beltY - BAG_H
     if (b.jewel) {
       b.seized = c.time
-      c.addScore(70, cx, y - 14)
-      c.sfx('coin')
+      streak++
+      scores.score(70 + Math.min(30, (streak - 1) * 5), cx, y - 14, streak, embers)
+      c.sfx('coin', { x: cx, combo: streak })
       // carimbo bate 80 ms depois do toque (antecipação), com hit-stop no contato
       timers.after(0.08, () => {
         b.stamp = stamp('RETIDA', P.red)
         b.stamp.scale.set(2)
         stop(c, 100)
-        c.fx.shake(2, 140)
+        joy(c, 2, 140)
         c.fx.ring(cx, y + 8, P.goldHi, 28)
         c.fx.burst(cx, y + 6, P.sparkle, 12, 60)
         sparkles.spawn(cx - 12, y - 2, 10)
         sparkles.spawn(cx + 13, y + 4, 0)
         embers.blast(cx, y, 140, 60)
-        c.sfx('boom')
+        c.sfx('stamp', { x: cx })
         const pop = new Sprite(ptex(b.items.includes('joia') ? 'joia' : 'colar', JEWEL_REAL))
         fxLayer.addChild(pop)
-        pops.push({ s: pop, t: c.time, x: cx, y: y - 4 })
+        pops.push({ s: pop, t: c.time, x: cx, y: y - 4, slot: reserved++ })
       })
     } else {
       b.checked = c.time
-      c.addScore(-30, cx, y - 10)
-      c.sfx('bad')
+      streak = 0
+      c.addScore(-30, cx, top - 18)
+      c.sfx('error', { x: cx })
       c.fx.shake(2, 120)
       c.fx.burst(cx, y + 6, P.redHot, 6, 40)
       b.stamp = stamp('LIMPA', P.green)
+      b.stamp.y = beltY - BAG_H / 2
       timers.after(0.6, () => {
         b.stamp?.destroy({ children: true })
         b.stamp = null
@@ -266,6 +286,40 @@ export default function raiox(): MicroGame {
     g.rect(lx - 2, top - 15, 5, 4).fill(P.void)
     g.rect(lx - 1, top - 14, 3, 3).fill(on ? P.redHot : P.blood1)
     if (on) g.rect(lx - 1, top - 14, 1, 1).fill(P.white)
+  }
+
+  function drawMonitor() {
+    const g = monitor
+    g.clear()
+    // cabos até o teto
+    g.rect(monX + 8, c.top - 4, 1, monY - c.top + 4).fill(P.stone0)
+    g.rect(monX + monW - 9, c.top - 4, 1, monY - c.top + 4).fill(P.stone0)
+    // moldura com bisel: claro em cima/esquerda, escuro embaixo/direita
+    g.rect(monX - 1, monY - 1, monW + 2, 18).fill(P.void)
+    g.rect(monX, monY, monW, 16).fill(P.stone1)
+    g.rect(monX, monY, monW, 1).fill(P.stone3)
+    g.rect(monX, monY, 1, 16).fill(P.stone2)
+    g.rect(monX + 1, monY + 15, monW - 1, 1).fill(P.stone0)
+    g.rect(monX + 2, monY + 2, monW - 4, 12).fill(P.blue0)
+    for (let y = monY + 3; y < monY + 14; y += 2) g.rect(monX + 2, y, monW - 4, 1).fill(P.night)
+    for (let i = 0; i < SLOTS; i++) {
+      const p = slotPos(i)
+      const on = i < filled
+      const fresh = on && i === filled - 1 && c.time - slotPop < 0.07
+      if (on) {
+        // gema lapidada: coroa dourada, corpo claro e ponta
+        const body = fresh ? P.white : P.sparkle
+        g.rect(p.x - 1, p.y - 3, 3, 1).fill(P.goldHi)
+        g.rect(p.x - 2, p.y - 2, 5, 1).fill(body)
+        g.rect(p.x - 1, p.y - 1, 3, 1).fill(body)
+        g.rect(p.x, p.y, 1, 1).fill(body)
+        g.rect(p.x - 1, p.y - 2, 1, 1).fill(P.white)
+        g.rect(p.x + 2, p.y - 2, 1, 1).fill(P.blue1)
+      } else g.rect(p.x - 1, p.y - 1, 3, 3).fill(P.blue1)
+    }
+    if (filled > SLOTS) {
+      monLabel.text = `RETIDAS +${filled - SLOTS}`
+    }
   }
 
   function drawBelt() {
@@ -328,16 +382,27 @@ export default function raiox(): MicroGame {
       rayLabel = label('RAIO-X', P.blue1)
       rayLabel.x = Math.round(c.W / 2) - 4
       rayLabel.y = top - 6
+      monW = Math.min(124, c.W - 12)
+      SLOTS = Math.floor((monW - 54) / 7)
+      monX = Math.round(c.W / 2 - monW / 2)
+      monY = Math.max(c.top + 10, top - 48)
+      monLabel = label('RETIDAS', P.blue1)
+      monLabel.anchor.set(0, 0.5)
+      monLabel.x = monX + 5
+      monLabel.y = monY + 8
       embers = new Embers(
         c,
         { x0: 0, y0: c.top, x1: c.W, y1: beltY },
         { ambient: 14, ramp: [P.white, P.sparkle, P.blue1, P.blue0] },
       ).listen()
       sparkles = new Sparkles(c.reduced)
+      scores = new ScorePops(c)
       // pista do toque: faixa escura sob a área de toque
       const lane = block(P.void, c.W, 1, 0.5)
       lane.y = beltY + 22
       root.addChild(
+        monitor,
+        monLabel,
         belt,
         lane,
         scanner,
@@ -352,6 +417,7 @@ export default function raiox(): MicroGame {
         fxLayer,
         embers.root,
         sparkles.root,
+        scores.root,
       )
     },
     update(dt) {
@@ -377,13 +443,14 @@ export default function raiox(): MicroGame {
             jewelsIn++
             if (!b.alarmed) {
               b.alarmed = true
-              c.sfx('tick')
+              c.sfx('tick', { x: sx1 })
             }
           }
           if (b.x > c.W + 2) {
             b.seized = -2
             if (b.jewel) {
               c.fx.burst(c.W - 4, beltY - 10, P.redHot, 10, 50)
+              streak = 0
               c.hit(c.W - 6, beltY - 10)
             }
           }
@@ -413,7 +480,7 @@ export default function raiox(): MicroGame {
           b.xray.y = beltY - BAG_H + hop
           if (b.stamp) {
             b.stamp.x = bx + b.w / 2
-            b.stamp.y = beltY - BAG_H - 8
+            b.stamp.y = beltY - Math.round(BAG_H / 2) + 1
           }
         }
       }
@@ -426,16 +493,30 @@ export default function raiox(): MicroGame {
       if (gone.length) bags = bags.filter((b) => !gone.includes(b))
 
       // joia saltando da mala retida
+      // sobe 12 px, segura um instante e voa em arco até o painel
       for (const p of pops) {
         const t = c.time - p.t
-        p.s.x = Math.round(p.x - p.s.width / 2)
-        p.s.y = Math.round(p.y - 30 * easeOutQuad(clamp01(t / 0.5)))
-        p.s.alpha = clamp01((1.1 - t) / 0.3)
-        if (Math.floor(t * 10) !== Math.floor((t - dt) * 10) && t < 0.8)
-          sparkles.spawn(p.x + (c.rnd() - 0.5) * 12, p.s.y + c.rnd() * 6, 0)
+        const sp = slotPos(p.slot)
+        let x = p.x
+        let y = p.y - 12 * easeOutQuad(clamp01(t / 0.18))
+        if (t > 0.28) {
+          const k = easeInQuad(clamp01((t - 0.28) / 0.38))
+          x = p.x + (sp.x - p.x) * k
+          y = p.y - 12 + (sp.y - p.y + 12) * k - Math.sin(k * Math.PI) * 18
+        }
+        p.s.x = Math.round(x - p.s.width / 2)
+        p.s.y = Math.round(y - p.s.height / 2)
+        if (Math.floor(t * 12) !== Math.floor((t - dt) * 12) && t < 0.66) embers.spark(x, y, 6)
       }
-      const old = pops.filter((p) => c.time - p.t > 1.1)
-      for (const p of old) p.s.destroy()
+      const old = pops.filter((p) => c.time - p.t > 0.66)
+      for (const p of old) {
+        const sp = slotPos(p.slot)
+        filled++
+        slotPop = c.time
+        sparkles.spawn(sp.x, sp.y, 6)
+        c.fx.burst(sp.x, sp.y, P.sparkle, 6, 30)
+        p.s.destroy()
+      }
       if (old.length) pops = pops.filter((p) => !old.includes(p))
 
       // máscara: só a janela do scanner, ou a tela toda com a dica
@@ -483,10 +564,12 @@ export default function raiox(): MicroGame {
             )
           }
       drawScanner()
+      drawMonitor()
       drawBelt()
       drawCurtains()
       embers.update(dt, c.time)
       sparkles.update(dt)
+      scores.update(dt)
       debris.update(dt)
     },
     down(x, y) {

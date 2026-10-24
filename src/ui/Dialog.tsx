@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { type ReactNode, useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { sfx } from '../audio/audio'
 import { fade, pop } from './motion'
 import { Tap } from './PixelButton'
 import type { FrameTone } from './PixelFrame'
@@ -30,6 +31,7 @@ export function useFocusTrap(open: boolean, onClose: () => void) {
       if (e.key === 'Escape') {
         e.stopPropagation()
         e.preventDefault()
+        sfx('back')
         close.current()
         return
       }
@@ -105,7 +107,7 @@ export function Dialog({
             <h2 id={id} className={hideTitle ? 'sr-only' : 'dlg-title'}>
               {title}
             </h2>
-            <Tap className="btn btn--ghost dlg-close" aria-label="Fechar" onClick={onClose}>
+            <Tap className="btn btn--ghost dlg-close" aria-label="Fechar" commit="back" onClick={onClose}>
               ✕
             </Tap>
             {children}

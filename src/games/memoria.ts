@@ -13,7 +13,9 @@ import {
   flipEl,
   goldPulse,
   hintPulse,
+  joy,
   P,
+  ScorePops,
   Sparkles,
   shakeEl,
   stop,
@@ -107,6 +109,8 @@ export default function memoria(): MicroGame {
   const timers = new Timers()
   let embers: Embers
   let sparkles: Sparkles
+  let pops: ScorePops
+  let streak = 0
   const strings = new Graphics()
   const coinLayer = new Container()
   const pins = new Container()
@@ -209,7 +213,8 @@ export default function memoria(): MicroGame {
     const t: Trail = { pts: tr.pts, len: tr.len, born: c.time, coins: 0 }
     trails.push(t)
     stop(c, 70)
-    c.sfx('good')
+    joy(c, 2, 160)
+    c.sfx('good', { x: Math.round((a.r.cx + b.r.cx) / 2), combo: streak })
     for (const k of [a, b]) {
       c.fx.ring(k.r.cx, k.r.cy, P.gold, Math.round(Math.max(k.r.w, k.r.h) * 0.75))
       addPin(k.r.cx, k.r.y)
@@ -248,7 +253,7 @@ export default function memoria(): MicroGame {
     card.open = true
     card.el.setAttribute('aria-pressed', 'true')
     flipEl(card.el, () => card.el.classList.add('open'))
-    c.sfx('tap')
+    c.sfx('flip', { x: Math.round(card.r.cx) })
     if (!first) {
       first = card
       return
@@ -268,7 +273,10 @@ export default function memoria(): MicroGame {
         matched(a, card)
       })
       pairs++
-      c.addScore(Math.max(80, 170 - misses * 8))
+      streak++
+      const pts = Math.max(80, 170 - misses * 8)
+      const sk = streak
+      timers.after(0.2, () => pops.score(pts, Math.round(card.r.cx), Math.round(card.r.y) - 6, sk, embers))
       if (pairs === PAIRS.length) {
         timers.after(0.9, () => {
           c.sfx('level')
@@ -284,6 +292,7 @@ export default function memoria(): MicroGame {
       }
     } else {
       misses++
+      streak = 0
       lock = true
       timers.after(0.22, () => {
         for (const k of [a, card]) {
@@ -291,7 +300,7 @@ export default function memoria(): MicroGame {
           shakeEl(k.el)
         }
         if (misses % 4 === 0) c.hit(card.r.cx, card.r.cy)
-        else c.sfx('tick')
+        else c.sfx('error', { x: Math.round(card.r.cx) })
       })
       timers.after(0.85, () => {
         for (const k of [a, card]) {
@@ -394,12 +403,14 @@ export default function memoria(): MicroGame {
       glow.blendMode = 'add'
       embers = new Embers(c, { x0: 0, y0: c.top, x1: c.W, y1: c.bottom }, { ambient: 16 }).listen()
       sparkles = new Sparkles(c.reduced)
-      root.addChild(shadow, board, strings, glow, coinLayer, pins, embers.root, sparkles.root)
+      pops = new ScorePops(c)
+      root.addChild(shadow, board, strings, glow, coinLayer, pins, embers.root, sparkles.root, pops.root)
     },
     update(dt) {
       timers.update(dt)
       embers.update(dt, c.time)
       sparkles.update(dt)
+      pops.update(dt)
       drawStrings()
       glow.clear()
       // moedas correndo pelo barbante
@@ -414,7 +425,7 @@ export default function memoria(): MicroGame {
           if (f.last) {
             c.fx.burst(p.x, p.y, P.goldHi, 10, 50)
             sparkles.spawn(p.x, p.y, 8)
-            c.sfx('coin')
+            c.sfx('coin', { x: p.x })
           }
         }
       }

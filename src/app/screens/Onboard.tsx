@@ -111,7 +111,7 @@ export default function Onboard() {
             estado.
           </motion.p>
           <motion.div className="actions actions--end" variants={rise}>
-            <PixelButton tone="ghost" onClick={() => go('title')}>
+            <PixelButton tone="ghost" commit="back" onClick={() => go('title')}>
               Voltar
             </PixelButton>
             <PixelButton tone="red" size="big" type="submit">

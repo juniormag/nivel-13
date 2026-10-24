@@ -163,7 +163,8 @@ export default function ir(): MicroGame {
             raining = true
             rainLeft = Math.max(14, Math.min(70, Math.round(e.mes / 5)))
             c.addScore(1000)
-            c.sfx('coin')
+            c.sfx('confirm')
+            c.sfx('coin', { x: burstAt.x })
             const r = confirm.getBoundingClientRect()
             burstAt = { x: (r.left + r.width / 2) / c.css, y: (r.top + r.height / 2) / c.css }
             c.fx.ring(burstAt.x, burstAt.y, P.goldHi, 34)
@@ -222,7 +223,7 @@ export default function ir(): MicroGame {
           spawnT = 0.028
           rainLeft--
           addCoin()
-          if (rainLeft % 4 === 0) c.sfx('coin')
+          if (rainLeft % 4 === 0) c.sfx('coin', { x: c.rnd() * c.W, combo: 8 - (rainLeft % 8), volume: 0.6 })
         }
       }
       glow.alpha = Math.max(0, glow.alpha - dt * 0.8)
@@ -282,7 +283,7 @@ export default function ir(): MicroGame {
           k.bounces = 2
           const col = Math.max(0, Math.min(heights.length - 1, Math.floor(k.x / COL)))
           heights[col] = Math.max(0, (heights[col] ?? 0) - 3)
-          c.sfx('coin')
+          c.sfx('coin', { x: k.x, pitch: 5 })
           field.sparkle(k.x, k.y - 6)
           break
         }

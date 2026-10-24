@@ -4,6 +4,7 @@
 import { Container, type Sprite, type Text, type Texture } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
 import {
+  Combo,
   clamp01,
   curve,
   FIRE,
@@ -38,6 +39,7 @@ interface Tree {
   /** quando acende (estado warn) */
   warnFor: number
   spread: boolean
+  burnFor: number
   pop: number
   body: Sprite
   fire: Sprite
@@ -47,32 +49,61 @@ interface Tree {
 }
 
 const CANOPY = [P.void, P.vine0, P.vine1, P.vine1, P.green]
-const BURNING = [P.blood0, P.blood1, P.emberDark, P.emberDark, P.ember]
+const BURNING = [P.void, P.blood0, P.blood1, P.blood1, P.emberDark]
 const CHAR = [P.void, P.stone0, P.stone1, P.stone1, P.stone2]
 const BARK = [P.void, P.gold0, P.emberDark, P.gold1]
 
-/** árvore 18×24: três tufos (cada um com seu próprio volume) e tronco */
+/**
+ * árvore 20×26: copa numa silhueta só (sem bordas internas), tufos marcados por arcos de luz
+ * em cima à esquerda, sombra violeta-verde embaixo, rim vermelho à direita e tronco com raízes.
+ * Variantes: 0 = copa redonda, 1 = alta, 2 = larga e baixa.
+ */
 function treeTex(v: number, look: 'ok' | 'burn' | 'char') {
-  return gridTex(`fogo-tree${v}${look}`, () => {
-    const m = new Grid(18, 24)
-    m.rect(8, 14, 2, 8, 4).rect(7, 21, 4, 1, 4).set(6, 22, 4)
-    m.set(11, 22, 4)
-    m.ellipse(9, 11, 7, 5.5, 1)
-    m.ellipse(v ? 6 : 5.5, 7, 4.5, 4, 2)
-    m.ellipse(v ? 12 : 12.5, v ? 6 : 7, 4.5, 4.2, 3)
-    if (v) m.ellipse(9, 3.5, 3, 2.5, 3)
+  return gridTex(`fogo-tree2-${v}${look}`, () => {
+    const m = new Grid(20, 26)
+    m.rect(9, 15, 2, 9, 2).rect(8, 23, 4, 1, 2).set(7, 24, 2)
+    m.set(12, 24, 2)
+    const tufts: [number, number, number, number][] =
+      v === 1
+        ? [
+            [10, 13, 6, 4.5],
+            [7, 9, 4.5, 4],
+            [13, 8, 4.5, 4],
+            [10, 4.5, 4, 3.5],
+          ]
+        : v === 2
+          ? [
+              [10, 13, 8, 4],
+              [5.5, 10, 4.5, 3.5],
+              [14.5, 10, 4.5, 3.5],
+              [10, 8, 5, 3.5],
+            ]
+          : [
+              [10, 12, 7.5, 5],
+              [6, 8.5, 4.5, 4],
+              [14, 8.5, 4.5, 4],
+              [10, 6, 4.5, 3.5],
+            ]
+    for (const [x, y, rx, ry] of tufts) m.ellipse(x, y, rx, ry, 1)
     const leaf = look === 'ok' ? CANOPY : look === 'burn' ? BURNING : CHAR
-    const rim = look === 'ok' ? P.crimsonDeep : look === 'burn' ? P.redHot : undefined
-    return shade(
+    const rim = look === 'ok' ? P.crimsonDeep : look === 'burn' ? P.ember : undefined
+    const g = shade(
       m,
-      {
-        1: { ramp: leaf, grain: 0.18, rim },
-        2: { ramp: leaf, grain: 0.18, rim },
-        3: { ramp: leaf, grain: 0.18, rim },
-        4: { ramp: look === 'char' ? CHAR : BARK },
-      },
+      { 1: { ramp: leaf, grain: 0.12, rim }, 2: { ramp: look === 'char' ? CHAR : BARK } },
       7 + v,
     )
+    // arcos de luz no alto-esquerda de cada tufo (lê como folhagem em camadas)
+    const hi = leaf[leaf.length - 1] ?? P.green
+    const mid = leaf[2] ?? P.vine1
+    for (const [x, y, rx, ry] of tufts.slice(1))
+      for (let a = 3.4; a < 4.9; a += 0.22) {
+        const px = Math.round(x + Math.cos(a) * (rx - 1.2))
+        const py = Math.round(y + Math.sin(a) * (ry - 1.2))
+        if (m.get(px, py) === 1) g.set(px, py, a < 4.2 ? hi : mid)
+      }
+    // sombra dos tufos de cima sobre a copa de baixo
+    for (let x = 4; x < 17; x++) if (m.get(x, 12) === 1 && x % 2) g.set(x, 12, leaf[1] ?? P.vine0)
+    return g
   })
 }
 
@@ -186,6 +217,7 @@ export default function fogo(): MicroGame {
   const glows = new Container()
   const fx = new Container()
   let field: Field
+  let combo: Combo
   const trees: Tree[] = []
   let spawn = 1.2
   let burned = 0
@@ -206,7 +238,7 @@ export default function fogo(): MicroGame {
         : s === 'broto'
           ? (T.sprout as Texture)
           : s === 'fire'
-            ? look(tr, tr.t > 2.2 ? 'char' : 'burn')
+            ? look(tr, tr.t > tr.burnFor - 1.2 ? 'char' : 'burn')
             : look(tr, 'ok')
   }
 
@@ -221,7 +253,10 @@ export default function fogo(): MicroGame {
     tr.state = 'fire'
     tr.t = 0
     tr.spread = false
+    // queima devagar no começo (4,4 s) e rápido no pico (3,2 s)
+    tr.burnFor = lerp(4.4, 3.2, curve(c.time, 30))
     c.fx.ring(tr.x, tr.y - 10, P.ember, 12)
+    c.sfx('fire', { x: tr.x, volume: 0.7 })
     field.blast(tr.x, tr.y - 10, 8, 40, FIRE, { add: true })
     setBody(tr)
   }
@@ -261,11 +296,13 @@ export default function fogo(): MicroGame {
       setBody(fire)
       const cy = fire.y - 10
       c.addScore(early ? 20 : 30, fire.x, cy - 12)
+      combo.hit(fire.x, cy - 22)
       c.fx.ring(fire.x, cy, P.blue1, 18)
       field.blast(fire.x, cy, 18, 60, WATER, { grav: 160 })
       field.blast(fire.x, cy - 4, 10, 18, SMOKE, { grav: -30, life: 1, drag: 2 })
       splash(fire.x, fire.y - 2)
-      c.sfx('swipe')
+      c.sfx('water', { x: fire.x })
+      c.sfx('good', { x: fire.x, combo: combo.n })
       return true
     }
     const toco = nearest(x, y, (t) => t.state === 'toco')
@@ -279,7 +316,7 @@ export default function fogo(): MicroGame {
       c.fx.ring(toco.x, toco.y - 4, P.leafHi, 14)
       field.blast(toco.x, toco.y - 4, 10, 40, LEAF)
       field.sparkle(toco.x + 3, toco.y - 8)
-      c.sfx('good')
+      c.sfx('spark', { x: toco.x })
       return true
     }
     return false
@@ -293,7 +330,9 @@ export default function fogo(): MicroGame {
       c.stage.addChild(root)
       field = new Field(c)
       field.trail = WATER
-      for (const v of [0, 1]) for (const l of ['ok', 'burn', 'char'] as const) T[`${v}${l}`] = treeTex(v, l)
+      combo = new Combo(c, field, 1.5)
+      for (const v of [0, 1, 2])
+        for (const l of ['ok', 'burn', 'char'] as const) T[`${v}${l}`] = treeTex(v, l)
       T.stump = stumpTex()
       T.sprout = sproutTex()
       for (let s = 0; s < 3; s++) flames.push([0, 1, 2, 3].map((f) => flameTex(s, f)))
@@ -310,12 +349,10 @@ export default function fogo(): MicroGame {
       for (let r = 0; r < rows; r++)
         for (let k = 0; k < cols; k++) {
           if (r % 2 && k === cols - 1) continue
-          const x = Math.round(6 + gx * (k + 0.5) + (c.rnd() - 0.5) * 4 + (r % 2 ? gx / 2 : 0))
-          const y = Math.round(top + gy * (r + 0.55) + (c.rnd() - 0.5) * 3)
+          const x = Math.round(6 + gx * (k + 0.5) + (c.rnd() - 0.5) * 7 + (r % 2 ? gx / 2 : 0))
+          const y = Math.round(top + gy * (r + 0.55) + (c.rnd() - 0.5) * 7)
           const body = spr(T['0ok'] as Texture, x, y, 0.5, 1)
           const fire = spr(flames[0]?.[0] as Texture, x, y - 6, 0.5, 1)
-          fire.blendMode = 'add'
-          fire.alpha = 0.7
           fire.visible = false
           const glow = spr(glowT, x, y - 8)
           glow.blendMode = 'add'
@@ -329,11 +366,12 @@ export default function fogo(): MicroGame {
           trees.push({
             x,
             y,
-            v: (k + r) % 2,
+            v: Math.floor(c.rnd() * 3),
             state: 'ok',
             t: 0,
             warnFor: 0,
             spread: false,
+            burnFor: 3.4,
             pop: -1,
             body,
             fire,
@@ -356,13 +394,13 @@ export default function fogo(): MicroGame {
         splashes.push({ s, t: -1 })
       }
       const grass = spr(grassTex(c.W), 0, c.bottom + 2, 0, 1)
-      root.addChild(shadows, decals, glows, bodies, field.root, fx, grass)
+      root.addChild(shadows, decals, glows, bodies, field.root, fx, grass, combo.text)
     },
     update(dt) {
       const d = curve(c.time, 30)
       spawn -= dt
       if (spawn <= 0) {
-        spawn = lerp(1.7, 0.55, d)
+        spawn = lerp(1.9, 0.55, d)
         const ok = trees.filter((t) => t.state === 'ok')
         const pick = ok[Math.floor(c.rnd() * ok.length)]
         // antecipação: 0,7 s de fumaça antes de pegar fogo
@@ -391,8 +429,8 @@ export default function fogo(): MicroGame {
               arcs.push({ from: t, to: n, t: 0 })
             }
           }
-          if (t.t > 2.2 && t.t - dt <= 2.2) setBody(t)
-          if (t.t > 3.4) {
+          if (t.t > t.burnFor - 1.2 && t.t - dt <= t.burnFor - 1.2) setBody(t)
+          if (t.t > t.burnFor) {
             t.state = 'toco'
             t.t = 0
             burned++
@@ -400,9 +438,10 @@ export default function fogo(): MicroGame {
             t.scorch.visible = true
             field.blast(t.x, t.y - 8, 16, 50, [P.stone2, P.stone1, P.stone0, P.void], { grav: 140 })
             field.blast(t.x, t.y - 10, 10, 40, FIRE, { add: true })
+            combo.reset()
             c.hit(t.x, t.y - 8)
           } else {
-            const size = t.t < 1 ? 0 : t.t < 2.2 ? 1 : 2
+            const size = t.t < 1 ? 0 : t.t < t.burnFor - 1.2 ? 1 : 2
             t.fire.texture = flames[size]?.[frameAt(c.time + t.x * 0.13, 12, 4)] as Texture
             if (c.rnd() < 0.25 + size * 0.2) field.ember(t.x + (c.rnd() - 0.5) * 8, t.y - 12 - size * 4)
           }
@@ -418,8 +457,8 @@ export default function fogo(): MicroGame {
         if (burning) {
           // brilho respira 2 tons a cada 4 quadros
           t.glow.alpha = frameAt(c.time, 15, 2) ? 0.6 : 0.45
-          const urgent = t.t > 2.2
-          t.pip.visible = urgent && frameAt(c.time, 4 + (t.t - 2.2) * 8, 2) === 0
+          const urgent = t.t > t.burnFor - 1.2
+          t.pip.visible = urgent && frameAt(c.time, 4 + (t.t - t.burnFor + 1.2) * 8, 2) === 0
           t.pip.x = t.x
           t.pip.y = t.y - 30
         } else t.pip.visible = false
@@ -445,6 +484,7 @@ export default function fogo(): MicroGame {
           s.s.visible = false
         } else s.s.texture = tex
       }
+      combo.update()
       field.update(dt)
     },
     move(x, y) {

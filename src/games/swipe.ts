@@ -231,7 +231,8 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
       state = 'show'
       const bonus = Math.round(clamp01(1 - cardT / perFor(idx)) * 50)
       c.addScore(100 + bonus, mx, my - 14)
-      c.sfx('good')
+      c.sfx('impact', { x: mx })
+      c.sfx('good', { x: mx, combo: streak })
       explode(mx, my)
       streak++
       if (streak >= 2) c.fx.float(`SEQUÊNCIA ${streak}`, mx, my - 24, streak >= 4 ? P.white : P.emberBright)
@@ -267,6 +268,7 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
 
   function next() {
     if (state === 'crash') return
+    c.sfx('flip')
     idx++
     if (idx >= statements.length) {
       state = 'done'
@@ -348,7 +350,7 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
         drag = null
         // perdão de entrada: 60 px de arrasto, ou um peteleco rápido de 30 px
         if (Math.abs(dx) > 60 || (Math.abs(dx) > 30 && Math.abs(v) > 0.5 && Math.sign(v) === Math.sign(dx))) {
-          c.sfx('swipe')
+          c.sfx('whoosh', { x: c.W / 2 + Math.sign(dx) * 40 })
           answer(dx > 0)
         } else {
           card.style.transform = 'translate(-50%, -50%)'
@@ -422,7 +424,7 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
           lastCount = left
           count.text = String(left)
           count.style.fill = left <= 3 ? P.redHot : P.gold
-          if (left <= 3 && left > 0 && state === 'ask') c.sfx('tick')
+          if (left <= 3 && left > 0 && state === 'ask') c.sfx('countdown', { x: mx })
         }
         count.x = meteor.x + 24
         count.y = meteor.y - 10

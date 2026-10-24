@@ -13,6 +13,8 @@ type Props = ButtonHTMLAttributes<HTMLButtonElement> & {
   wide?: boolean
   /** som no pointer-down (null desliga) */
   sound?: Sfx | null
+  /** som ao confirmar; padrão: 'confirm' no botão vermelho (ação principal) */
+  commit?: Sfx | null
   vibe?: Haptic | null
   ref?: Ref<HTMLButtonElement>
 }
@@ -34,6 +36,7 @@ export function PixelButton({
   size = 'md',
   wide,
   sound = 'tap',
+  commit,
   vibe = 'confirm',
   className,
   type = 'button',
@@ -41,7 +44,12 @@ export function PixelButton({
   onKeyDown,
   ...rest
 }: Props) {
-  const press = usePress<HTMLButtonElement>(onClick, { sound, vibe, disabled: rest.disabled })
+  const press = usePress<HTMLButtonElement>(onClick, {
+    sound,
+    vibe,
+    commit: commit === undefined ? (tone === 'red' ? 'confirm' : null) : commit,
+    disabled: rest.disabled,
+  })
   return (
     <button
       type={type}
@@ -70,6 +78,7 @@ export function PixelLink({
 /** Botão sem estilo próprio com o mesmo modelo de toque (abas, cartas, opções, ícones). */
 export function Tap({
   sound = 'tap',
+  commit = null,
   vibe = 'confirm',
   type = 'button',
   onClick,
@@ -77,10 +86,11 @@ export function Tap({
   ...rest
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   sound?: Sfx | null
+  commit?: Sfx | null
   vibe?: Haptic | null
   ref?: Ref<HTMLButtonElement>
 }) {
-  const press = usePress<HTMLButtonElement>(onClick, { sound, vibe, disabled: rest.disabled })
+  const press = usePress<HTMLButtonElement>(onClick, { sound, commit, vibe, disabled: rest.disabled })
   return (
     <button
       type={type}

@@ -1,15 +1,25 @@
-# Cloudflare Worker da API do Nível 13. Deploy: cd worker && npx wrangler deploy (ver docs/DEPLOY.md)
+# Cloudflare Worker da API do Nível 13. Deploy: pnpm deploy:api (ver docs/DEPLOY.md)
 name = "nivel13-api"
-main = "src/index.ts"
+main = "src/worker.ts"
 compatibility_date = "2026-10-01"
 
 [vars]
 # URL pública do site (sem barra no fim). Aceita lista separada por vírgula.
 ALLOWED_ORIGIN = "https://SEU-SITE.pages.dev"
+# Site para onde /c/:n manda a pessoa e de onde vem o og:image (/og/c-{n}.png, senão /og.png).
+SITE_URL = "https://SEU-SITE.pages.dev"
+# Igual a VITE_RESPONSAVEL: vai no og:description de todo preview de /c/:n.
+RESPONSAVEL = ""
 RATE_PER_MIN = "40"
-# SALT é segredo: npx wrangler secret put SALT
+# Expurgo de todos os dados (o cron abaixo apaga tudo a partir desta data).
+PURGE_AT = "2026-11-30T00:00:00-03:00"
+# SALT é segredo: npx wrangler@4 secret put SALT --config worker/wrangler.toml
+
+# Cron diário às 03:17 UTC (00:17 em Brasília): limpa a tabela `rate` e, a partir de PURGE_AT, apaga tudo.
+[triggers]
+crons = ["17 3 * * *"]
 
 [[d1_databases]]
 binding = "DB"
 database_name = "nivel13"
-database_id = "00000000-0000-0000-0000-000000000000" # troque pelo id de `npx wrangler d1 create nivel13`
+database_id = "00000000-0000-0000-0000-000000000000" # troque pelo id de `npx wrangler@4 d1 create nivel13`
