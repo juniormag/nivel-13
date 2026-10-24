@@ -199,18 +199,22 @@ export function drawBird(g: CanvasRenderingContext2D, x: number, y: number, f: n
  * Brilho de 4 pontas, ciclo de 6 quadros (regra 26):
  * ponto → + 3×3 → estrela 5×5 → estrela 7×7 com pontas douradas → 3×3 → some.
  */
-export function drawSparkle(g: CanvasRenderingContext2D, x: number, y: number, frame: number) {
+export function drawSparkle(g: CanvasRenderingContext2D, x: number, y: number, frame: number, k = 1) {
   x = Math.round(x)
   y = Math.round(y)
-  const p = (dx: number, dy: number, k: K) => {
-    g.fillStyle = HEX[k]
+  const p = (dx: number, dy: number, c: K) => {
+    g.fillStyle = HEX[c]
     g.fillRect(x + dx, y + dy, 1, 1)
   }
-  const arms = (n: number, k: K) => {
-    p(-n, 0, k)
-    p(n, 0, k)
-    p(0, -n, k)
-    p(0, n, k)
+  // braço de 1 px: núcleo → ponta, `k` estica sem engrossar
+  const arm = (len: number, cols: K[]) => {
+    for (let i = 1; i <= len * k; i++) {
+      const c = cols[Math.min(cols.length - 1, Math.floor(((i - 1) / (len * k)) * cols.length))] ?? 'gold'
+      p(-i, 0, c)
+      p(i, 0, c)
+      p(0, -i, c)
+      p(0, i, c)
+    }
   }
   switch (frame) {
     case 0:
@@ -218,18 +222,21 @@ export function drawSparkle(g: CanvasRenderingContext2D, x: number, y: number, f
       break
     case 1:
     case 4:
-      arms(1, 'goldHi')
+      arm(1, ['goldHi'])
       p(0, 0, 'white')
       break
     case 2:
-      arms(1, 'sparkle')
-      arms(2, 'goldHi')
+      arm(2, ['sparkle', 'goldHi'])
       p(0, 0, 'white')
       break
     case 3:
-      arms(1, 'sparkle')
-      arms(2, 'goldHi')
-      arms(3, 'gold')
+      arm(3, ['sparkle', 'goldHi', 'gold'])
+      if (k > 1) {
+        p(-1, -1, 'goldHi')
+        p(1, -1, 'goldHi')
+        p(-1, 1, 'goldHi')
+        p(1, 1, 'goldHi')
+      }
       p(0, 0, 'white')
       break
     default:

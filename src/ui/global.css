@@ -1,3 +1,11 @@
+/* Pixelify Sans desenha o 5 parecido com S: algarismos vêm da Silkscreen (legibilidade de números e fontes) */
+@font-face {
+  font-family: "n13-digits";
+  src: url("../../node_modules/@fontsource/silkscreen/files/silkscreen-latin-400-normal.woff2") format("woff2");
+  unicode-range: U+0030-0039;
+  size-adjust: 88%;
+  font-display: swap;
+}
 /* Nível 13 · tokens, base e classes usadas pelos minijogos.
    Componentes do HUD em hud.css; telas em pages.css.
    Tudo em pixel: bordas em degrau (box-shadow), sem raio, sem blur em elemento pixel. */
@@ -63,7 +71,7 @@
   --safe-l: env(safe-area-inset-left, 0px);
   --safe-r: env(safe-area-inset-right, 0px);
   --f-hud: "Silkscreen", ui-monospace, monospace;
-  --f-text: "Pixelify Sans", system-ui, sans-serif;
+  --f-text: "n13-digits", "Pixelify Sans", system-ui, sans-serif;
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
   --shadow-text: 0 var(--px) 0 var(--void);
@@ -84,6 +92,7 @@ body {
   background: var(--void);
   color: var(--stone-hi);
   font-family: var(--f-text);
+  font-variant-ligatures: none;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: none;

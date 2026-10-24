@@ -126,8 +126,8 @@ export function Reveal({
         </motion.a>
       )}
       {crowd && (
-        <motion.div className="cx-crowd" variants={rise}>
-          {round.kind === 'number' ? <Histogram hist={crowd.hist} mine={mine} /> : <span />}
+        <motion.div className={`cx-crowd${round.kind === 'number' ? '' : ' cx-crowd--text'}`} variants={rise}>
+          {round.kind === 'number' && <Histogram hist={crowd.hist} mine={mine} />}
           <p>
             <span className="cx-crowd-k">Brasil chutou</span> {crowd.text}
           </p>

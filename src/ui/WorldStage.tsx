@@ -11,8 +11,8 @@ export interface WorldStageProps {
   celebrate?: boolean
 }
 
-/** lado menor da tela vira ~270 px lógicos (480×270 no desktop) */
-const TARGET = 270
+/** lado menor ≈ 420 px lógicos: 720×450 (escala 2) no desktop, 390 de largura (escala 3) no celular */
+const TARGET = 420
 
 export function WorldStage({ progress, celebrate }: WorldStageProps) {
   const ref = useRef<HTMLCanvasElement>(null)

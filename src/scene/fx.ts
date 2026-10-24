@@ -49,6 +49,8 @@ export class Fx {
   pointer = { x: -999, y: -999, vx: 0, vy: 0, on: false }
   /** gerador de acaso: Math.random no mundo vivo, semeado nos quadros parados (share) */
   rnd: () => number = Math.random
+  /** escala dos brilhos (braços mais longos na resolução alta) */
+  k = 1
 
   /** recomeça do zero com acaso determinístico (o mesmo momento sempre vira o mesmo card) */
   reseed(seed: number) {
@@ -188,7 +190,7 @@ export class Fx {
     dt = Math.min(dt, 0.05)
     if (!this.reduced) {
       // brasas da área dos anéis
-      this.emberAcc += dt * (src.mobile ? 10 : 18)
+      this.emberAcc += dt * (src.mobile ? 14 : 26)
       while (this.emberAcc > 1) {
         this.emberAcc--
         this.ember(src.base.x + (this.rnd() - 0.5) * src.base.w, src.base.y - this.rnd() * src.base.w * 0.35)
@@ -265,7 +267,7 @@ export class Fx {
     for (const s of this.sparkles) {
       const f = Math.floor((t - s.t0) * 12)
       if (f < 0 || f > 5) continue
-      drawSparkle(g, s.x + ox, s.y + oy, f)
+      drawSparkle(g, s.x + ox, s.y + oy, f, this.k)
     }
   }
 
@@ -303,7 +305,7 @@ export class Fx {
       }
       // estrela 9×9 no nó: ciclo de 6 quadros a cada `period`
       const f = Math.floor(cyc * 12)
-      if (f <= 5) drawSparkle(g, x, y, f)
+      if (f <= 5) drawSparkle(g, x, y, f, this.k + 1)
       else {
         g.fillStyle = HEX.white
         g.fillRect(x, y, 1, 1)

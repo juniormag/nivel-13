@@ -196,7 +196,7 @@ export function ChuteResult({
         <p className="cx-share-sub">
           Sem spoiler: vai a grade e uma pergunta. Quem recebe chuta antes de abrir.
         </p>
-        <PixelButton tone="red" size="big" wide onClick={() => void share('group')}>
+        <PixelButton tone={duel ? 'stone' : 'red'} size="big" wide onClick={() => void share('group')}>
           Mandar no grupo
         </PixelButton>
         <div className="cx-share-row">

@@ -80,7 +80,8 @@ export class World {
     this.g.imageSmoothingEnabled = false
     this.bd = new Backdrop(W, H)
     const u = this.bd.L.ppu
-    this.flag = flagFrames(Math.round(u * 2.7), Math.round(u * 1.85), 6)
+    this.flag = flagFrames(Math.round(u * 2.2), Math.round(u * 1.5), 6)
+    this.fx.k = Math.max(1, Math.round(u / 16))
     const cw = Math.round(u * 2.6)
     this.crownSpr = crown(cw)
     this.crownSquash = crown(cw, 0.78)
@@ -240,6 +241,7 @@ export class World {
   /** simula só as partículas (sem desenhar): usado para encher o ar antes de um quadro parado */
   simulate(t: number, dt: number) {
     this.lastT = t
+    this.updateCam(t)
     const L = this.bd.L
     const u = L.ppu
     const a = this.mon?.anchors()
@@ -249,11 +251,7 @@ export class World {
     this.fx.update(dt, t, { heads, base: { x: L.base.x, y: L.base.y - u, w: u * 9 }, anchors, mobile: false })
   }
 
-  frame(t: number, dt: number) {
-    this.lastT = t
-    const g = this.g
-    const L = this.bd.L
-    const u = L.ppu
+  private updateCam(t: number) {
     // câmera: respiração de ±2 px em 6 s + seguir de leve o ponteiro/inclinação (lerp 0,08)
     if (!this.reduced) {
       this.follow.x += (this.follow.tx - this.follow.x) * 0.08
@@ -261,6 +259,14 @@ export class World {
       this.cam.x = Math.round(Math.sin((t * Math.PI * 2) / 6) * 2 + this.follow.x)
       this.cam.y = Math.round(Math.sin((t * Math.PI * 2) / 6 + 1.3) * 1 + this.follow.y)
     }
+  }
+
+  frame(t: number, dt: number) {
+    this.lastT = t
+    const g = this.g
+    const L = this.bd.L
+    const u = L.ppu
+    this.updateCam(t)
     this.bd.drawBack(g, t, this.cam)
 
     const mon = this.mon
@@ -320,7 +326,7 @@ export class World {
   }
 
   private drawFlag(g: CanvasRenderingContext2D, t: number, x: number, y: number, u: number) {
-    const poleH = Math.round(u * 3.4)
+    const poleH = Math.round(u * (this.bd.L.portrait ? 2.3 : 2.8))
     const px = Math.round(x)
     const top = Math.round(y) - poleH
     g.fillStyle = HEX.stone3
@@ -453,7 +459,7 @@ export async function renderHeroStill(
 ): Promise<HTMLCanvasElement> {
   width = Math.max(32, Math.floor(width) || 1200)
   height = Math.max(32, Math.floor(height) || 630)
-  const s = Math.max(1, Math.round(Math.min(width, height) / 270))
+  const s = Math.max(1, Math.round(Math.min(width, height) / 420))
   const W = Math.ceil(width / s)
   const H = Math.ceil(height / s)
   const key = `${W}x${H}`

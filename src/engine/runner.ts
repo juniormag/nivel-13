@@ -49,7 +49,7 @@ async function levelBackdrop(level: number | undefined, W: number, H: number, th
   return backdrop(W, H, theme)
 }
 
-export const playTarget = () => (innerWidth < innerHeight ? 150 : 220)
+export const playTarget = () => (innerWidth < innerHeight ? 190 : 300)
 
 function backdrop(W: number, H: number, theme: Theme) {
   const { c, g } = offscreen(W, H)

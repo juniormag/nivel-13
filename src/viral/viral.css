@@ -643,6 +643,9 @@
   gap: 12px;
   align-items: center;
 }
+.cx-crowd--text {
+  grid-template-columns: 1fr;
+}
 .cx-crowd p {
   font-size: 15px;
   line-height: 1.35;
@@ -1019,7 +1022,7 @@
 .cx-duel-x {
   align-self: center;
   font-family: var(--f-hud);
-  font-size: 14px;
+  font-size: 20px;
   color: var(--stone-2);
 }
 
@@ -1317,9 +1320,6 @@
   font-size: 17px;
 }
 .cx-fact-note {
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
   font-size: 14px !important;
   color: var(--stone-3);
 }
@@ -1355,7 +1355,8 @@
 }
 .cx-plan-rows dd {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
+  line-height: 1.25;
   letter-spacing: 0.04em;
   color: var(--white);
 }
@@ -1363,7 +1364,10 @@
   color: var(--stone-1);
 }
 .cx-plan-foot {
-  margin-top: 14px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 2px solid var(--blood-1);
+  line-height: 1.4;
   font-family: var(--f-text);
   text-transform: none;
   font-size: 14px;

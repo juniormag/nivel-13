@@ -49,7 +49,7 @@ export default function JourneyScreen() {
     mapRef.current = map
     const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
     const layout = () => {
-      const fit = computeFit(220)
+      const fit = computeFit(330)
       fitRef.current = fit
       // topo: barra (≈60 px CSS); embaixo: painel (≈150 px CSS)
       map.layout(fit.W, fit.H, 64 / fit.css, 170 / fit.css)

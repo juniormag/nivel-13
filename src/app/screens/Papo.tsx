@@ -39,12 +39,22 @@ const FACT: Record<Concern, string> = {
   seguranca: 'r17',
 }
 
+/** A revelação de rodada de escolha começa pela resposta ("Todos: ...", "Fake. ..."): na conversa, tira. */
+function factSentence(r: NonNullable<ReturnType<typeof verifiedRound>>) {
+  if (r.kind !== 'choice') return r.reveal
+  const ans = r.options[r.correct] ?? ''
+  const m = r.reveal.match(/^([^:.]{1,24})[:.]\s+(.*)$/)
+  if (!m || !ans || (m[1] ?? '').toLowerCase() !== ans.toLowerCase()) return r.reveal
+  const rest = m[2] ?? ''
+  return rest.charAt(0).toUpperCase() + rest.slice(1)
+}
+
 const greet = (who: Who | null) => (who && who !== 'Colega' ? `Oi, ${who.toLowerCase()}!` : 'Oi!')
 
 function build(concern: Concern, who: Who | null) {
   const r = verifiedRound(FACT[concern])
   const src = r?.sources[0]
-  const fact = r ? r.reveal : ''
+  const fact = r ? factSentence(r) : ''
   const fonte = src ? `Fonte: ${src.name}, ${src.url}` : ''
   const game = chuteUrl(dailyNumber(), { s: 'tio' })
   const hi = greet(who)

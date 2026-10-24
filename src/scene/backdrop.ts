@@ -58,6 +58,8 @@ export interface Puff {
 
 export function bank(rnd: () => number, x0: number, x1: number, yb: number, hb: number, n: number): Puff[] {
   const out: Puff[] = []
+  // mais sopros (menores) quando a resolução sobe: couve-flor mais rica, pontilhado mais fino
+  n = Math.round(n * Math.min(2.2, Math.max(1, hb / 28)))
   for (let i = 0; i < n; i++) {
     const f = (i + rnd() * 0.6) / n
     const env = Math.sin(Math.PI * Math.min(1, Math.max(0, f))) ** 0.7
@@ -222,7 +224,7 @@ export class Backdrop {
         [1, 'blood1'],
       ])
       const m = L.moon
-      const nStars = Math.round((LW * hz) / 150)
+      const nStars = Math.round((LW * hz) / 70)
       for (let i = 0; i < nStars; i++) {
         const x = Math.floor(rnd() * LW)
         const y = Math.floor(rnd() ** 1.5 * hz * 0.8)
@@ -231,7 +233,7 @@ export class Backdrop {
       }
       this.sky = b.canvas()
       this.stars = []
-      for (let i = 0; i < Math.round(W / 9); i++) {
+      for (let i = 0; i < Math.round(W / 5); i++) {
         const x = Math.floor(rnd() * W)
         const y = Math.floor(rnd() ** 1.4 * L.horizon * 0.7)
         if (Math.hypot(x - m.x, y - m.y) < m.r * 2.4) continue
