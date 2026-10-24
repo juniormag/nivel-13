@@ -1,8 +1,8 @@
 // Juice: partículas, textos flutuantes, tremor, hit-stop, clarão e ondas de choque.
 import { Container, Graphics, Particle, ParticleContainer, Sprite, Text } from 'pixi.js'
-import type { Juice } from './types'
 import { getPrefs } from '../ui/prefs'
 import { px } from './textures'
+import type { Juice } from './types'
 
 interface P {
   p: Particle
@@ -45,16 +45,35 @@ export class JuiceLayer implements Juice {
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2
       const sp = speed * (0.4 + Math.random())
-      const p = new Particle({ texture: px(), x, y, tint: color, scaleX: Math.random() < 0.3 ? 2 : 1, scaleY: Math.random() < 0.3 ? 2 : 1 })
+      const p = new Particle({
+        texture: px(),
+        x,
+        y,
+        tint: color,
+        scaleX: Math.random() < 0.3 ? 2 : 1,
+        scaleY: Math.random() < 0.3 ? 2 : 1,
+      })
       this.parts.addParticle(p)
-      this.ps.push({ p, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - speed * 0.4, life: 0, max: 0.35 + Math.random() * 0.45 })
+      this.ps.push({
+        p,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - speed * 0.4,
+        life: 0,
+        max: 0.35 + Math.random() * 0.45,
+      })
     }
   }
 
   float(text: string, x: number, y: number, color: number | string = 0xefe8dc) {
     const t = new Text({
       text,
-      style: { fontFamily: 'Silkscreen', fontSize: 8, fill: color, stroke: { color: 0x000000, width: 2 }, align: 'center' },
+      style: {
+        fontFamily: 'Silkscreen',
+        fontSize: 8,
+        fill: color,
+        stroke: { color: 0x000000, width: 2 },
+        align: 'center',
+      },
       resolution: 1,
       textureStyle: { scaleMode: 'nearest' },
     })
@@ -115,7 +134,14 @@ export class JuiceLayer implements Juice {
   ring(x: number, y: number, color: number | string, maxR = 24) {
     const g = new Graphics()
     this.root.addChild(g)
-    this.rings.push({ g, x, y, r: 1, max: maxR, color: typeof color === 'string' ? Number.parseInt(color.replace('#', ''), 16) : color })
+    this.rings.push({
+      g,
+      x,
+      y,
+      r: 1,
+      max: maxR,
+      color: typeof color === 'string' ? Number.parseInt(color.replace('#', ''), 16) : color,
+    })
   }
 
   /** dt real (sem hit-stop): partículas seguem mesmo com a simulação congelada */

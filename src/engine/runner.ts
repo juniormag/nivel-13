@@ -1,11 +1,11 @@
 // Runner: cria o app PixiJS em resolução lógica, roda o laço, aplica juice e expõe o estado ao HUD.
 import { Application, Container, Sprite, Texture } from 'pixi.js'
 import { hitstop as audioHitstop, setIntensity, sfx } from '../audio/audio'
+import { computeFit, ditherGradient, offscreen, type PixelFit } from '../lib/pixel'
 import { mulberry32 } from '../lib/rng'
-import { type PixelFit, computeFit, ditherGradient, offscreen } from '../lib/pixel'
 import { usePlay } from '../state/play'
-import { Ambient } from './ambient'
 import { haptic } from '../ui/prefs'
+import { Ambient } from './ambient'
 import { JuiceLayer } from './juice'
 import { tex } from './textures'
 import type { GameCtx, MicroGame } from './types'
@@ -31,9 +31,9 @@ export interface RunnerOpts {
 }
 
 // Cenários por fase do diretor de arte (src/scene/index.ts); sem o arquivo, usa o fundo genérico.
-const sceneMods = import.meta.glob<{ renderLevelBackdrop?: (level: number, W: number, H: number) => HTMLCanvasElement }>(
-  '../scene/index.ts',
-)
+const sceneMods = import.meta.glob<{
+  renderLevelBackdrop?: (level: number, W: number, H: number) => HTMLCanvasElement
+}>('../scene/index.ts')
 
 async function levelBackdrop(level: number | undefined, W: number, H: number, theme: Theme) {
   const load = sceneMods['../scene/index.ts']
@@ -123,7 +123,9 @@ export class Runner {
     canvas.style.width = `${this.fit.W * this.fit.css}px`
     canvas.style.height = `${this.fit.H * this.fit.css}px`
     canvas.style.imageRendering = 'pixelated'
-    const bg = new Sprite(Texture.from(await levelBackdrop(this.o.level, this.fit.W, this.fit.H, this.o.theme)))
+    const bg = new Sprite(
+      Texture.from(await levelBackdrop(this.o.level, this.fit.W, this.fit.H, this.o.theme)),
+    )
     bg.texture.source.scaleMode = 'nearest'
     this.juice = new JuiceLayer(this.fit.W, this.fit.H, this.o.reduced)
     this.ambient = new Ambient(this.fit.W, this.fit.H, this.o.reduced)
@@ -162,7 +164,8 @@ export class Runner {
       addScore(n, x, y) {
         self.score = Math.max(0, self.score + n)
         usePlay.setState({ score: self.score })
-        if (x !== undefined && y !== undefined) self.juice.float(n >= 0 ? `+${n}` : `${n}`, x, y, n >= 0 ? 0xf5c04a : 0xff3b3b)
+        if (x !== undefined && y !== undefined)
+          self.juice.float(n >= 0 ? `+${n}` : `${n}`, x, y, n >= 0 ? 0xf5c04a : 0xff3b3b)
       },
       hit(x, y) {
         self.hit(x, y)

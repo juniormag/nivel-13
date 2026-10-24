@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { lazy, Suspense } from 'react'
 import { useNav } from './nav'
 
 // Cada tela é um chunk próprio: a primeira tela abre rápido.
