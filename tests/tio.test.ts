@@ -1,6 +1,6 @@
 // Convence o Tio: regras puras (src/modes/tio/logic.ts), o retrato em pixels e as regras do conteúdo.
 import { describe, expect, it } from 'vitest'
-import { PARENTES, TIO_MSGS } from '../src/content/tio'
+import { PARENTES, TIO_MSGS, type TioMsg } from '../src/content/tio'
 import { PALETTE } from '../src/lib/palette'
 import { FACE, faceGrid } from '../src/modes/tio/faces'
 import { FIX_MSGS, FIX_PARENTES } from '../src/modes/tio/fixture'
@@ -26,7 +26,7 @@ const fix = { parentes: FIX_PARENTES, msgs: FIX_MSGS }
 
 describe('selectPool', () => {
   it('produção: só review ok e nunca a fixture', () => {
-    const pend = { ...TIO_MSGS[0], id: 'x', review: 'pendente' as const }
+    const pend: TioMsg = { ...(TIO_MSGS[0] as TioMsg), id: 'x', review: 'pendente' }
     const p = selectPool({ parentes: PARENTES, msgs: [...TIO_MSGS, pend] }, fix, { dev: false, prod: true })
     expect(p.fixture).toBe(false)
     expect(p.msgs.every((m) => m.review === 'ok')).toBe(true)

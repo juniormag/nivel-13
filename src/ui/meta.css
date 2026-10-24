@@ -122,11 +122,11 @@
 /* ---------- tipografia comum ---------- */
 .mt-kicker {
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--red-hot);
-  margin: 4px 0 6px;
+  margin: var(--sp-1) 0 var(--sp-2);
 }
 .mt-kicker--stone {
   color: var(--stone-3);
@@ -134,30 +134,30 @@
 .mt-title {
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 26px;
+  font-size: var(--fs-2xl);
   line-height: 1.1;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--stone-hi);
-  margin: 4px 0 8px;
+  margin: var(--sp-1) 0 var(--sp-2);
   text-shadow:
     0 var(--px) 0 var(--crimson-deep),
     0 calc(var(--px) * 2) 0 var(--void);
 }
 .mt-title--big {
-  font-size: 40px;
+  font-size: var(--fs-4xl);
   color: var(--white);
 }
 .mt-title--icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: var(--sp-4);
 }
 .mt-lead {
-  font-size: 17px;
+  font-size: var(--fs-lg);
   line-height: 1.35;
-  margin: 0 auto 14px;
+  margin: 0 auto var(--sp-4);
   max-width: 34ch;
   color: var(--stone-hi);
 }
@@ -165,8 +165,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  margin-top: 16px;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
 }
 /* botões do tamanho do conteúdo, com piso comum: nada de faixa de borda a borda */
 .mt-actions > .btn:not(.btn--ghost) {
@@ -220,9 +220,9 @@
   position: absolute;
   top: 0;
   left: calc(var(--px) * 6);
-  padding: 6px 10px 10px;
+  padding: var(--sp-2) var(--sp-3) var(--sp-3);
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -241,12 +241,12 @@
   bottom: calc(var(--px) * 4);
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px 4px 6px;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2) var(--sp-1) var(--sp-2);
   background: var(--void);
   box-shadow: 0 0 0 var(--px) var(--stone-1);
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -267,7 +267,7 @@
   top: calc(var(--px) * 4);
   display: flex;
   gap: 2px;
-  padding: 3px 4px;
+  padding: var(--sp-1) var(--sp-1);
   background: var(--void);
   box-shadow: 0 0 0 var(--px) var(--gold-0);
   z-index: 2;
@@ -341,16 +341,16 @@
   padding: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: var(--sp-3);
   text-align: left;
 }
 .mt-tips li {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   min-width: 0;
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1.3;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -361,7 +361,7 @@
   overflow-wrap: anywhere;
 }
 .mt-tips--still {
-  margin: 10px 0 4px;
+  margin: var(--sp-3) 0 var(--sp-1);
 }
 
 /* celular em pé: o card sobe e o véu clareia embaixo, para o marco do lugar (no horizonte, ~66% da
@@ -387,14 +387,14 @@
 /* celular deitado (altura baixa): a arte vai para a esquerda, o texto para a direita, botões em linha */
 @media (orientation: landscape) and (max-height: 500px) {
   .mt-ov {
-    padding: 8px 12px;
+    padding: var(--sp-2) var(--sp-3);
   }
   .mt-card--intro {
     width: min(760px, 100%);
     display: grid;
     grid-template-columns: auto 1fr;
     align-items: center;
-    gap: 0 14px;
+    gap: 0 var(--sp-4);
     text-align: left;
   }
   .mt-card--intro .mt-art {
@@ -402,29 +402,29 @@
     align-self: start;
   }
   .mt-card--intro .mt-title {
-    font-size: 22px;
+    font-size: var(--fs-xl);
     margin-top: 0;
   }
   .mt-card--intro .mt-lead {
-    font-size: 15px;
-    margin: 0 0 10px;
+    font-size: var(--fs-md);
+    margin: 0 0 var(--sp-3);
   }
   .mt-tips {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: var(--sp-2);
   }
   .mt-actions {
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: flex-start;
-    margin-top: 10px;
+    margin-top: var(--sp-3);
   }
   .mt-card--intro .mt-actions > .btn:not(.btn--ghost) {
     min-width: 0;
   }
   .mt-card--intro .btn--big {
     min-height: 48px;
-    padding: 10px 18px;
+    padding: var(--sp-3) var(--sp-4);
   }
   .mt-card--win,
   .mt-card--lose,
@@ -520,7 +520,7 @@
 }
 .mt-go-text {
   font-family: var(--f-hud);
-  font-size: 64px;
+  font-size: var(--fs-6xl);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gold-hi);
@@ -558,7 +558,7 @@
   animation: mt-drop 0.22s steps(4) both;
 }
 .mt-win-banner {
-  margin: calc(var(--px) * -10) -14px 8px;
+  margin: calc(var(--px) * -10) -16px var(--sp-2);
   opacity: 0;
 }
 .mt-win-banner.is-in {
@@ -569,10 +569,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: var(--sp-4);
   flex-wrap: wrap;
   min-height: 44px;
-  margin-top: 6px;
+  margin-top: var(--sp-2);
   visibility: hidden;
 }
 .mt-tally.is-in {
@@ -582,12 +582,12 @@
 .mt-pts {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 .mt-pts b {
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 30px;
+  font-size: var(--fs-3xl);
   color: var(--white);
   text-shadow:
     0 var(--px) 0 var(--stone-1),
@@ -595,16 +595,16 @@
 }
 .mt-pts-label {
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--stone-3);
 }
 .mt-xpchip {
   display: inline-block;
-  padding: 5px 8px 6px;
+  padding: var(--sp-1) var(--sp-2) var(--sp-2);
   font-family: var(--f-hud);
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 1;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -653,7 +653,7 @@
   position: relative;
   display: block;
   font-family: var(--f-hud);
-  font-size: 18px;
+  font-size: var(--fs-lg);
   line-height: 1;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -710,7 +710,7 @@
   clip-path: polygon(0 0, 100% 0, 0 100%);
 }
 .mt-banner--sm .mt-banner-text {
-  font-size: 13px;
+  font-size: var(--fs-xs);
 }
 .mt-banner--sm .mt-banner-face {
   padding: calc(var(--px) * 3) calc(var(--px) * 5) calc(var(--px) * 4);
@@ -725,11 +725,11 @@
   justify-content: center;
   align-items: flex-end;
   gap: calc(var(--px) * 3);
-  margin: 6px 0 4px;
+  margin: var(--sp-2) 0 var(--sp-1);
 }
 .mt-stars--big {
   --k: calc(var(--px) * 2);
-  margin: 10px 0 4px;
+  margin: var(--sp-3) 0 var(--sp-1);
 }
 .mt-stars--big .is-mid {
   --k: calc(var(--px) * 2 + 1px);
@@ -806,8 +806,8 @@
 .mt-miss {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
   background: var(--void);
   box-shadow: 0 0 0 var(--px) var(--stone-1);
   text-align: left;
@@ -816,11 +816,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 .mt-miss-note {
   font-family: var(--f-hud);
-  font-size: 14px;
+  font-size: var(--fs-sm);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--white);
@@ -828,19 +828,19 @@
 .mt-hint {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 15px;
+  gap: var(--sp-3);
+  font-size: var(--fs-md);
   line-height: 1.3;
   color: var(--stone-hi);
 }
 .mt-hint b {
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--gold);
-  margin-right: 6px;
+  margin-right: var(--sp-2);
 }
 
 /* barra em segmentos vermelhos com número branco (ref v2, lição 14) */
@@ -848,11 +848,11 @@
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 .mt-seg-label {
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--stone-3);
@@ -880,7 +880,7 @@
 .mt-seg-num {
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 16px;
+  font-size: var(--fs-md);
   color: var(--white);
   min-width: 3.4ch;
   text-align: right;
@@ -891,7 +891,7 @@
   animation: mt-drop 0.18s steps(3) both;
 }
 .mt-card--pause .mt-tips {
-  padding: 10px;
+  padding: var(--sp-3);
   background: var(--void);
   box-shadow: 0 0 0 var(--px) var(--stone-1);
 }
@@ -901,7 +901,7 @@
   --cc: var(--gold-hi);
   position: relative;
   width: 100%;
-  padding: 12px 12px 14px;
+  padding: var(--sp-3) var(--sp-3) var(--sp-4);
   background: var(--night);
   box-shadow:
     0 0 0 var(--px) var(--stone-1),
@@ -916,14 +916,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 .mt-res-count {
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.14em;
   color: var(--stone-hi);
-  padding: 5px 7px;
+  padding: var(--sp-1) var(--sp-2);
   background: var(--void);
   box-shadow: 0 0 0 var(--px) var(--stone-1);
 }
@@ -932,7 +932,7 @@
   position: relative;
   flex-wrap: nowrap;
   justify-content: center;
-  padding: 8px 12px;
+  padding: var(--sp-2) var(--sp-3);
   background: var(--void);
   box-shadow: 0 0 0 var(--px) var(--stone-1);
 }
@@ -966,7 +966,7 @@
 .mt-glint {
   position: relative;
   overflow: hidden;
-  padding: 0 6px 4px;
+  padding: 0 var(--sp-2) var(--sp-1);
 }
 .mt-glint::after {
   content: "";
@@ -984,10 +984,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  margin: 2px 0 12px;
+  gap: var(--sp-3);
+  margin: 2px 0 var(--sp-3);
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--gold-hi);
@@ -1003,19 +1003,19 @@
 /* ---------- desktop ---------- */
 @media (min-width: 1000px) and (min-height: 640px) {
   .mt-title {
-    font-size: 32px;
+    font-size: var(--fs-3xl);
   }
   .mt-title--big {
-    font-size: 48px;
+    font-size: var(--fs-5xl);
   }
   .mt-lead {
-    font-size: 19px;
+    font-size: var(--fs-xl);
   }
   .mt-banner-text {
-    font-size: 24px;
+    font-size: var(--fs-2xl);
   }
   .mt-banner--sm .mt-banner-text {
-    font-size: 15px;
+    font-size: var(--fs-md);
   }
   .mt-count .count {
     font-size: 160px;
@@ -1024,10 +1024,10 @@
     font-size: 88px;
   }
   .mt-pts b {
-    font-size: 36px;
+    font-size: var(--fs-4xl);
   }
   .mt-tips li {
-    font-size: 13px;
+    font-size: var(--fs-xs);
   }
   .mt-stars--mid {
     --k: calc(var(--px) + 1px);

@@ -1,5 +1,5 @@
 // Cache simples: shell e assets com hash ficam offline depois da primeira visita. /api nunca é cacheado.
-const CACHE = 'nivel13-v1'
+const CACHE = 'nivel13-v2'
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/manifest.webmanifest', '/favicon.svg'])))
   self.skipWaiting()

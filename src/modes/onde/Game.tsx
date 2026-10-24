@@ -245,6 +245,7 @@ export function OndeGame({
     return (
       <div className="onde-wrap">
         <header className="onde-hud">
+          <h1 className="onde-title">Onde Foi?</h1>
           <Tap
             className="btn btn--ghost onde-close"
             aria-label="Sair do Onde Foi?"
@@ -253,7 +254,6 @@ export function OndeGame({
           >
             ✕
           </Tap>
-          <h1 className="onde-title">Onde Foi?</h1>
         </header>
         <p className="onde-empty pf pf--hud">Os pinos de hoje ainda não chegaram. Volte daqui a pouco.</p>
       </div>
@@ -263,14 +263,6 @@ export function OndeGame({
   return (
     <div className={`onde-wrap${b.wide ? ' is-wide' : ''}`}>
       <header className="onde-hud">
-        <Tap
-          className="btn btn--ghost onde-close"
-          aria-label="Sair do Onde Foi?"
-          commit="back"
-          onClick={onHome}
-        >
-          ✕
-        </Tap>
         <div className="onde-hud-l">
           <h1 className="onde-title">
             Onde Foi? <b>{seedLabel(seed)}</b>
@@ -288,6 +280,14 @@ export function OndeGame({
           <span>Pontos</span>
           <b aria-hidden="true">{fmt(running)}</b>
         </div>
+        <Tap
+          className="btn btn--ghost onde-close"
+          aria-label="Sair do Onde Foi?"
+          commit="back"
+          onClick={onHome}
+        >
+          ✕
+        </Tap>
       </header>
 
       <div className="onde-play">

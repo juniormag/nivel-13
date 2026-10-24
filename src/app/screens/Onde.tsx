@@ -4,6 +4,7 @@
 
 import { OndeGame } from '../../modes/onde/Game'
 import { dailySeed, normSeed } from '../../modes/onde/logic'
+import { levelsDone, useSave } from '../../state/save'
 import { Screen } from '../../ui/Shell'
 import { go, useNav } from '../nav'
 
@@ -14,8 +15,10 @@ export default function Onde() {
   const n =
     typeof raw === 'number' || (typeof raw === 'string' && raw.trim() !== '') ? Number(raw) : Number.NaN
   const vs = Number.isFinite(n) && n >= 0 ? Math.min(1000, Math.round(n)) : null
+  // mesmo fundo das folhas: o monumento esmaecido atrás do mapa
+  const world = useSave((s) => levelsDone(s)) / 13
   return (
-    <Screen className="onde-scr">
+    <Screen world={world} className="onde-scr">
       <OndeGame
         key={seed}
         seed={seed}

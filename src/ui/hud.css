@@ -78,9 +78,9 @@
 }
 
 .btn--sm {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   min-height: 44px;
-  padding: 8px 12px;
+  padding: var(--sp-2) var(--sp-3);
 }
 
 /* ---------- PixelIcon ---------- */
@@ -162,9 +162,9 @@ canvas {
     inset 0 calc(var(--w) * -1) 0 0 var(--crimson);
 }
 .xp-text {
-  margin-top: 8px;
+  margin-top: var(--sp-2);
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.04em;
   color: var(--stone-3);
   text-shadow: var(--shadow-text);
@@ -177,7 +177,7 @@ canvas {
   padding: 0;
   display: grid;
   grid-template-columns: auto var(--stat-w, 112px) auto;
-  gap: 12px 18px;
+  gap: var(--sp-3) var(--sp-4);
   align-items: center;
 }
 .stat {
@@ -185,7 +185,7 @@ canvas {
 }
 .stat-label {
   font-family: var(--f-hud);
-  font-size: 13px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--stone-3);
@@ -210,7 +210,7 @@ canvas {
 }
 .stat-num {
   font-family: var(--f-hud);
-  font-size: 16px;
+  font-size: var(--fs-md);
   color: var(--stone-hi);
   text-align: right;
   min-width: 2ch;
@@ -235,10 +235,10 @@ canvas {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--sp-3);
   width: 100%;
   min-height: 44px;
-  padding: 0 18px 0 30px;
+  padding: 0 var(--sp-4) 0 var(--sp-7);
   font-family: var(--f-hud);
   font-size: var(--cmd-fs, 18px);
   letter-spacing: 0.05em;
@@ -317,9 +317,9 @@ canvas {
 }
 .cmd-hint {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.06em;
-  padding: 3px 6px;
+  padding: var(--sp-1) var(--sp-2);
   color: var(--stone-3);
   background: var(--night);
   box-shadow: 0 0 0 1px var(--stone-1);
@@ -337,7 +337,7 @@ canvas {
 /* ---------- Minimap ---------- */
 .minimap {
   margin: 0;
-  padding: var(--mm-pad, 6px);
+  padding: var(--mm-pad, var(--sp-2));
   display: inline-block;
   line-height: 0;
   --pf-fill: var(--night);
@@ -354,9 +354,9 @@ canvas {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: var(--sp-1);
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1;
   color: var(--stone-hi);
 }
@@ -374,7 +374,7 @@ canvas {
   position: absolute;
   width: 8px;
   height: 8px;
-  margin: calc(var(--mm-pad, 6px) - 4px) 0 0 calc(var(--mm-pad, 6px) - 4px);
+  margin: calc(var(--mm-pad, var(--sp-2)) - var(--sp-1)) 0 0 calc(var(--mm-pad, var(--sp-2)) - var(--sp-1));
   background: var(--red-hot);
   box-shadow:
     0 0 0 2px var(--white),
@@ -398,9 +398,9 @@ canvas {
 }
 .mm-label {
   position: absolute;
-  margin: calc(var(--mm-pad, 6px) - 22px) 0 0 calc(var(--mm-pad, 6px) + 10px);
+  margin: calc(var(--mm-pad, var(--sp-2)) - var(--sp-5)) 0 0 calc(var(--mm-pad, var(--sp-2)) + var(--sp-3));
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -414,7 +414,7 @@ canvas {
 }
 .mm-label.is-left {
   transform: translateX(-100%);
-  margin-left: calc(var(--mm-pad, 6px) - 10px);
+  margin-left: calc(var(--mm-pad, var(--sp-2)) - var(--sp-3));
 }
 
 /* ---------- Dialog ---------- */
@@ -425,14 +425,14 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(16px + var(--safe-t)) 16px calc(16px + var(--safe-b));
+  padding: calc(var(--sp-4) + var(--safe-t)) var(--sp-4) calc(var(--sp-4) + var(--safe-b));
   background: color-mix(in srgb, var(--void) 80%, transparent);
 }
 .dlg {
   width: min(500px, 100%);
   max-height: 100%;
   overflow: auto;
-  padding: 24px 20px 20px;
+  padding: var(--sp-6) var(--sp-5) var(--sp-5);
   outline: none;
 }
 .dlg--wide {
@@ -441,10 +441,10 @@ canvas {
 .dlg-title {
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 18px;
+  font-size: var(--fs-lg);
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  margin: 0 40px 14px 0;
+  margin: 0 var(--sp-10) var(--sp-4) 0;
 }
 .dlg-close {
   position: absolute;
@@ -471,7 +471,7 @@ canvas {
 .tabs {
   display: flex;
   gap: calc(var(--hair, 2px) * 3);
-  margin: 4px 0 18px;
+  margin: var(--sp-1) 0 var(--sp-4);
   flex-wrap: wrap;
 }
 .tab {
@@ -479,10 +479,10 @@ canvas {
   border: 0;
   cursor: pointer;
   font-family: var(--f-hud);
-  font-size: 13px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 8px 16px;
+  padding: var(--sp-2) var(--sp-4);
   min-height: 44px;
   flex: 1 1 0;
   background: var(--night);
@@ -493,9 +493,11 @@ canvas {
     -2px 0 0 0 var(--stone-1),
     2px 0 0 0 var(--stone-1);
 }
-.tab:hover {
-  color: var(--stone-hi);
-  background: var(--dusk);
+@media (hover: hover) {
+  .tab:hover {
+    color: var(--stone-hi);
+    background: var(--dusk);
+  }
 }
 .tab[aria-selected="true"] {
   color: var(--white);
@@ -522,14 +524,14 @@ canvas {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   pointer-events: none;
   width: min(420px, calc(100vw - 32px));
 }
 .toast {
-  padding: 12px 16px;
+  padding: var(--sp-3) var(--sp-4);
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1.4;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -540,18 +542,18 @@ canvas {
 /* ---------- FactCard ---------- */
 .factcard {
   width: min(500px, 100%);
-  padding: 22px 20px 18px;
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
   text-align: left;
 }
 .fc-head {
   display: flex;
-  gap: 14px;
+  gap: var(--sp-4);
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: var(--sp-4);
 }
 .fc-art {
   flex: none;
-  padding: 4px;
+  padding: var(--sp-1);
   line-height: 0;
 }
 .fc-art canvas {
@@ -562,7 +564,7 @@ canvas {
 }
 .fc-kicker {
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--gold);
@@ -570,9 +572,9 @@ canvas {
 .factcard h2 {
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 18px;
+  font-size: var(--fs-lg);
   line-height: 1.25;
-  margin: 6px 0 0;
+  margin: var(--sp-2) 0 0;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--stone-hi);
@@ -580,11 +582,11 @@ canvas {
 .fc-status {
   display: inline-block;
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  padding: 5px 8px;
-  margin-bottom: 12px;
+  padding: var(--sp-1) var(--sp-2);
+  margin-bottom: var(--sp-3);
   background: var(--blood-0);
   color: var(--red-glow);
   box-shadow:
@@ -603,9 +605,9 @@ canvas {
     2px 0 0 0 var(--vine-1);
 }
 .fc-body {
-  font-size: 18px;
+  font-size: var(--fs-lg);
   line-height: 1.45;
-  margin: 0 0 14px;
+  margin: 0 0 var(--sp-4);
   color: var(--stone-hi);
   user-select: text;
   -webkit-user-select: text;
@@ -613,24 +615,24 @@ canvas {
 .fc-src-title {
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--stone-3);
-  margin: 0 0 6px;
+  margin: 0 0 var(--sp-2);
 }
 .fc-sources {
   list-style: none;
-  margin: 0 0 16px;
+  margin: 0 0 var(--sp-4);
   padding: 0;
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 1.4;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 .fc-sources li {
-  padding-left: 14px;
+  padding-left: var(--sp-4);
   position: relative;
 }
 .fc-sources li::before {
@@ -650,7 +652,7 @@ canvas {
 }
 .fc-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--sp-3);
   flex-wrap: wrap;
 }
 .like.is-on {
@@ -664,29 +666,29 @@ canvas {
 /* ---------- Countdown ---------- */
 .cd-blocks {
   display: flex;
-  gap: 14px;
+  gap: var(--sp-4);
 }
 .cd-block {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 6px 8px;
+  padding: var(--sp-3) var(--sp-2) var(--sp-2);
 }
 .cd-block b {
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 32px;
+  font-size: var(--fs-3xl);
   line-height: 1;
   color: var(--gold-hi);
 }
 .cd-block small {
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--stone-3);
-  margin-top: 6px;
+  margin-top: var(--sp-2);
 }
 
 /* ---------- HUD de fase (Play.tsx) ---------- */
@@ -695,22 +697,23 @@ canvas {
   left: 0;
   right: 0;
   top: 0;
-  padding: calc(10px + var(--safe-t)) calc(12px + var(--safe-r)) 14px calc(14px + var(--safe-l));
+  padding: calc(var(--sp-3) + var(--safe-t)) calc(var(--sp-3) + var(--safe-r)) var(--sp-4)
+    calc(var(--sp-4) + var(--safe-l));
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 14px;
+  gap: var(--sp-4);
   background: linear-gradient(color-mix(in srgb, var(--void) 88%, transparent), transparent);
 }
 .play-top .hearts {
-  gap: 4px;
+  gap: var(--sp-1);
 }
 .play-mid {
   min-width: 0;
 }
 .play-title {
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.06em;
   color: var(--stone-3);
   text-transform: uppercase;
@@ -726,7 +729,7 @@ canvas {
 .timer {
   position: relative;
   height: 10px;
-  margin-top: 8px;
+  margin-top: var(--sp-2);
   background: var(--void);
   box-shadow:
     0 -2px 0 0 var(--stone-3),
@@ -756,11 +759,11 @@ canvas {
 .play-right {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 .score {
   font-family: var(--f-hud);
-  font-size: 18px;
+  font-size: var(--fs-lg);
   color: var(--gold-hi);
   text-shadow: var(--shadow-text);
   min-width: 64px;
@@ -776,7 +779,7 @@ canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--sp-1);
   padding: 0;
 }
 .pause-btn i {
@@ -785,27 +788,30 @@ canvas {
   background: var(--stone-hi);
   box-shadow: 0 2px 0 var(--void);
 }
-.pause-btn:hover i {
-  background: var(--gold-hi);
+@media (hover: hover) {
+  .pause-btn:hover i {
+    background: var(--gold-hi);
+  }
 }
 
 @media (min-width: 1000px) and (min-height: 640px) {
   .play-top {
-    padding: calc(16px + var(--safe-t)) calc(24px + var(--safe-r)) 18px calc(24px + var(--safe-l));
-    gap: 24px;
+    padding: calc(var(--sp-4) + var(--safe-t)) calc(var(--sp-6) + var(--safe-r)) var(--sp-4)
+      calc(var(--sp-6) + var(--safe-l));
+    gap: var(--sp-6);
   }
   .play-top .heart {
     width: 33px;
     height: 30px;
   }
   .play-title {
-    font-size: 14px;
+    font-size: var(--fs-sm);
   }
   .timer {
     height: 12px;
   }
   .score {
-    font-size: 24px;
+    font-size: var(--fs-2xl);
   }
 }
 

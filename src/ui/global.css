@@ -5,7 +5,8 @@
 /* Pixelify Sans desenha o 5 parecido com S: algarismos vêm da Silkscreen (legibilidade de números e fontes) */
 @font-face {
   font-family: "n13-digits";
-  src: url("../../node_modules/@fontsource/silkscreen/files/silkscreen-latin-400-normal.woff2") format("woff2");
+  src: url("../../node_modules/@fontsource/silkscreen/files/silkscreen-latin-400-normal.woff2")
+    format("woff2");
   unicode-range: U+0030-0039;
   size-adjust: 88%;
   font-display: swap;
@@ -64,6 +65,28 @@
   --dim: var(--stone-2);
   --line: var(--stone-1);
   --line-strong: var(--stone-2);
+
+  /* espaçamento: escala de 4 px (2 px só para fio de borda) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 28px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  /* tipografia: rótulo Silkscreen em xs/sm, texto Pixelify em md/lg, títulos de xl para cima */
+  --fs-xs: 12px;
+  --fs-sm: 14px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 20px;
+  --fs-2xl: 24px;
+  --fs-3xl: 32px;
+  --fs-4xl: 40px;
+  --fs-5xl: 48px;
+  --fs-6xl: 64px;
 
   /* 1 pixel lógico da interface, em px CSS (escala inteira) */
   --px: 2px;
@@ -136,6 +159,73 @@ select:focus-visible,
   position: fixed;
   inset: 0;
   background: var(--void);
+}
+/* contêiner de cada tela (App): só existe para a saída em degraus */
+.scr-swap {
+  position: fixed;
+  inset: 0;
+}
+
+/* splash entre telas: nada aparece nos primeiros 200 ms (chunk em cache não pisca) */
+.splash {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--void);
+}
+.splash-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  opacity: 0;
+  animation: splash-in 0.12s steps(2) 0.2s forwards;
+}
+.splash-13 {
+  font-family: var(--f-hud);
+  font-size: var(--fs-3xl);
+  line-height: 1;
+  color: var(--stone-hi);
+  text-shadow:
+    0 var(--px) 0 var(--crimson),
+    0 calc(var(--px) * 2) 0 var(--crimson-deep);
+}
+.splash-dots {
+  display: flex;
+  gap: var(--sp-2);
+}
+.splash-dots i {
+  width: 8px;
+  height: 8px;
+  background: var(--crimson-deep);
+  animation: splash-dot 0.72s steps(1) infinite;
+}
+.splash-dots i:nth-child(2) {
+  animation-delay: 0.24s;
+}
+.splash-dots i:nth-child(3) {
+  animation-delay: 0.48s;
+}
+@keyframes splash-in {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes splash-dot {
+  0%,
+  33% {
+    background: var(--red-hot);
+  }
+  34%,
+  100% {
+    background: var(--crimson-deep);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-dots i {
+    animation: none;
+  }
 }
 
 /* ---------- celular: gestos (mobile-ux-lead) ----------

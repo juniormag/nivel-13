@@ -126,6 +126,7 @@ export type Evento =
   | 'plano_create'
   | 'streak_freeze'
   | 'jornada_from_daily'
+  | 'install'
 
 const myId = () => getSave().id
 /** Duelo e grupo mostram o apelido guardado no servidor: sincroniza antes. */

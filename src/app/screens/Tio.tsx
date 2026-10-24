@@ -7,6 +7,7 @@ import { Chat } from '../../modes/tio/Chat'
 import { POOL } from '../../modes/tio/content'
 import { isParenteId, msgsOf } from '../../modes/tio/logic'
 import { Picker } from '../../modes/tio/Picker'
+import { levelsDone, useSave } from '../../state/save'
 import { Screen } from '../../ui/Shell'
 import { ev } from '../../viral/api'
 import { go, useNav } from '../nav'
@@ -17,12 +18,14 @@ export default function Tio() {
   const parente = id ? POOL.parentes.find((p) => p.id === id) : undefined
   const msgs = parente ? msgsOf(POOL, parente.id) : []
   const run = typeof params.run === 'number' ? params.run : 0
+  // mesmo fundo das folhas: o monumento esmaecido atrás da conversa
+  const world = useSave((s) => levelsDone(s)) / 13
 
   useEffect(() => ev('papo_open', 'tio'), [])
 
   if (parente && msgs.length > 0)
     return (
-      <Screen className="tio-scr tio-scr--chat">
+      <Screen world={world} className="tio-scr tio-scr--chat">
         <Chat
           key={`${parente.id}-${run}`}
           parente={parente}
@@ -35,7 +38,7 @@ export default function Tio() {
     )
 
   return (
-    <Screen className="tio-scr tio-scr--pick">
+    <Screen world={world} className="tio-scr tio-scr--pick">
       <Picker
         parentes={POOL.parentes}
         fixture={POOL.fixture}

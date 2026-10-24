@@ -57,3 +57,6 @@ export const pageIn: Variants = {
   hidden: { opacity: 0, x: 16 },
   show: { opacity: 1, x: 0, transition: { duration: 0.16, ease: steps(4) } },
 }
+
+/** Saída de tela: apaga em 3 degraus em 100 ms (fechar mais rápido que abrir; a entrada é o PixelWipe de 160 ms). */
+export const screenOut = { opacity: 0, transition: { duration: 0.1, ease: steps(3) } }
