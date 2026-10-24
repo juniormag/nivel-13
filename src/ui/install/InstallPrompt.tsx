@@ -69,9 +69,10 @@ export function InstallPrompt() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: roda uma vez, no boot
   useEffect(() => {
     if (!fromLink.current || inapp || standalone) return
-    fromLink.current = false
-    setUrlParam(false)
+    // a marca só cai quando o timer roda (o StrictMode monta, desmonta e monta de novo)
     const t = window.setTimeout(() => {
+      fromLink.current = false
+      setUrlParam(false)
       if (useNav.getState().screen === 'play') return
       shownThisSession = true
       if (path === 'ios') openSheet()

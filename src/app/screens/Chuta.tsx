@@ -127,14 +127,6 @@ export default function Chuta() {
     <Screen world={world} className="cx-scr">
       <div className="cx-wrap">
         <header className="cx-hud">
-          <Tap
-            className="btn btn--ghost cx-close"
-            aria-label="Sair do Chuta Aí"
-            sound="back"
-            onClick={() => go('title')}
-          >
-            ✕
-          </Tap>
           <div className="cx-hud-l">
             <h1 className="cx-title">
               Chuta Aí! <b>#{n}</b>
@@ -151,6 +143,14 @@ export default function Chuta() {
             <span>Pontos</span>
             <b aria-hidden="true">{fmt(shownTotal)}</b>
           </div>
+          <Tap
+            className="btn btn--ghost cx-close"
+            aria-label="Sair do Chuta Aí"
+            sound="back"
+            onClick={() => go('title')}
+          >
+            ✕
+          </Tap>
         </header>
         {duel && (
           <p className="cx-banner pf pf--red">

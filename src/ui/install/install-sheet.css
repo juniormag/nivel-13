@@ -182,10 +182,11 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: var(--red);
+  /* carmim por baixo do texto: branco e pedra clara passam de 4,5:1 */
+  background: var(--crimson);
   box-shadow:
-    inset 0 2px 0 0 var(--red-glow),
-    inset 0 -2px 0 0 var(--crimson);
+    inset 0 2px 0 0 var(--red),
+    inset 0 -2px 0 0 var(--crimson-deep);
 }
 .inst-band::before {
   content: "▶";

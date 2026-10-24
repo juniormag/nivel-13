@@ -108,8 +108,8 @@ export const ADD = ['ccccccc', 'c.....c', 'c..c..c', 'c.ccc.c', 'c..c..c', 'c...
 export const KEBAB = ['c', '.', 'c', '.', 'c'] as const
 export const MEATBALL = ['c.c.c'] as const
 
-/** Bússola (abrir no navegador). */
-export const COMPASS = ['..ccc..', '.c...c.', 'c...c.c', 'c..c..c', 'c.c...c', '.c...c.', '..ccc..'] as const
+/** Abrir fora do app (no navegador): caixa com a seta saindo pelo canto. */
+export const COMPASS = ['....ccc', '.....cc', 'cc..c.c', 'c..c...', 'c.c....', 'c.....c', 'ccccccc'] as const
 
 /** Brilho de 4 pontas, 3 quadros (o ciclo vai e volta: 0 1 2 1 0). */
 export const SPARKLE = [

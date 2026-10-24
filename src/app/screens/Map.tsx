@@ -140,8 +140,8 @@ export default function JourneyScreen() {
         onPointerDown={onCanvas}
       />
       <div className="topbar" style={{ position: 'fixed', zIndex: 2 }}>
-        <PixelButton tone="ghost" size="sm" commit="back" onClick={() => go('title')}>
-          ← Início
+        <PixelButton size="sm" commit="back" aria-label="Voltar ao início" onClick={() => go('title')}>
+          <span aria-hidden="true">◀</span> Início
         </PixelButton>
         <h1
           style={{

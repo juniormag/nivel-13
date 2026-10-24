@@ -11,7 +11,8 @@
   color: var(--stone-hi);
   background:
     linear-gradient(to bottom, var(--void), transparent 22%),
-    linear-gradient(to top, var(--blood-0), transparent 30%), var(--night);
+    linear-gradient(to top, var(--blood-0), transparent 30%),
+    color-mix(in srgb, var(--night) 55%, transparent);
 }
 
 /* ---------- estrutura ---------- */
@@ -36,10 +37,11 @@
   height: 56px;
   flex: none;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: 10px;
-  padding: 6px 16px 4px 6px;
+  gap: var(--sp-3);
+  /* ✕ à direita, como nas folhas (Placar, Coleção, Sobre) */
+  padding: var(--sp-2) var(--sp-2) var(--sp-1) var(--sp-4);
   font-family: var(--f-hud);
   text-transform: uppercase;
 }
@@ -48,15 +50,15 @@
   height: 44px;
   min-width: 44px;
   padding: 0;
-  font-size: 16px;
+  font-size: var(--fs-md);
 }
 .onde-hud-l {
   min-width: 0;
 }
 .onde-title {
-  margin: 0 0 6px;
+  margin: 0 0 var(--sp-2);
   font-weight: 400;
-  font-size: 15px;
+  font-size: var(--fs-sm);
   line-height: 1;
   letter-spacing: 0.1em;
   color: var(--stone-hi);
@@ -112,14 +114,14 @@
 }
 .onde-hud-r span {
   display: block;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.14em;
   color: var(--stone-3);
-  margin-bottom: 4px;
+  margin-bottom: var(--sp-1);
 }
 .onde-hud-r b {
   font-weight: 400;
-  font-size: 22px;
+  font-size: var(--fs-2xl);
   color: var(--gold);
   text-shadow: var(--shadow-text);
 }
@@ -130,11 +132,11 @@
   width: calc(100% - 24px);
   max-width: 560px;
   min-height: 100px;
-  margin: 2px 12px 10px;
-  padding: 10px 14px 12px;
+  margin: 2px var(--sp-3) var(--sp-3);
+  padding: var(--sp-3) var(--sp-4) var(--sp-3);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--sp-2);
 }
 .onde-clue.is-avanco {
   --pf-line: var(--green);
@@ -148,17 +150,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--sp-2);
   font-family: var(--f-hud);
   text-transform: uppercase;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.08em;
 }
 .onde-side {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 3px 8px 3px 4px;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2) var(--sp-1) var(--sp-1);
   background: var(--void);
 }
 .onde-side i {
@@ -190,7 +192,7 @@
 .onde-q {
   margin: 0;
   font-weight: 400;
-  font-size: 17px;
+  font-size: var(--fs-lg);
   line-height: 1.3;
   color: var(--white);
   text-wrap: pretty;
@@ -238,7 +240,7 @@
   top: 8px;
   right: 10px;
   font-family: var(--f-hud);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--stone-2);
   pointer-events: none;
 }
@@ -278,8 +280,8 @@
   max-width: 560px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px 12px calc(12px + var(--safe-b));
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-3) calc(var(--sp-3) + var(--safe-b));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -288,7 +290,7 @@
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 /* trilha dos 6 pinos (a grade do MapTap se montando) */
 .onde-trail {
@@ -297,16 +299,16 @@
   padding: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  gap: var(--sp-2);
 }
 .onde-trail li {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
   min-height: 28px;
-  padding: 2px 8px;
+  padding: 2px var(--sp-2);
   font-family: var(--f-hud);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--stone-2);
@@ -341,30 +343,30 @@
 .onde-hint {
   margin: 0;
   text-align: center;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   color: var(--stone-3);
   min-height: 1.3em;
 }
 .onde-dock-row {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 12px;
+  gap: var(--sp-3);
   align-items: stretch;
 }
 .onde-listbtn {
   min-height: 60px;
   min-width: 92px;
-  font-size: 13px;
+  font-size: var(--fs-xs);
 }
 
 /* ---------- carta do fato ---------- */
 .onde-fact {
   flex: none;
   margin-top: auto;
-  padding: 10px 14px 12px;
+  padding: var(--sp-3) var(--sp-4) var(--sp-3);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--sp-2);
 }
 .onde-fact.is-avanco {
   --pf-line: var(--green);
@@ -376,14 +378,14 @@
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 .onde-fact-place {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   line-height: 1.15;
   color: var(--stone-hi);
 }
@@ -409,18 +411,18 @@
 }
 .onde-fact-km b {
   font-weight: 400;
-  font-size: 20px;
+  font-size: var(--fs-xl);
   color: var(--gold-hi);
   text-shadow: var(--shadow-text);
   white-space: nowrap;
 }
 .onde-fact-km em {
   font-style: normal;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--stone-3);
-  margin-top: 3px;
+  margin-top: var(--sp-1);
 }
 .onde-fact-km.is-bull em,
 .onde-fact-km.is-good em {
@@ -428,35 +430,35 @@
 }
 .onde-fact-pts {
   font-family: var(--f-hud);
-  font-size: 18px;
+  font-size: var(--fs-lg);
   color: var(--gold);
   white-space: nowrap;
 }
 .onde-fact-pts small {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--stone-3);
 }
 .onde-fact-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 10px;
+  gap: var(--sp-2) var(--sp-3);
   margin-top: 2px;
 }
 .onde-fact-title {
   margin: 0;
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 16px;
+  font-size: var(--fs-md);
   line-height: 1.15;
   text-transform: uppercase;
   color: var(--white);
 }
 .onde-seal {
   margin: 0;
-  padding: 3px 8px;
+  padding: var(--sp-1) var(--sp-2);
   font-family: var(--f-hud);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.2;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -481,14 +483,14 @@
 }
 .onde-fact-body {
   margin: 2px 0 0;
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 1.25;
   color: var(--stone-hi);
   text-wrap: pretty;
 }
 .onde-fact-src {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   line-height: 1.4;
   color: var(--stone-3);
   white-space: nowrap;
@@ -508,7 +510,7 @@
 }
 .onde-next {
   min-height: 54px;
-  font-size: 16px;
+  font-size: var(--fs-md);
 }
 
 /* ---------- lista de UFs ---------- */
@@ -518,7 +520,7 @@
   z-index: 4;
   display: flex;
   flex-direction: column;
-  padding: 10px 10px 8px;
+  padding: var(--sp-3) var(--sp-3) var(--sp-2);
   max-width: 560px;
   margin: 0 auto;
 }
@@ -531,7 +533,7 @@
   margin: 0;
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -541,8 +543,8 @@
   padding: 0;
 }
 .onde-ufs-note {
-  margin: 0 0 6px;
-  font-size: 13px;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-sm);
   color: var(--stone-3);
 }
 .onde-ufs-body {
@@ -550,13 +552,13 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 2px 2px 8px;
+  padding: 2px 2px var(--sp-2);
 }
 .onde-ufs-body h4 {
-  margin: 10px 0 6px;
+  margin: var(--sp-3) 0 var(--sp-2);
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--stone-2);
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -564,14 +566,14 @@
 .onde-ufs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 6px;
+  gap: var(--sp-2);
 }
 .onde-uf {
   appearance: none;
   border: 0;
   cursor: pointer;
   min-height: 48px;
-  padding: 4px 6px;
+  padding: var(--sp-1) var(--sp-2);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -589,10 +591,10 @@
 .onde-uf b {
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 14px;
+  font-size: var(--fs-sm);
 }
 .onde-uf span {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 1.1;
   color: var(--stone-3);
 }
@@ -613,8 +615,8 @@
 }
 
 .onde-empty {
-  margin: 40px 16px;
-  padding: 16px;
+  margin: var(--sp-10) var(--sp-4);
+  padding: var(--sp-4);
   text-align: center;
 }
 
@@ -625,27 +627,31 @@
 }
 .onde-hud--end {
   grid-template-columns: auto;
+  justify-content: end;
+}
+.onde-close {
+  grid-column: -2;
 }
 .onde-end {
   width: 100%;
   max-width: 1040px;
   margin: 0 auto;
-  padding: 0 16px calc(24px + var(--safe-b));
+  padding: 0 var(--sp-4) calc(var(--sp-6) + var(--safe-b));
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-4);
 }
 .onde-end-head {
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--sp-1);
 }
 .onde-end-kicker {
   margin: 0;
   font-family: var(--f-hud);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--red-hot);
@@ -654,7 +660,7 @@
   margin: 0;
   font-family: var(--f-hud);
   font-weight: 400;
-  font-size: 28px;
+  font-size: var(--fs-2xl);
   text-transform: uppercase;
   color: var(--white);
   text-shadow: var(--shadow-text);
@@ -669,27 +675,27 @@
 }
 .onde-end-total b {
   font-weight: 400;
-  font-size: 48px;
+  font-size: var(--fs-5xl);
   color: var(--gold);
   text-shadow:
     0 3px 0 var(--blood-0),
     0 -2px 0 var(--void);
 }
 .onde-end-total span {
-  font-size: 18px;
+  font-size: var(--fs-lg);
   color: var(--stone-hi);
-  margin-left: 4px;
+  margin-left: var(--sp-1);
 }
 .onde-end-rival {
-  margin: 6px 0 0;
-  padding: 6px 12px;
-  font-size: 14px;
+  margin: var(--sp-2) 0 0;
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
 }
 .onde-end-main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: var(--sp-4);
 }
 .onde-end-map {
   display: flex;
@@ -700,7 +706,7 @@
   max-width: 460px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-4);
 }
 .onde-end-list {
   list-style: none;
@@ -711,9 +717,9 @@
   display: grid;
   grid-template-columns: 12px 1fr auto 48px;
   align-items: center;
-  gap: 10px;
+  gap: var(--sp-3);
   min-height: 46px;
-  padding: 4px 2px;
+  padding: var(--sp-1) 2px;
   box-shadow: inset 0 -2px 0 0 var(--stone-0);
 }
 .onde-end-place {
@@ -723,14 +729,14 @@
 }
 .onde-end-place b {
   font-weight: 400;
-  font-size: 14px;
+  font-size: var(--fs-sm);
   color: var(--white);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .onde-end-place small {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   color: var(--stone-3);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -738,21 +744,21 @@
 }
 .onde-end-km {
   font-family: var(--f-hud);
-  font-size: 13px;
+  font-size: var(--fs-xs);
   color: var(--gold-hi);
   white-space: nowrap;
 }
 .onde-end-pts {
   font-family: var(--f-hud);
-  font-size: 13px;
+  font-size: var(--fs-xs);
   color: var(--stone-hi);
   text-align: right;
 }
 .onde-grid {
   margin: 0;
-  padding: 10px 12px;
+  padding: var(--sp-3) var(--sp-3);
   font-family: system-ui, sans-serif;
-  font-size: 15px;
+  font-size: var(--fs-md);
   line-height: 1.45;
   color: var(--stone-hi);
 }
@@ -765,12 +771,12 @@
 .onde-end-cta {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-4);
 }
 .onde-end-row {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 12px;
+  gap: var(--sp-3);
 }
 
 /* ---------- desktop / paisagem larga: mapa à esquerda, pista e carta à direita ---------- */
@@ -783,8 +789,8 @@
     "stage dock";
   justify-content: center;
   align-items: start;
-  column-gap: 32px;
-  padding: 8px 24px 20px;
+  column-gap: var(--sp-8);
+  padding: var(--sp-2) var(--sp-6) var(--sp-5);
 }
 .onde-wrap.is-wide .onde-stage {
   grid-area: stage;
@@ -800,7 +806,7 @@
   width: auto;
   height: 100%;
   justify-content: flex-start;
-  padding: 18px 0 0;
+  padding: var(--sp-4) 0 0;
 }
 .onde-wrap.is-wide .onde-hint {
   text-align: left;
@@ -809,36 +815,36 @@
   margin-top: 0;
 }
 .onde-wrap.is-wide .onde-q {
-  font-size: 21px;
+  font-size: var(--fs-xl);
 }
 .onde-wrap.is-wide .onde-clue {
-  padding: 14px 18px 16px;
-  gap: 12px;
+  padding: var(--sp-4) var(--sp-4) var(--sp-4);
+  gap: var(--sp-3);
 }
 .onde-wrap.is-wide .onde-fact {
-  padding: 14px 18px 16px;
-  gap: 9px;
+  padding: var(--sp-4) var(--sp-4) var(--sp-4);
+  gap: var(--sp-2);
 }
 .onde-wrap.is-wide .onde-fact-place {
-  font-size: 16px;
+  font-size: var(--fs-md);
 }
 .onde-wrap.is-wide .onde-fact-km b {
-  font-size: 24px;
+  font-size: var(--fs-2xl);
 }
 .onde-wrap.is-wide .onde-fact-title {
-  font-size: 19px;
+  font-size: var(--fs-xl);
 }
 .onde-wrap.is-wide .onde-fact-body {
-  font-size: 18px;
+  font-size: var(--fs-lg);
 }
 .onde-wrap.is-wide .onde-fact-src {
-  font-size: 14px;
+  font-size: var(--fs-sm);
 }
 .onde-wrap.is-wide .onde-hint {
-  font-size: 15px;
+  font-size: var(--fs-md);
 }
 .onde-wrap.is-wide .onde-trail li {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   min-height: 32px;
 }
 .onde-wrap.is-wide .onde-ufs {
@@ -849,7 +855,7 @@
     flex-direction: row;
     align-items: flex-start;
     justify-content: center;
-    gap: 32px;
+    gap: var(--sp-8);
   }
   .onde-end-head h1 {
     font-size: 34px;
