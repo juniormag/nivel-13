@@ -240,10 +240,10 @@
     gap: var(--sp-1);
   }
   /* com o botão Instalar, os corações decorativos saem para caber ao lado do jogador */
-  .t-topright:has(.inst-home) .hearts {
+  .t-topright:has(.inst-homebtn) .hearts {
     display: none;
   }
-  .title:has(.inst-home) {
+  .title:has(.inst-homebtn) {
     --xp-w: 120px;
   }
   .title .heart {
@@ -1176,7 +1176,7 @@
 
 /* celular estreito com o botão Instalar: a barra de XP encurta para não encostar nele */
 @media (max-width: 379px) and (orientation: portrait) {
-  .title:has(.inst-home) {
+  .title:has(.inst-homebtn) {
     --xp-w: 100px;
   }
 }

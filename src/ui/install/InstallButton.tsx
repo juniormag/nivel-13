@@ -13,15 +13,15 @@ export function InstallButton() {
   if (standalone || installed || (path === 'desktop' && !deferred)) return null
   return (
     <Tap
-      className="inst-home"
+      className="inst-homebtn"
       aria-label="Instalar o Nível 13 como app"
       onClick={() => void requestInstall()}
     >
-      <span className="inst-home-icon" aria-hidden="true">
+      <span className="inst-homebtn-icon" aria-hidden="true">
         <img src="/favicon-32.png" alt="" width={16} height={16} draggable={false} />
         <i>+</i>
       </span>
-      <span className="inst-home-text">Instalar</span>
+      <span className="inst-homebtn-text">Instalar</span>
     </Tap>
   )
 }

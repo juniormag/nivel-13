@@ -8,9 +8,14 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
+}
+.inst-dim {
+  position: absolute;
+  inset: 0;
   background: color-mix(in srgb, var(--void) 78%, transparent);
 }
 .inst-sheet {
+  position: relative;
   width: 100%;
   max-width: 520px;
   max-height: calc(100dvh - 10px - var(--safe-t));
