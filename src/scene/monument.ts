@@ -90,7 +90,7 @@ void main(){
   vec4 tx = texelFetch(uTex, ivec2(mod(gl_FragCoord.xy + uOff, 256.0)), 0);
   float crack = tx.r;
   // desgaste: com o monumento gasto aparecem todas as rachaduras; reformado, só as maiores
-  if (crack > 0.4 && tx.a > 0.5 + 0.5 * uWear) crack = 0.0;
+  if (crack > 0.4 && tx.a > 0.78 + 0.22 * uWear) crack = 0.0;
   float speck = tx.g;
   float tone = tx.b;
   float lam = dot(nW, uKey);
@@ -264,6 +264,7 @@ uniform int uCrimson;
 uniform int uCrimsonDeep;
 uniform int uRedHot;
 uniform int uOutline;
+uniform int uBlood1;
 uniform float uEps;
 uniform ivec2 uSize;
 vec4 C(ivec2 p){ return texelFetch(tC, clamp(p, ivec2(0), uSize - 1), 0); }
@@ -284,7 +285,9 @@ void main(){
       || isRing(C(p + ivec2(1,1))) || isRing(C(p - ivec2(1,1))) || isRing(C(p + ivec2(1,-1))) || isRing(C(p - ivec2(1,-1)));
     float b = bayer4(gl_FragCoord.xy);
     if (n1 && b < 0.5) { gl_FragColor = vec4(uPal[uCrimson], 1.0); return; }
-    if ((n1 || n2) && b < 0.25) { gl_FragColor = vec4(uPal[uCrimsonDeep], 1.0); return; }
+    if (n2 && b < 0.5) { gl_FragColor = vec4(uPal[uCrimsonDeep], 1.0); return; }
+    bool n3 = isRing(C(p + ivec2(3,0))) || isRing(C(p - ivec2(3,0))) || isRing(C(p + ivec2(0,3))) || isRing(C(p - ivec2(0,3)));
+    if (n3 && b < 0.22) { gl_FragColor = vec4(uPal[uBlood1], 1.0); return; }
     // contorno de 1 px por fora da silhueta (escuro violeta-vermelho, some contra o céu preto)
     if (isSolid(C(p + ivec2(1,0))) || isSolid(C(p - ivec2(1,0))) || isSolid(C(p + ivec2(0,1))) || isSolid(C(p - ivec2(0,1)))) {
       gl_FragColor = vec4(uPal[uOutline], 1.0);
@@ -626,6 +629,24 @@ export class Monument3D {
         const z = -D / 2 + r() ** 0.6 * D
         add(pi, x, p.y1 + 0.05, x, p.y1 + 0.02, z, 0.24 + r() * 0.22)
       }
+      // touceiras derramando pela beira da frente (como na referência)
+      for (let x = p.x0 + 0.2; x < p.x1 - 0.1; x += 0.35 + r() * 0.5) {
+        if (r() > 0.55) continue
+        const n = 6 + Math.floor(r() * 10)
+        for (let q = 0; q < n; q++) {
+          const a2 = r() * Math.PI * 2
+          const d2 = Math.sqrt(r()) * 0.32
+          add(
+            pi,
+            x,
+            p.y1 + 0.05,
+            x + Math.cos(a2) * d2,
+            p.y1 + Math.sin(a2) * d2 * 0.7 - 0.05,
+            front - 0.1 + r() * 0.25,
+            0.22 + r() * 0.16,
+          )
+        }
+      }
       // tufos que escorrem pela frente
       const drapes = r() < 0.75 ? 1 + Math.floor(r() * (w > 2 ? 3 : 2)) : 0
       for (let d = 0; d < drapes; d++) {
@@ -639,7 +660,8 @@ export class Monument3D {
           const s = (0.3 - t * 0.17) * (0.8 + r() * 0.4)
           add(pi, x0, p.y1 + 0.05, x, y, front + r() * 0.08, s)
           for (let q = 0; q < 2; q++)
-            if (r() < 0.7) add(pi, x0, p.y1 + 0.05, x + (r() - 0.5) * 0.4, y - r() * 0.1, front + 0.04, s * 0.8)
+            if (r() < 0.7)
+              add(pi, x0, p.y1 + 0.05, x + (r() - 0.5) * 0.4, y - r() * 0.1, front + 0.04, s * 0.8)
         }
       }
       // trepadeira pela lateral direita
@@ -766,6 +788,7 @@ export class Monument3D {
         uCrimsonDeep: { value: KEYS.indexOf('crimsonDeep') },
         uRedHot: { value: KEYS.indexOf('redHot') },
         uOutline: { value: KEYS.indexOf('blood0') },
+        uBlood1: { value: KEYS.indexOf('blood1') },
         uEps: { value: 0.18 / 79 },
         uSize: { value: [this.w, this.h] },
       },
@@ -843,7 +866,9 @@ export class Monument3D {
     if (topPiece) {
       const d = topPiece.def
       topPiece.mesh.updateMatrixWorld()
-      const v = new THREE.Vector3(1.75 - (d.x0 + d.x1) / 2, d.y1 - d.y0 + 0.05, -0.2).applyMatrix4(topPiece.mesh.matrixWorld)
+      const v = new THREE.Vector3(1.75 - (d.x0 + d.x1) / 2, d.y1 - d.y0 + 0.05, -0.2).applyMatrix4(
+        topPiece.mesh.matrixWorld,
+      )
       flag = this.project(v)
     }
     const crown = this.project(this.local(7.1, 9.55, 0))
@@ -902,12 +927,17 @@ export class Monument3D {
       if (u.uFlick) u.uFlick.value = Math.floor(step / 3) % 2
       if (u.uFlare) u.uFlare.value = this.flare
       const power = 0.78 + 0.22 * Math.max(0, this.progress)
-      if (u.uW) u.uW.value = rb.spec.w * 0.85 * power * (1 + this.flare * 0.5)
+      if (u.uW) u.uW.value = rb.spec.w * 1.35 * power * (1 + this.flare * 0.5)
       if (u.uArc) u.uArc.value = rb.spec.arc * (0.7 + 0.3 * power)
       rb.holder.rotation.y = Math.sin(t * 0.13 + i * 2) * 0.25
       rb.holder.updateMatrixWorld()
       this.ringUniforms.uRingInv.value[i]?.copy(rb.holder.matrixWorld).invert()
-      this.ringUniforms.uRingP.value[i]?.set(rb.spec.R, head, rb.spec.arc * (0.7 + 0.3 * power), power * (1 + this.flare))
+      this.ringUniforms.uRingP.value[i]?.set(
+        rb.spec.R,
+        head,
+        rb.spec.arc * (0.7 + 0.3 * power),
+        power * (1 + this.flare),
+      )
     })
     this.renderer.setRenderTarget(this.rt)
     this.renderer.clear()

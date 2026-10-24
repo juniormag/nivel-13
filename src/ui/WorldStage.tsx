@@ -14,6 +14,9 @@ export interface WorldStageProps {
 /** lado menor ≈ 420 px lógicos: 720×450 (escala 2) no desktop, 390 de largura (escala 3) no celular */
 const TARGET = 420
 
+const STAGE = { position: 'fixed', inset: 0, overflow: 'hidden', zIndex: 0, pointerEvents: 'none' } as const
+const CANVAS = { position: 'absolute', left: 0, top: 0, imageRendering: 'pixelated' } as const
+
 export function WorldStage({ progress, celebrate }: WorldStageProps) {
   const ref = useRef<HTMLCanvasElement>(null)
   const worldRef = useRef<World | null>(null)
@@ -154,8 +157,9 @@ export function WorldStage({ progress, celebrate }: WorldStageProps) {
   }, [celebrate])
 
   return (
-    <div className="world-stage" aria-hidden="true">
-      <canvas ref={ref} />
+    // estilos inline: o palco não depende do CSS do HUD para ficar atrás de tudo em tela cheia
+    <div className="world-stage" aria-hidden="true" style={STAGE}>
+      <canvas ref={ref} style={CANVAS} />
     </div>
   )
 }

@@ -1,3 +1,6 @@
+@import "./base.css";
+@import "./hud.css";
+@import "./pages.css";
 /* Pixelify Sans desenha o 5 parecido com S: algarismos vêm da Silkscreen (legibilidade de números e fontes) */
 @font-face {
   font-family: "n13-digits";
@@ -9,9 +12,6 @@
 /* Nível 13 · tokens, base e classes usadas pelos minijogos.
    Componentes do HUD em hud.css; telas em pages.css.
    Tudo em pixel: bordas em degrau (box-shadow), sem raio, sem blur em elemento pixel. */
-@import "./base.css";
-@import "./hud.css";
-@import "./pages.css";
 
 :root {
   /* paleta mestra (src/lib/palette.ts · docs/research/visual.md §2) */

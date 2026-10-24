@@ -1,9 +1,9 @@
 // Forma do "13" (lajes) e das fitas de energia, compartilhada pelo monumento 3D e pelo fallback 2D.
 
 /** profundidade das lajes */
-export const D = 1.9
-export const YAW = -0.38
-export const PITCH = 0.2
+export const D = 2.3
+export const YAW = -0.47
+export const PITCH = 0.17
 
 export interface PieceDef {
   x0: number

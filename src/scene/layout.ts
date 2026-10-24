@@ -61,8 +61,8 @@ export function layoutFor(W: number, H: number): Layout {
       corc: { x: Math.round(W * 0.9), peak: Math.round(horizon - ppu * 3.2), half: Math.round(W * 0.2) },
     }
   }
-  const ppu = Math.max(10, Math.floor(Math.min((H * 0.62) / 11, (W * 0.42) / 10)))
-  const baseY = Math.round(H * 0.76)
+  const ppu = Math.max(10, Math.floor(Math.min((H * 0.68) / 11, (W * 0.5) / 10)))
+  const baseY = Math.round(H * 0.75)
   const horizon = Math.round(H * 0.58)
   return {
     W,
@@ -73,8 +73,8 @@ export function layoutFor(W: number, H: number): Layout {
     ppu,
     base: { x: Math.round(W / 2), y: baseY },
     hillTop: baseY,
-    moon: { x: Math.round(W * 0.17), y: Math.round(H * 0.24), r: Math.max(12, Math.round(H * 0.085)) },
+    moon: { x: Math.round(W * 0.17), y: Math.round(H * 0.24), r: Math.max(12, Math.round(H * 0.062)) },
     sugar: { x: Math.round(W * 0.17), h: Math.round(H * 0.15) },
-    corc: { x: Math.round(W * 0.88), peak: Math.round(H * 0.4), half: Math.round(W * 0.13) },
+    corc: { x: Math.round(W * 0.87), peak: Math.round(H * 0.37), half: Math.round(W * 0.16) },
   }
 }
