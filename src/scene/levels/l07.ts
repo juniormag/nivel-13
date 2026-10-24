@@ -3,9 +3,9 @@
 // colunas curvas) à esquerda, a Torre de TV ao longe e o Mastro da Bandeira, alto o bastante para aparecer
 // acima do card de introdução. Céu com o clarão vermelho da noite tensa; centro escuro para as minutas.
 import { mulberry32 } from '../../lib/rng'
-import { type Ctx, calm, clouds, moon, type Painter, sky } from '../levels'
+import { type Ctx, calm, moon, type Painter, sky } from '../levels'
 import { DARKER, dith, type K } from '../pal'
-import { bird, box3q, cityLights, fgFrame, fogBand, halo, reflect, river, star4 } from './b-kit'
+import { bird, box3q, city, cumulus, fgFrame, halo, range, reflect, river, star4, stratus } from './b-kit'
 
 /** Catedral de Brasília: colunas curvas que se apertam num anel alto e abrem em pontas (coroa) */
 function catedral(c: Ctx, cx: number, base: number, k: number) {
@@ -13,7 +13,8 @@ function catedral(c: Ctx, cx: number, base: number, k: number) {
   const h = Math.round(k * 17)
   const R = Math.round(k * 9)
   const ring = 0.72
-  const radAt = (t: number) => (t < ring ? R * (1 - (t / ring) ** 1.6 * 0.68) : R * (0.32 + ((t - ring) / (1 - ring)) * 0.5))
+  const radAt = (t: number) =>
+    t < ring ? R * (1 - (t / ring) ** 1.6 * 0.68) : R * (0.32 + ((t - ring) / (1 - ring)) * 0.5)
   // vidro escuro com reflexo azul atrás das colunas
   for (let y = 1; y < h * ring; y++) {
     const rad = radAt(y / h)
@@ -60,7 +61,8 @@ function bandeira(c: Ctx, x: number, top: number, fw: number, fh: number) {
       if (u * u * 2.6 + v * v * 1.6 < 0.42) kk = 'blue0'
       if (kk === 'blue0' && Math.abs(v + u * 0.3) < 0.08) kk = 'stoneHi'
       if (kk === 'blue0' && (xx * 7 + yy * 3) % 11 === 0) kk = 'sparkle'
-      if (shade < -0.4) kk = kk === 'green' ? 'vine1' : kk === 'gold' ? 'gold1' : kk === 'blue0' ? 'night' : 'stone2'
+      if (shade < -0.4)
+        kk = kk === 'green' ? 'vine1' : kk === 'gold' ? 'gold1' : kk === 'blue0' ? 'night' : 'stone2'
       else if (shade > 0.7 && kk === 'green') kk = 'leafHi'
       else if (shade > 0.7 && kk === 'gold') kk = 'goldHi'
       if (yy === 0 && kk === 'green') kk = 'leafHi'
@@ -72,7 +74,17 @@ function bandeira(c: Ctx, x: number, top: number, fw: number, fh: number) {
 }
 
 /** ministério em três quartos: lâmina alta, frente com grade de janelas 1 px, lateral grossa vermelha */
-function ministerio(c: Ctx, x: number, base: number, w: number, h: number, d: number, dir: 1 | -1, seed: number, far: number) {
+function ministerio(
+  c: Ctx,
+  x: number,
+  base: number,
+  w: number,
+  h: number,
+  d: number,
+  dir: 1 | -1,
+  seed: number,
+  far: number,
+) {
   box3q(c, {
     x,
     base,
@@ -91,21 +103,29 @@ function ministerio(c: Ctx, x: number, base: number, w: number, h: number, d: nu
 const paint: Painter = (c) => {
   const { W, H, hz, s } = c
   const portrait = W < H
-  sky(c, 'crimsonDeep', 1)
+  sky(c, 'crimsonDeep', 0.6)
   // clarão da cidade no horizonte: base das nuvens acesa de vermelho/laranja
   moon(c, portrait ? W * 0.24 : W * 0.12, H * (portrait ? 0.12 : 0.15), s * (portrait ? 4.2 : 3.6))
-  clouds(c, hz - H * 0.15, H * 0.07, 'bottom', 0.6, 71, [
-    [0, 0.42],
-    [0.58, 1],
-  ])
-  clouds(c, hz - H * 0.3, H * 0.04, 'bottom', 1.8, 73, [[0.3, 0.75]])
-  fogBand(c, hz - Math.round(H * 0.1), hz, 'blood1', 0.55)
-  // plano 6: cidade ao longe em luzes de 1 px e a Torre de TV
-  for (let x = 0; x < W; x++) {
-    const hh = Math.round(s * (1 + c.nz.fbm(x / 7, 4, 3) * 3))
-    for (let y = hz - hh; y < hz; y++) c.b.set(x, y, y === hz - hh ? 'haze' : 'hazeDark')
-  }
-  cityLights(c, 0, W, hz - s * 3, hz, 0.3, 91)
+  cumulus(
+    c,
+    [
+      { x: 0.1, y: hz / H - 0.15, r: 0.05, n: 6 },
+      { x: 0.66, y: hz / H - 0.2, r: 0.04, n: 5 },
+    ],
+    71,
+  )
+  stratus(
+    c,
+    [
+      { x: 0, y: hz - Math.round(H * 0.02), len: W * 0.6, th: 2, heat: 0.95 },
+      { x: W * 0.45, y: hz - Math.round(H * 0.04), len: W * 0.55, th: 3, heat: 0.65 },
+      { x: W * 0.1, y: hz - Math.round(H * 0.075), len: W * 0.3, th: 4, heat: 0.3 },
+    ],
+    73,
+  )
+  // plano 6: cerrado baixo com névoa de brasa, a cidade ao longe (fileira longe) e a Torre de TV
+  range(c, hz, (x) => hz - s - c.nz.fbm(x / 14, 4, 3) * s * 3, 'hazeDark', 'crimsonDeep', 'blood1')
+  city(c, 0, W, () => hz, s, s * 4, 'far', 91, 0.3)
   const tvx = Math.round(W * 0.5)
   const tvh = Math.round(s * (portrait ? 20 : 16))
   for (let y = 0; y < tvh; y++) {
@@ -116,7 +136,8 @@ const paint: Painter = (c) => {
   c.b.set(tvx, hz - tvh - 1, 'redHot')
   halo(c, tvx, hz - tvh - 1, 3, 'crimson', 0.5)
   // planos 5 e 4: Esplanada dos Ministérios, duas filas convergindo para o centro
-  const k = s * (portrait ? 0.62 : 0.85)
+  // no recorte do card de introdução (168×104, s = 1) o marco cresce para continuar legível
+  const k = Math.max(s * (portrait ? 0.62 : 0.85), H < 160 ? 1.25 : 0)
   const n = portrait ? 5 : 7
   for (let i = n - 1; i >= 0; i--) {
     const f = i / (n - 1) // 0 = perto, 1 = longe
@@ -153,12 +174,14 @@ const paint: Painter = (c) => {
   c.b.set(mx, mTop - 1, 'goldHi')
   star4(c, mx, mTop - 2, 2)
   // base da haste: as 24 hastes ao redor viram um feixe de lâminas
-  for (let i = 0; i < 4; i++) c.b.rect(mx - 3 - i, hz + Math.round(k * 2) + i * 2, 8 + i * 2, 1, i ? 'stone1' : 'stone2')
+  for (let i = 0; i < 4; i++)
+    c.b.rect(mx - 3 - i, hz + Math.round(k * 2) + i * 2, 8 + i * 2, 1, i ? 'stone1' : 'stone2')
   const fw = Math.round(portrait ? W * 0.15 : W * 0.1)
   bandeira(c, mx + 2, mTop + 1, fw, Math.round(fw * 0.66))
   // gaivotas cruzando o clarão
   const r = mulberry32(77)
-  for (let i = 0; i < 4; i++) bird(c, W * (0.3 + r() * 0.4), H * (0.18 + r() * 0.12), i % 2 ? 'stone1' : 'stone2', i % 2 === 0)
+  for (let i = 0; i < 4; i++)
+    bird(c, W * (0.3 + r() * 0.4), H * (0.18 + r() * 0.12), i % 2 ? 'stone1' : 'stone2', i % 2 === 0)
   // chão de cá
   for (let y = ry1; y < H; y++)
     for (let x = 0; x < W; x++) c.b.set(x, y, c.nz.n2(x / 6, y / 2) > 0.8 ? 'night' : 'void')

@@ -6,7 +6,7 @@ import { LEVELS } from '../content/levels'
 import { STATEMENTS } from '../content/statements'
 import { mulberry32 } from '../lib/rng'
 import { MAX_TOTAL } from '../lib/score'
-import { skillIcon, sprite } from '../lib/sprites'
+import { sprite } from '../lib/sprites'
 import { getSave, shareLink, stats, XP_MAX, xpTotal } from '../state/save'
 import { heroStill, sceneLayout, still2d } from './hero'
 import {
@@ -368,40 +368,34 @@ async function scene(
 }
 
 /**
- * Faixa de baixo do story (fora das zonas de leitura): a barra de habilidades do HUD da
- * referência (Q W E R) e brasas subindo. Decoração; nada essencial mora aqui.
+ * Faixa de baixo do story (fora das zonas de leitura): brasas subindo de um chão de pedra escura.
+ * Decoração; nada essencial mora aqui.
  */
 function foreground(c: Card) {
   if (!c.story) return
   const y0 = STORY_FOOTER_MAX + 3
-  for (let i = 0; i < 16; i++) {
+  // duas cristas de pedra em degraus: a de trás com rim vermelho, a da frente quase preta (primeiro plano)
+  const band = c.H - y0
+  for (const [k, fill, rim, step] of [
+    [0.55, 'blood0', 'crimsonDeep', 6],
+    [0.3, 'void', 'stone0', 4],
+  ] as const) {
+    const top = c.H - Math.round(band * k)
+    let h = 0
+    for (let x = 0; x < c.W; x += step) {
+      h = Math.max(0, Math.min(10, h + Math.round((c.rnd() - 0.5) * 6)))
+      // mais alto nas bordas: moldura escura
+      const edge = Math.max(0, 14 - Math.min(x, c.W - x) / 4)
+      const yy = Math.round(top - h - edge)
+      rect(c.g, x, yy, step, c.H - yy, fill)
+      rect(c.g, x, yy, step, 1, rim)
+    }
+  }
+  for (let i = 0; i < 28; i++) {
     const x = c.rnd() * c.W
-    const y = y0 + c.rnd() * (c.H - y0)
+    const y = y0 + c.rnd() * band * 0.6
     const ramp: Ink[] = ['goldHi', 'emberBright', 'ember', 'red', 'crimson']
     rect(c.g, x, y, 1, 1, ramp[Math.floor(c.rnd() * ramp.length)] ?? 'red')
-  }
-  const skills = [
-    ['checar', 'CHECAR', 'Q'],
-    ['lembrar', 'LEMBRAR', 'W'],
-    ['foco', 'FOCO', 'E'],
-    ['proteger', 'PROTEGER', 'R'],
-  ] as const
-  const size = 30
-  const gap = 8
-  const total = skills.length * size + (skills.length - 1) * gap
-  let x = Math.round(c.cx - total / 2)
-  const y = y0 + 4
-  for (const [k, label, key] of skills) {
-    rect(c.g, x - 1, y - 1, size + 2, size + 2, 'void')
-    c.g.drawImage(skillIcon(k), 1, 1, size, size, x, y, size, size)
-    fineFrame(c, x, y, size, size, 'stone3')
-    fine(c, label, x + size / 2, y + size + 3, 'stoneHi', 'center')
-    const kx = x + size / 2 - 3
-    const ky = y + size + 9
-    rect(c.g, kx, ky, 6, 7, 'night')
-    fineFrame(c, kx, ky, 6, 7, 'stone2')
-    fine(c, key, kx + 3, ky + 1, 'stone3', 'center')
-    x += size + gap
   }
 }
 

@@ -7,6 +7,8 @@
 import { Container, Graphics, Sprite } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
 import { shuffle } from '../lib/rng'
+import { domHand, Flyers, finale } from './fx-b'
+import { rowsTex } from './kit-a'
 import {
   bake,
   bakeRotated,
@@ -70,9 +72,24 @@ function gavelTex() {
   })
 }
 
+/** lateral da bancada em três quartos (px) e quanto ela sobe para o fundo */
+const BENCH_D = 5
+const BENCH_RISE = 2
+
 function benchTex(w: number) {
   const h = 26
-  return bake(`bench${w}`, w, h, (p) => {
+  return bake(`bench3q${w}`, w + BENCH_D, h + BENCH_RISE, (p) => {
+    // lateral grossa em madeira-sangue com rim red-hot na aresta (lição da ref v2)
+    for (let i = 0; i < BENCH_D; i++) {
+      const lift = Math.round(((i + 1) / BENCH_D) * BENCH_RISE)
+      const x = w + i
+      p.rect(x, BENCH_RISE - lift, 1, 4, i === BENCH_D - 1 ? P.redHot : P.emberDark)
+      p.rect(x, BENCH_RISE - lift + 4, 1, h - 4, i === BENCH_D - 1 ? P.redHot : i % 2 ? P.blood0 : P.blood1)
+      if (i < BENCH_D - 1) p.dot(x, BENCH_RISE - lift + 9 + i * 3, P.crimsonDeep)
+    }
+    // tampo visto de cima: faixa fina recuando
+    for (let j = 0; j < BENCH_RISE; j++) p.rect(BENCH_RISE - j, j, w, 1, j ? P.gold1 : P.gold)
+    p.g.translate(0, BENCH_RISE)
     // tampo
     p.rect(0, 0, w, 4, P.emberDark)
     p.rect(0, 0, w, 1, P.gold1)
@@ -99,38 +116,8 @@ function benchTex(w: number) {
     p.rect(cx + 6, 11, 1, 1, P.gold)
     p.rect(cx - 2, 18, 5, 1, P.gold1)
     p.dot(cx, 9, P.goldHi)
+    p.g.setTransform(1, 0, 0, 1, 0, 0)
     p.outline(P.void, P.stone0)
-    p.rim(P.redHot, 'r')
-  })
-}
-
-/** Palácio do STF (Niemeyer): laje fina sobre pilares curvos, em silhueta de névoa */
-function stfTex(w: number) {
-  const h = 34
-  return bake(`stf${w}`, w, h, (p) => {
-    p.rect(0, 4, w, 3, P.hazeDark)
-    p.rect(0, 4, w, 1, P.stone1)
-    p.rect(2, 7, w - 4, h - 7, P.night)
-    // pilares em "V" curvos
-    const step = 11
-    for (let x = 4; x < w - 4; x += step) {
-      for (let y = 7; y < h; y++) {
-        const k = (y - 7) / (h - 7)
-        const off = Math.round(Math.sin(k * Math.PI) * 3)
-        p.dot(x + off, y, P.haze)
-        p.dot(x + 1 + off, y, P.hazeDark)
-      }
-    }
-    // vidros com algumas luzes
-    for (let i = 0; i < w / 6; i++) {
-      const x = 4 + ((i * 37) % (w - 8))
-      const y = 12 + ((i * 13) % (h - 16))
-      p.dot(x, y, i % 3 ? P.gold0 : P.gold1)
-    }
-    // mastro com bandeira escura
-    p.rect(w - 10, 0, 1, 5, P.stone1)
-    p.outline(P.void)
-    p.rim(P.crimson, 't')
   })
 }
 
@@ -177,6 +164,11 @@ export default function linha(): MicroGame {
   let scY = 0
   let scL = 40
   let scOn = false
+  let panX = 0
+  let panY = 0
+  let flyers: Flyers
+  /** remove a mão de demonstração (no primeiro toque ou depois de 4 s) */
+  let dropHand: () => void = () => {}
 
   const frame = (a: number) => frames.get(a)
 
@@ -207,6 +199,7 @@ export default function linha(): MicroGame {
 
   function pick(i: number, btn: HTMLButtonElement) {
     if (done || btn.disabled) return
+    dropHand()
     if (i === next) {
       const ev = EVENTS[i]
       const slot = slots[i]
@@ -226,6 +219,17 @@ export default function linha(): MicroGame {
         ],
         { duration: 200, easing: 'steps(4, end)', fill: 'forwards' },
       ).onfinish = () => btn.classList.add('used')
+      // o fato vira uma barra de ouro que voa da carta até o prato da balança
+      const from = domRect(c, btn)
+      flyers.send(from.cx, from.cy, {
+        to: scOn ? { x: panX, y: panY } : { x: blockX, y: blockY - 6 },
+        dur: 0.42,
+        arc: 14,
+        done: () => {
+          c.fx.ring(scOn ? panX : blockX, scOn ? panY : blockY, P.goldHi, 14)
+          sparkles.spawn(scOn ? panX + 6 : blockX, (scOn ? panY : blockY) - 6, 0)
+        },
+      })
       next++
       const pts = Math.max(60, 160 - mistakes * 10)
       streak++
@@ -248,6 +252,7 @@ export default function linha(): MicroGame {
           for (let k = 0; k < 6; k++)
             sparkles.spawn(blockX + (c.rnd() - 0.5) * 80, blockY - 10 - c.rnd() * 30, 8)
           c.fx.float('ORDEM CERTA', Math.round(c.W / 2), blockY - 34, P.goldHi)
+          finale(c, blockX, blockY)
         })
         timers.after(1.7, () => c.finish())
       }
@@ -260,6 +265,9 @@ export default function linha(): MicroGame {
       timers.after(0.45, () => btn.classList.remove('bad'))
       tiltV += 1.6
       shakeEl(btn)
+      // o erro ensina: a carta certa pisca (a pontuação já descontou o erro, nada muda)
+      const right = cards.find((x) => !x.disabled && x.textContent === EVENTS[next]?.text)
+      if (right) hintPulse(right, 2)
       wobbleT = c.time
       lampBad = c.time
       c.hit(blockX, blockY - 10)
@@ -281,14 +289,9 @@ export default function linha(): MicroGame {
     const benchW = Math.min(c.W < 200 ? 96 : 124, c.W - 24)
     const cx = Math.round(c.W / 2)
     const benchTop = Math.round(Math.max(g.y + g.h + 20, a1 - 26))
-    const stfW = Math.min(c.W - 8, 176)
-    const stf = new Sprite(stfTex(stfW))
-    stf.x = Math.round(cx - stfW / 2)
-    stf.y = benchTop - 22
-    stf.alpha = 0.9
     const bench = new Sprite(benchTex(benchW))
     bench.x = Math.round(cx - benchW / 2)
-    bench.y = benchTop
+    bench.y = benchTop - BENCH_RISE
     // bloco de som
     const block = new Sprite(
       bake('soundblock', 16, 6, (p) => {
@@ -321,7 +324,8 @@ export default function linha(): MicroGame {
     scX = cx
     scY = Math.round(g.y + g.h + Math.max(12, (free - 30) / 2))
     scaleGlow.blendMode = 'add'
-    root.addChild(stf, shadow, scaleG, scaleGlow, bench, block, glow, lamps, gavel, smear)
+    // o Palácio do STF agora está no cenário da fase (src/scene/levels/l08.ts), em três quartos
+    root.addChild(shadow, scaleG, scaleGlow, bench, block, glow, lamps, gavel, smear)
   }
 
   function drawScale(dt: number) {
@@ -340,13 +344,22 @@ export default function linha(): MicroGame {
     const x1 = Math.round(scX + ca * scL)
     const y1 = Math.round(scY + sa * scL)
     const g = scaleG
-    // coluna e base
-    g.rect(scX - 2, scY, 4, 30).fill(P.void)
-    g.rect(scX - 1, scY, 2, 30).fill(P.stone2)
+    // coluna em três quartos: frente de pedra clara (3 tons) e lateral vermelha com rim, capitel dourado
+    g.rect(scX - 3, scY, 7, 30).fill(P.void)
+    g.rect(scX - 2, scY, 1, 30).fill(P.stoneHi)
     g.rect(scX - 1, scY, 1, 30).fill(P.stone3)
-    g.rect(scX - 9, scY + 29, 19, 4).fill(P.void)
-    g.rect(scX - 8, scY + 30, 17, 2).fill(P.stone2)
-    g.rect(scX - 8, scY + 30, 17, 1).fill(P.stoneHi)
+    g.rect(scX, scY, 1, 30).fill(P.stone2)
+    g.rect(scX + 1, scY, 1, 30).fill(P.crimsonDeep)
+    g.rect(scX + 2, scY, 1, 30).fill(P.redHot)
+    g.rect(scX - 3, scY + 2, 6, 2).fill(P.gold1)
+    g.rect(scX - 3, scY + 2, 6, 1).fill(P.goldHi)
+    // base em três quartos: degrau com tampo, frente e lateral
+    g.rect(scX - 10, scY + 28, 22, 6).fill(P.void)
+    g.rect(scX - 9, scY + 29, 18, 1).fill(P.stoneHi)
+    g.rect(scX - 9, scY + 30, 18, 3).fill(P.stone2)
+    g.rect(scX - 9, scY + 32, 18, 1).fill(P.stone1)
+    g.rect(scX + 9, scY + 29, 2, 4).fill(P.blood1)
+    g.rect(scX + 10, scY + 29, 1, 4).fill(P.redHot)
     // travessão rasterizado (sem antialias)
     const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))
     for (let i = 0; i <= n; i++) {
@@ -373,10 +386,14 @@ export default function linha(): MicroGame {
         g.rect(px - 5 + Math.floor(k / 4), py + k, 1, 1).rect(px + 5 - Math.floor(k / 4), py + k, 1, 1)
       g.fill(P.gold1)
       const by = py + 16
-      g.rect(px - 8, by, 17, 4).fill(P.void)
-      g.rect(px - 7, by + 1, 15, 2).fill(P.gold1)
+      // prato em 4 faixas (aro claro, bojo, sombra violeta-ouro) com contorno escuro
+      g.rect(px - 9, by - 1, 19, 6).fill(P.void)
+      g.rect(px - 8, by, 17, 1).fill(P.goldHi)
       g.rect(px - 7, by + 1, 15, 1).fill(P.gold)
-      g.rect(px - 5, by + 3, 11, 1).fill(P.gold0)
+      g.rect(px - 6, by + 2, 13, 1).fill(P.gold1)
+      g.rect(px - 4, by + 3, 9, 1).fill(P.gold0)
+      g.rect(px + 7, by + 1, 1, 1).fill(P.redHot)
+      g.rect(px - 8, by, 1, 1).fill(P.sparkle)
       // carga: barras de ouro (fatos) ou papéis de boato
       for (let k = 0; k < facts; k++) {
         const x = px - 6 + (k % 3) * 5
@@ -392,6 +409,8 @@ export default function linha(): MicroGame {
       }
     }
     pan(x0, y0, 0, next)
+    panX = x0
+    panY = y0 + 14
     pan(x1, y1, EVENTS.length - next, 0)
     energyDot(scaleGlow, scX, scY, P.white, P.goldHi, P.gold1)
     if (done) {
@@ -477,12 +496,29 @@ export default function linha(): MicroGame {
       embers = new Embers(c, area, { ambient: 18 }).listen()
       sparkles = new Sparkles(c.reduced)
       pops = new ScorePops(c)
-      root.addChild(debris.root, embers.root, sparkles.root, pops.root)
+      flyers = new Flyers(c, rowsTex('linha-barra', ['.YYYYYs', 'yyyyyYY', 'yyyyyy6', '6666665']), 6)
+      flyers.trail = (x, y) => {
+        if (c.rnd() < 0.4) embers.spark(x, y, 12)
+      }
+      root.addChild(debris.root, embers.root, sparkles.root, pops.root, flyers.root)
       markNext()
       cards[0]?.focus({ preventScroll: true })
+      // demonstração: a mão aponta a carta mais antiga (o primeiro passo) até o primeiro toque
+      const first = cards.find((x) => x.textContent === EVENTS[0]?.text)
+      if (first) {
+        const off = domHand(c, first)
+        let alive = true
+        dropHand = () => {
+          if (!alive) return
+          alive = false
+          off()
+        }
+        timers.after(4, () => dropHand())
+      }
     },
     update(dt) {
       timers.update(dt)
+      flyers.update(dt)
       embers.update(dt, c.time)
       sparkles.update(dt)
       pops.update(dt)
@@ -542,6 +578,7 @@ export default function linha(): MicroGame {
       return true
     },
     dispose() {
+      dropHand()
       timers.clear()
       embers?.destroy()
       rail?.remove()

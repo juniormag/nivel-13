@@ -53,14 +53,30 @@ const CLOUD_RAMP: K[] = [
 ]
 
 /**
+ * Rampa de cúmulo noturno: aro vermelho no topo (lua e brasa), corpo grená escurecendo para baixo.
+ * Use com `cloudLayer(..., 'top', 0, seed, 1.4, { ramp: CLOUD_NIGHT, grain: 0.08, bottomRim: 'ember' })`.
+ */
+export const CLOUD_NIGHT: K[] = [
+  'redHot',
+  'red',
+  'crimson',
+  'crimsonDeep',
+  'crimsonDeep',
+  'blood1',
+  'blood1',
+  'blood0',
+  'blood0',
+]
+
+/**
  * Rampa de nuvem acesa por baixo pela cidade: aro laranja de 1 px, faixa vermelha logo acima,
- * corpo grená e topo quase da cor do céu. Use com `cloudLayer(..., 'bottom', 0, ..., CLOUD_UNDERLIT, 'crimson')`.
+ * corpo grená e topo quase da cor do céu. Use com `cloudLayer(..., 'bottom', 0, seed, 1.5, { ramp: CLOUD_UNDERLIT, topRim: 'crimson', grain: 0.08 })`.
  */
 export const CLOUD_UNDERLIT: K[] = [
   'emberBright',
   'ember',
-  'red',
   'crimson',
+  'crimsonDeep',
   'crimsonDeep',
   'blood1',
   'blood1',
@@ -93,10 +109,18 @@ export function bank(rnd: () => number, x0: number, x1: number, yb: number, hb: 
   return out
 }
 
-/**
- * Nuvem cúmulo: cada sopro tem sua borda iluminada sobre o corpo do sopro de trás.
- * `ramp` troca a rampa (padrão: vermelha); `topRim` acende 1 px no topo de cada sopro quando a luz vem de baixo.
- */
+export interface CloudOpts {
+  /** rampa do claro ao escuro (padrão: vermelha; título: CLOUD_UNDERLIT) */
+  ramp?: K[]
+  /** 1 px no topo de cada sopro quando a luz vem de baixo */
+  topRim?: K | null
+  /** ruído dentro do sopro (padrão 0,2; 0,08 dá massas mais limpas, como na referência) */
+  grain?: number
+  /** com luz de cima: 1 px quente na base chapada dos sopros de baixo (a cidade acendendo a nuvem) */
+  bottomRim?: K | null
+}
+
+/** Nuvem cúmulo: cada sopro tem sua borda iluminada sobre o corpo do sopro de trás. */
 export function cloudLayer(
   w: number,
   h: number,
@@ -105,11 +129,17 @@ export function cloudLayer(
   dim: number,
   seed: number,
   stretch = 1.35,
-  ramp: K[] = CLOUD_RAMP,
-  topRim: K | null = null,
+  o: CloudOpts = {},
 ) {
+  const ramp = o.ramp ?? CLOUD_RAMP
+  const topRim = o.topRim ?? null
+  const grain = o.grain ?? 0.2
+  const bottomRim = o.bottomRim ?? null
   const b = new Buf(w, h)
   const nz = makeNoise(seed)
+  // os sopros se sobrepõem muito: o ruído de borda e o grão são calculados uma vez por pixel
+  const eC = new Float32Array(w * h).fill(-1)
+  const gC = new Float32Array(w * h).fill(-1)
   const order = puffs.slice().sort((a, c) => (lit === 'top' ? a.y - c.y : c.y - a.y))
   for (const p of order) {
     const rx = p.r * stretch
@@ -120,16 +150,26 @@ export function cloudLayer(
       for (let ox = -ex; ox <= ex; ox++) {
         const u = ox / rx
         const v = oy / ry
-        if (lit === 'top' ? v > p.flat : v < -p.flat * 2.2) continue
+        if (lit === 'top' ? v > p.flat : v < -p.flat) continue
         const y = p.y + oy
         if (y < 0 || y >= h) continue
         const xx = (((p.x + ox) % w) + w) % w
-        const e = 0.8 + nz.fbm(xx / 8, y / 6, 3, w / 8) * 0.4
+        const ci = y * w + xx
+        let e = eC[ci] as number
+        if (e < 0) {
+          e = 0.8 + nz.fbm(xx / 8, y / 6, 3, w / 8) * 0.4
+          eC[ci] = e
+        }
         const d = Math.hypot(u, v)
         if (d > e) continue
         if (d > e - 0.12 && !dith(xx, y, 0.5)) continue
         let s = lit === 'top' ? v * 0.5 + 0.5 : 0.5 - v * 0.5
-        s += u * 0.12 + (nz.n2(xx / 3, y / 3, w / 3) - 0.5) * 0.2
+        let gr = gC[ci] as number
+        if (gr < 0) {
+          gr = nz.n2(xx / 3, y / 3, w / 3)
+          gC[ci] = gr
+        }
+        s += u * 0.12 + (gr - 0.5) * grain
         const edge = (e - d) * ry
         const toLight = lit === 'top' ? v < 0.05 : v > -0.05
         let idx = dim + 2 + clamp01(s) * 5.5
@@ -138,8 +178,62 @@ export function cloudLayer(
         const i0 = Math.floor(idx)
         let k = ramp[Math.min(ramp.length - 1, dith(xx, y, idx - i0) ? i0 + 1 : i0)] ?? 'blood0'
         if (topRim && !toLight && edge < 1.1 && v < -0.35 && u > -0.6) k = topRim
+        if (bottomRim && lit === 'top' && v > p.flat - 1.5 / ry && Math.abs(u) < 0.95)
+          k = dith(xx, y, 0.5) ? bottomRim : 'red'
         b.set(xx, y, k)
       }
+  }
+  return b
+}
+
+/**
+ * Cúmulos noturnos legíveis: poucos sopros grandes (raio 4–8% da altura), cada um com aro vermelho
+ * de 1–2 px no alto-esquerda, corpo grená em 4 faixas de valor que escurecem para baixo-direita e
+ * base chapada acesa de laranja pela cidade nos sopros de baixo. Os de baixo cobrem os de cima,
+ * então o aro de cada sopro desenha o contorno do cacho. Repete em x a cada `w`.
+ */
+export function cumulusLayer(w: number, h: number, puffs: Puff[], seed: number) {
+  const b = new Buf(w, h)
+  const nz = makeNoise(seed)
+  const order = puffs.slice().sort((a, c) => a.y - c.y)
+  const lowest = Math.max(...puffs.map((p) => p.y + p.r * p.flat))
+  for (const p of order) {
+    const rx = p.r * 1.25
+    const ry = p.r
+    const ex = Math.ceil(rx * 1.1)
+    const ey = Math.ceil(ry * 1.1)
+    const low = p.y + ry * p.flat > lowest - ry * 0.8
+    for (let oy = -ey; oy <= ey; oy++) {
+      const v = oy / ry
+      if (v > p.flat) continue
+      const y = p.y + oy
+      if (y < 0 || y >= h) continue
+      for (let ox = -ex; ox <= ex; ox++) {
+        const u = ox / rx
+        const xx = (((p.x + ox) % w) + w) % w
+        const e = 0.93 + nz.n2(xx / 5, y / 4, w / 5) * 0.14
+        const d = Math.hypot(u, v)
+        if (d > e) continue
+        const edge = (e - d) * ry
+        const l = -(u * 0.55 + v * 0.83) / Math.max(0.35, d)
+        let t: number
+        if (edge < 1.6 && l > 0.15) t = l > 0.62 ? 0 : 1
+        else t = 2.2 + (1 - l) * 1.6 + d * 0.8
+        if (low && v > p.flat - 1.6 / ry && Math.abs(u) < 0.8 && nz.n2(xx / 4, 5, w / 4) > 0.3) t = -1
+        const i0 = Math.floor(t)
+        // pontilhado só numa faixa estreita entre dois tons (massas limpas)
+        const ti = t < 0 ? -1 : dith(xx, y, clamp01((t - i0 - 0.3) / 0.4)) ? i0 + 1 : i0
+        const k: K =
+          ti < 0
+            ? dith(xx, y, 0.5)
+              ? 'emberBright'
+              : 'ember'
+            : ((['redHot', 'red', 'crimson', 'crimsonDeep', 'blood1', 'blood1', 'blood0'] as K[])[
+                Math.min(6, ti)
+              ] ?? 'blood0')
+        b.set(xx, y, k)
+      }
+    }
   }
   return b
 }
@@ -205,7 +299,7 @@ export function moonBuf(r: number, grow: number, crescent = false) {
   const S = (r + cor) * 2
   const b = new Buf(S, S)
   const c = S / 2
-  const k = r * 0.24
+  const k = r * (crescent ? 0.18 : 0.24)
   for (let y = 0; y < S; y++)
     for (let x = 0; x < S; x++) {
       const dx = x + 0.5 - c
@@ -228,7 +322,7 @@ export function moonBuf(r: number, grow: number, crescent = false) {
           b.set(x, y, col)
         } else if (crescent) {
           // disco escuro: fio grená no limbo, mais vivo perto do crescente
-          b.set(x, y, r - d < 1 ? (w > 0.2 ? 'crimson' : w > -0.5 ? 'crimsonDeep' : 'blood1') : 'void')
+          b.set(x, y, r - d < 1 ? (w > 0.2 ? 'crimson' : w > -0.3 ? 'crimsonDeep' : 'blood1') : 'void')
         } else {
           // disco escuro com limbo AA de 1 tom
           b.set(x, y, r - d < 1 ? 'blood0' : 'void')
@@ -240,8 +334,8 @@ export function moonBuf(r: number, grow: number, crescent = false) {
       if (crescent) {
         if (e < 1) {
           if (w > 0.15) b.set(x, y, 'redHot')
-          else if (w > -0.45) b.set(x, y, 'crimson')
-          else if (dith(x, y, 0.55)) b.set(x, y, 'crimsonDeep')
+          else if (w > -0.3) b.set(x, y, 'crimsonDeep')
+          else if (dith(x, y, 0.4)) b.set(x, y, 'blood1')
           continue
         }
         if (e < 2.2 && w > 0.3) {
@@ -251,8 +345,8 @@ export function moonBuf(r: number, grow: number, crescent = false) {
         const span = r * 1.05 * grow * (0.08 + 0.92 * wt ** 2.2)
         const t = 1 - (e - 1) / span
         if (t <= 0) continue
-        const dens = t ** 1.5
-        if (!dith(x, y, dens * 0.95)) continue
+        const dens = t ** 1.6
+        if (!dith(x, y, dens * 0.8)) continue
         b.set(x, y, dens > 0.66 ? (w > 0.55 ? 'red' : 'crimson') : dens > 0.36 ? 'crimsonDeep' : 'blood1')
         continue
       }
@@ -293,7 +387,14 @@ export interface RidgeStyle {
  * Plano de serra com perspectiva atmosférica: corpo quase chapado, aro de 1 px no topo,
  * encosta da direita 1 tom mais escura e névoa pontilhada no pé. `top(x)` dá a linha do cume.
  */
-export function ridge(b: Buf, x0: number, x1: number, base: number, top: (x: number) => number, st: RidgeStyle) {
+export function ridge(
+  b: Buf,
+  x0: number,
+  x1: number,
+  base: number,
+  top: (x: number) => number,
+  st: RidgeStyle,
+) {
   const fogH = st.fogH ?? 0
   const fogMax = st.fogMax ?? 0.55
   let prev = top(x0 - 1)
@@ -306,7 +407,8 @@ export function ridge(b: Buf, x0: number, x1: number, base: number, top: (x: num
       for (let y = Math.max(0, t0); y <= base; y++) {
         let k: K = st.body
         if (st.shade && falling && prev < t0 && y - t0 < 6 + (x % 3)) k = dith(x, y, 0.6) ? st.shade : k
-        if (st.fog && fogH > 0 && y > base - fogH && dith(x, y, ((y - (base - fogH)) / fogH) * fogMax)) k = st.fog
+        if (st.fog && fogH > 0 && y > base - fogH && dith(x, y, ((y - (base - fogH)) / fogH) * fogMax))
+          k = st.fog
         if (y === t0 && st.rim) k = st.rim
         b.set(x, y, k)
       }
@@ -332,14 +434,25 @@ export interface CityTier {
   wide?: boolean
 }
 
-/** Fileiras de cidade: longe (corpo quase céu, poucas luzes fracas), meio (fachadas quentes, luzes densas), perto (silhueta, janelas maiores). */
-export const CITY: Record<'far' | 'mid' | 'near', CityTier> = {
+/**
+ * Fileiras de cidade: longe (corpo quase céu, luzes fracas), meio (corpo escuro, luzes densas),
+ * acesa (fachada quente iluminada pela rua, para a orla e o pé dos morros) e perto (silhueta, janelas maiores).
+ */
+export const CITY: Record<'far' | 'mid' | 'lit' | 'near', CityTier> = {
   far: { body: 'blood0', edge: 'blood1', win: ['emberDark', 'gold1', 'ember', 'gold'], dens: 0.42, step: 2 },
   mid: {
     body: 'night',
-    edge: 'gold0',
+    edge: 'blood0',
     win: ['ember', 'gold1', 'gold', 'emberBright', 'goldHi'],
     dens: 0.5,
+    step: 2,
+  },
+  lit: {
+    body: 'gold0',
+    edge: 'emberDark',
+    rim: 'blood0',
+    win: ['gold', 'emberBright', 'ember', 'goldHi', 'sparkle'],
+    dens: 0.45,
     step: 2,
   },
   near: {
@@ -367,11 +480,17 @@ export function cityRow(
   hMax: number,
   tier: CityTier,
   anchors?: { x: number; y: number }[],
+  /** chance de pular um lote (bairros em cachos, com o morro aparecendo entre eles) */
+  gap = 0,
 ) {
   let x = Math.floor(x0)
   while (x < x1) {
     const tower = rnd() < 0.12
     const w = tower ? 3 + Math.floor(rnd() * 3) : 3 + Math.floor(rnd() * 6)
+    if (gap > 0 && rnd() < gap) {
+      x += w + Math.floor(rnd() * w * 2)
+      continue
+    }
     const hh = Math.max(2, Math.round((hMin + rnd() ** 1.6 * (hMax - hMin)) * (tower ? 1.7 : 1)))
     const yb = base(x)
     const top = yb - hh
@@ -400,6 +519,9 @@ export function cityRow(
 }
 
 type Glow = { x: number; y: number; r: number } | null
+
+/** copa de primeiro plano: quase preta, com 1 px de verde-escuro só nos topos */
+export const DARK_CANOPY: FoliageOpts = { tones: ['void', 'void', 'night'], hi: 'vine0', spread: 1.7 }
 
 export interface FoliageOpts {
   /** sombra, corpo, luz (3 tons) */
@@ -450,82 +572,83 @@ export function foliage(b: Buf, cx: number, cy: number, rad: number, seed: numbe
         const y = Math.round(c.y + oy)
         if (q > 0.72 && hash2(x, y) > 0.62) continue
         const l = -(ox / rx) * 0.45 - (oy / ry) * 0.8
-        let ti = l > 0.42 ? 3 : l > -0.25 ? 2 : 1
+        let ti = l > 0.55 ? 3 : l > -0.2 ? 2 : 1
         if (oy > 0 && q > 0.5) ti = 1
         ti = Math.max(0, ti - shift)
         let k = tones[ti] ?? 'void'
-        if (hi && shift === 0 && l > 0.7 && q > 0.2 && q < 0.75 && hash2(x * 3, y) > 0.5) k = hi
-        if (glow && q > 0.45) {
+        if (hi && (shift === 0 || o.hi) && l > 0.7 && q > 0.2 && q < 0.75 && hash2(x * 3, y) > 0.5) k = hi
+        if (glow && q > 0.6) {
           const gx = glow.x - x
           const gy = glow.y - y
           const gd = Math.hypot(gx, gy)
           const gl = clamp01(1 - gd / glow.r)
-          if (gl > 0.3 && ox * gx + oy * gy > 0) k = gl > 0.62 ? 'red' : 'crimson'
+          // aro de 1 px só na borda virada para a luz
+          if (gl > 0.42 && (ox * gx + oy * gy) / (gd * Math.hypot(ox, oy) || 1) > 0.5)
+            k = gl > 0.7 ? 'red' : 'crimson'
         }
         b.set(x, y, k)
       }
   }
 }
 
-/** Cristo de braços abertos no pedestal, aceso de frente-esquerda pela cidade (creme, sombra fria, aro quente). */
+/**
+ * Cristo de braços abertos no pedestal, aceso pela brasa da cidade (salmão, sombra ferrugem, aro de
+ * luz fria do lado da lua). Proporção da referência: envergadura ≈ altura, braço grosso no ombro
+ * afinando nas mãos, peito largo, manto reto até o pedestal.
+ */
 function christStatue(h: number) {
   const pad = 3
-  const span = Math.round(h * 0.92) | 1
+  const span = Math.round(h * 1.0) | 1
   const W = span + pad * 2
   const H = h + pad * 2
   const b = new Buf(W, H)
   const cx = Math.floor(W / 2)
   const top = pad
-  const big = h >= 22
-  const headW = big ? 3 : 2
-  const headH = big ? 3 : 2
-  const pedH = Math.max(3, Math.round(h * 0.17))
-  const bodyTop = top + headH
-  const bodyBot = top + h - pedH
-  const armY = top + headH + (big ? 1 : 0)
-  const armT = h >= 28 ? 3 : h >= 16 ? 2 : 1
-  // braços abertos, afinando nas mãos
+  const headW = Math.max(2, Math.round(h * 0.09))
+  const headH = Math.max(2, Math.round(h * 0.1))
+  const pedH = Math.max(2, Math.round(h * 0.1))
+  const armY = top + headH
+  const aT = Math.max(2, Math.round(h * 0.085))
+  const chest = Math.max(3, Math.round(h * 0.12))
+  const robe = Math.max(2, Math.round(h * 0.08))
   const half = span >> 1
+  const bodyBot = top + h - pedH
+  const shade = (x: number, x0: number, x1: number): K => {
+    const u = (x - x0) / Math.max(1, x1 - x0)
+    return u < 0.34 ? 'stoneHi' : u < 0.7 ? 'redGlow' : 'emberDark'
+  }
+  // braços: grossos no ombro, afinando até a mão
   for (let x = cx - half; x <= cx + half; x++) {
     const dx = Math.abs(x - cx)
-    const t = dx < half - 1 ? armT : Math.max(1, armT - 1)
+    const t = dx <= half * 0.7 ? aT : Math.max(2, aT - 1)
     for (let y = armY; y < armY + t; y++) {
-      let k: K = x < cx ? 'stoneHi' : 'stone3'
-      if (y === armY + t - 1 && t > 1) k = x < cx ? 'stone3' : 'stone2'
-      if (y === armY && x < cx) k = 'sparkle'
+      let k: K = 'redGlow'
+      if (y === armY) k = x < cx ? 'stoneHi' : 'redGlow'
+      if (y === armY + t - 1 && t > 1) k = 'emberDark'
       b.set(x, y, k)
     }
-    // luz quente da cidade por baixo dos braços
-    if (dx > 2) b.set(x, armY + t, dx % 3 === 0 ? 'gold1' : 'gold0')
   }
-  // manto: ombros e caimento alargando até o pedestal
-  const sh = big ? 2 : 1
-  for (let y = bodyTop; y < bodyBot; y++) {
-    const t = (y - bodyTop) / Math.max(1, bodyBot - bodyTop)
-    const hw = sh + Math.round(t * (big ? 1.4 : 0.8))
+  // peito e manto
+  for (let y = armY + aT; y < bodyBot; y++) {
+    const t = (y - (armY + aT)) / Math.max(1, bodyBot - armY - aT)
+    const hw = Math.round(chest - (chest - robe) * Math.min(1, t * 2.5) + t * 0.8)
     for (let x = cx - hw; x <= cx + hw; x++) {
-      const u = (x - (cx - hw)) / Math.max(1, hw * 2)
-      let k: K = u < 0.3 ? 'stoneHi' : u < 0.55 ? 'stone3' : u < 0.85 ? 'stone2' : 'stone1'
-      if (x === cx + hw && y > bodyTop + 2) k = 'redGlow'
-      if (big && x === cx && y > armY + armT + 1 && (y & 1) === 0) k = 'stone2'
+      let k = shade(x, cx - hw, cx + hw)
+      // dobras do manto
+      if (t > 0.25 && (x === cx + 1 || (hw > 3 && x === cx - 2)) && (y & 1) === 0) k = 'emberDark'
       b.set(x, y, k)
     }
   }
   // cabeça
   for (let y = 0; y < headH; y++)
-    for (let x = 0; x < headW; x++) b.set(cx - (headW >> 1) + x, top + y, x === 0 ? 'sparkle' : 'stone3')
+    for (let x = 0; x < headW; x++)
+      b.set(cx - (headW >> 1) + x, top + y, x === 0 ? 'stoneHi' : x === headW - 1 ? 'emberDark' : 'redGlow')
   // pedestal
-  const pw = Math.max(2, Math.round(h * 0.12))
+  const pw = robe + 1
   for (let y = bodyBot; y < top + h; y++)
-    for (let x = cx - pw; x <= cx + pw; x++) {
-      let k: K = x < cx - 1 ? 'stone3' : x < cx + 1 ? 'stone2' : 'stone1'
-      if (y === bodyBot) k = 'stoneHi'
-      b.set(x, y, k)
-    }
-  haloAround(b, 'gold0', 'blood0', 0.35)
-  // refletores no pé
-  b.set(cx - pw - 1, top + h - 1, 'goldHi')
-  b.set(cx + pw + 1, top + h - 1, 'gold')
+    for (let x = cx - pw; x <= cx + pw; x++)
+      b.set(x, y, y === bodyBot ? 'stone2' : x < cx ? 'stone1' : 'stone0')
+  haloAround(b, 'blood1', 'blood0', 0.3)
   return { c: b.canvas(), ax: cx, ay: top + h }
 }
 
@@ -612,8 +735,10 @@ export class Backdrop {
     }
 
     // ---------- lua (0.02) ----------
-    this.moonA = moonCanvas(L.moon.r, 1)
-    this.moonB = moonCanvas(L.moon.r, 1.08)
+    // um pouco menor que o círculo do layout: o crescente fino lê melhor que um disco grande
+    const mr = Math.max(10, Math.round(L.moon.r * 0.85))
+    this.moonA = moonCanvas(mr, 1)
+    this.moonB = moonCanvas(mr, 1.08)
 
     // ---------- nuvens: estratos colados no horizonte (0.06) e cúmulos acesos por baixo (0.10) ----------
     {
@@ -636,20 +761,42 @@ export class Backdrop {
       }
       this.cloudsFar = stratusLayer(CW, LH, bands, 11).canvas()
 
+      // poucos sopros grandes por cacho: o contorno de cada um tem que ler
       const near: Puff[] = []
-      if (P) {
-        const yb = Y(L.moon.y + L.moon.r * 2.6)
-        near.push(...bank(r2, -CW * 0.02, W * 0.45, yb + H * 0.02, H * 0.07, 12))
-        near.push(...bank(r2, W * 0.6, W * 1.02, yb + H * 0.05, H * 0.06, 10))
-        near.push(...bank(r2, W * 1.15, W * 1.5, yb + H * 0.01, H * 0.07, 10))
-      } else {
-        near.push(...bank(r2, -W * 0.03, W * 0.34, Y(H * 0.47), H * 0.15, 18))
-        near.push(...bank(r2, W * 0.24, W * 0.44, Y(H * 0.41), H * 0.06, 8))
-        near.push(...bank(r2, W * 0.6, W * 0.8, Y(H * 0.43), H * 0.05, 8))
-        near.push(...bank(r2, W * 0.9, W * 1.04, Y(H * 0.47), H * 0.045, 6))
-        near.push(...bank(r2, W * 1.12, W * 1.5, Y(H * 0.44), H * 0.1, 12))
+      const heap = (x0: number, x1: number, yb: number, hb: number, n: number) => {
+        for (let i = 0; i < n; i++) {
+          const f = (i + 0.2 + r2() * 0.6) / n
+          const env = Math.sin(Math.PI * f) ** 0.8
+          const r = hb * (0.4 + 0.45 * env) * (0.8 + r2() * 0.35)
+          near.push({
+            x: Math.round(x0 + f * (x1 - x0)),
+            y: Math.round(yb - r * 0.55 - env * hb * 0.5 * r2()),
+            r,
+            flat: 0.45,
+          })
+          // um segundo andar de sopros menores por cima do meio do cacho
+          if (!P && env > 0.6 && r2() < 0.6)
+            near.push({
+              x: Math.round(x0 + f * (x1 - x0) + (r2() - 0.5) * r),
+              y: Math.round(yb - r * 1.3 - hb * 0.3),
+              r: r * 0.6,
+              flat: 0.5,
+            })
+        }
       }
-      this.cloudsNear = cloudLayer(CW, LH, near, 'bottom', 0, 23, 1.5, CLOUD_UNDERLIT, 'crimson').canvas()
+      if (P) {
+        const yb = Y(L.moon.y + L.moon.r * 3)
+        heap(-CW * 0.02, W * 0.45, yb + H * 0.02, H * 0.06, 5)
+        heap(W * 0.6, W * 1.02, yb + H * 0.05, H * 0.05, 4)
+        heap(W * 1.15, W * 1.5, yb + H * 0.01, H * 0.06, 4)
+      } else {
+        heap(-W * 0.03, W * 0.34, Y(H * 0.47), H * 0.1, 9)
+        heap(W * 0.24, W * 0.44, Y(H * 0.42), H * 0.05, 4)
+        heap(W * 0.6, W * 0.8, Y(H * 0.44), H * 0.045, 4)
+        heap(W * 0.9, W * 1.05, Y(H * 0.48), H * 0.04, 3)
+        heap(W * 1.12, W * 1.5, Y(H * 0.45), H * 0.09, 6)
+      }
+      this.cloudsNear = cumulusLayer(CW, LH, near, 23).canvas()
     }
 
     // ---------- skyline (0.18): água do horizonte, serra, Pão de Açúcar, morros, Corcovado ----------
@@ -686,20 +833,24 @@ export class Backdrop {
             [0.78, 0.045, 0.12],
           ]
         : [
-            [0.02, 0.075, 0.06],
-            [0.09, 0.05, 0.05],
-            [0.3, 0.045, 0.07],
-            [0.45, 0.035, 0.06],
-            [0.62, 0.05, 0.06],
-            [0.74, 0.075, 0.07],
-            [0.97, 0.05, 0.06],
+            [0.03, 0.11, 0.07],
+            [0.1, 0.07, 0.05],
+            [0.3, 0.06, 0.07],
+            [0.45, 0.045, 0.06],
+            [0.62, 0.06, 0.06],
+            [0.74, 0.09, 0.07],
+            [0.97, 0.07, 0.06],
           ]
       const farTop = (x: number) => {
         const fx = (x - PAD) / W
         let hgt = H * 0.01 + nz.fbm(x / 22, 0.5, 3) * H * (P ? 0.015 : 0.025)
         for (const [px, ph, pw] of peaks) {
           const tri = Math.max(0, 1 - Math.abs(fx - px) / pw)
-          if (tri > 0) hgt = Math.max(hgt, ph * H * tri ** 1.15 + (nz.n2(x / 3, 7) - 0.5) * 3 * tri)
+          if (tri > 0)
+            hgt = Math.max(
+              hgt,
+              ph * H * tri ** 1.15 * (0.8 + nz.fbm(x / 7, 13, 3) * 0.4) + (nz.n2(x / 3, 7) - 0.5) * 3 * tri,
+            )
         }
         return Math.round(farShore - hgt)
       }
@@ -707,9 +858,9 @@ export class Backdrop {
         body: 'hazeDark',
         shade: 'dusk',
         rim: 'crimsonDeep',
-        fog: 'haze',
-        fogH: Math.round(H * 0.03),
-        fogMax: 0.5,
+        fog: 'blood1',
+        fogH: Math.round(H * 0.035),
+        fogMax: 0.55,
       })
 
       // Pão de Açúcar + Urca + Babilônia (pé na água)
@@ -773,9 +924,9 @@ export class Backdrop {
             [0.2, 0.022, 0.08],
           ]
         : [
-            [0.02, 0.065, 0.08],
-            [0.11, 0.035, 0.055],
-            [0.27, 0.03, 0.07],
+            [0.02, 0.09, 0.09],
+            [0.11, 0.05, 0.06],
+            [0.27, 0.045, 0.07],
           ]
       const midTop = (x: number) => {
         const fx = (x - PAD) / W
@@ -787,31 +938,48 @@ export class Backdrop {
         if (hgt <= 0.5) return cityLine + 2
         return Math.round(cityLine + 1 - hgt - (nz.fbm(x / 6, 21, 2) - 0.5) * 4)
       }
-      ridge(b, 0, Math.round(X(W * 0.45)), cityLine + 1, midTop, { body: 'night', shade: 'void', rim: 'blood1' })
+      ridge(b, 0, Math.round(X(W * 0.45)), cityLine + 1, midTop, {
+        body: 'dusk',
+        shade: 'night',
+        rim: 'blood1',
+        fog: 'blood0',
+        fogH: Math.round(H * 0.02),
+        fogMax: 0.45,
+      })
       for (let x = 0; x < X(W * 0.45); x++) {
         const t0 = midTop(x)
-        for (let y = t0 + 2; y < cityLine; y++)
-          if (nz.n2(x / 3.5, y / 3) > 0.6 && dith(x, y, 0.6)) b.set(x, y, 'vine0')
+        for (let y = t0 + 2; y < cityLine; y++) {
+          const n = nz.n2(x / 3.5, y / 3)
+          if (n > 0.66) b.set(x, y, n > 0.76 ? 'night' : dith(x, y, 0.5) ? 'vine0' : 'night')
+          else if (n < 0.24 && dith(x, y, 0.5)) b.set(x, y, 'hazeDark')
+        }
       }
 
       // Corcovado: pedra quente do lado da cidade, mata escura, plataforma acesa no cume
       const cx = X(L.corc.x)
       const peak = Y(L.corc.peak)
       const half = L.corc.half
-      const humps: [number, number, number][] = [
-        [0, 1, half * 0.42],
-        [-half * 0.55, 0.62, half * 0.45],
-        [-half * 1.1, 0.3, half * 0.5],
-        [half * 0.55, 0.7, half * 0.5],
-        [half * 1.25, 0.5, half * 0.7],
+      // pico íngreme (perfil de cone levemente côncavo) sobre ombros arredondados
+      const humps: [number, number, number, number][] = [
+        [0, 1, half * 0.45, 2.4],
+        [-half * 0.62, 0.56, half * 0.5, 2],
+        [-half * 1.2, 0.28, half * 0.5, 2],
+        [half * 0.5, 0.7, half * 0.48, 1.5],
+        [half * 1.2, 0.5, half * 0.7, 2],
       ]
-      const cBase = hz + 2
+      // o pé desce atrás da cidade da direita: morro de média distância, grande
+      const cBase = hz + Math.round(H * (P ? 0.04 : 0.1))
       const cTop = (x: number) => {
         const H0 = cBase - peak
         let hgt = 0
-        for (const [dx, hh, w] of humps) {
+        for (const [dx, hh, w, ex] of humps) {
           const u = (x - cx - dx) / w
-          if (u > -1.6 && u < 1.6) hgt = Math.max(hgt, H0 * hh * Math.max(0, 1 - (u / 1.6) ** 2) ** 0.85)
+          if (u <= -1.6 || u >= 1.6) continue
+          // 1 - |u|^ex: topo arredondado e encosta íngreme (ex baixo = pico, ex 2 = lombada)
+          hgt = Math.max(
+            hgt,
+            H0 * hh * Math.max(0, 1 - (Math.abs(u) / 1.6) ** ex) ** (ex < 1.9 ? 1.6 : ex > 2 ? 1.5 : 0.85),
+          )
         }
         if (hgt <= 0) return cBase
         hgt += (nz.fbm(x / 8, 9, 3) - 0.5) * 5 * Math.min(1, Math.abs(x - cx) / half)
@@ -825,26 +993,35 @@ export class Backdrop {
         const left = x < cx
         for (let y = top; y <= cBase; y++) {
           const dy = y - top
-          const n = nz.fbm(x / 9, y / 9, 3)
+          const n = nz.fbm(x / 13, y / 13, 3)
           const stri = nz.n2(x / 1.7, y / 12)
-          const gully = nz.n2((x + y * 0.55) / 2.5, y / 10) > 0.7
+          const gully = nz.n2((x + y * 0.55) / 3, y / 12) > 0.72
           const litF = clamp01((cx - x) / (half * 0.7) + 0.4)
-          let v = 0.2 + litF * 0.36 + (n - 0.5) * 0.55 + (stri - 0.5) * 0.18 - (dy / mh) * 0.3
+          let v = 0.22 + litF * 0.42 + (n - 0.5) * 0.45 + (stri - 0.5) * 0.16 - (dy / mh) * 0.32
           if (gully) v -= 0.25
+          // pedra fria e escura (mais clara que o céu), faceta acesa quente do lado da cidade
           let k: K =
-            v > 0.6
-              ? dith(x, y, 0.5)
-                ? 'emberDark'
-                : 'blood1'
-              : v > 0.42
-                ? 'blood1'
-                : v > 0.22
+            v > 0.62
+              ? dith(x, y, 0.45)
+                ? 'gold0'
+                : 'stone1'
+              : v > 0.46
+                ? dith(x, y, 0.3)
                   ? 'blood0'
-                  : 'night'
-          if (dy === 0) k = left ? 'crimsonDeep' : 'blood1'
+                  : 'stone0'
+                : v > 0.3
+                  ? 'hazeDark'
+                  : v > 0.14
+                    ? 'dusk'
+                    : 'night'
+          // brasa da cidade subindo do pé
+          if (y > cBase - mh * 0.25 && dith(x, y, ((y - (cBase - mh * 0.25)) / (mh * 0.25)) * 0.35))
+            k = 'blood0'
+          if (dy === 0) k = left ? 'crimsonDeep' : 'hazeDark'
           // mata escura em manchas, com folha acesa rara do lado da cidade
-          if (dy > 1 && nz.n2(x / 5, y / 5) > 0.6 && dith(x, y, 0.65)) k = 'vine0'
-          if (dy > 1 && k === 'vine0' && left && hash2(x, y) > 0.94) k = 'vine1'
+          // mata em manchas grandes: quase só valor (noite), com verde-escuro pontilhado na borda
+          const veg = nz.n2(x / 7, y / 6)
+          if (dy > 1 && veg > 0.68) k = dith(x, y, 0.5) ? 'vine0' : veg > 0.75 ? 'dusk' : k
           b.set(x, y, k)
         }
       }
@@ -855,32 +1032,39 @@ export class Backdrop {
       }
       for (const dx of [-4, -2, 2, 4]) b.set(cx + dx, peak + 1, dx < 0 ? 'goldHi' : 'gold')
       // favela e bairros acesos em cachos na encosta baixa
-      const nCl = P ? 7 : 14
+      // (casinhas em degraus: luz de 1 px com a fachada escura embaixo, a cada 2 px)
+      const nCl = P ? 6 : 12
       for (let c = 0; c < nCl; c++) {
-        const ccx = cx - half * 1.5 + rnd() * half * 2.6
-        const ccy = cBase - 2 - rnd() * mh * 0.32
-        const cr = 3 + rnd() * (P ? 4 : 7)
-        for (let i = 0; i < cr * cr * 0.9; i++) {
-          const x = Math.round(ccx + (rnd() - 0.5) * cr * 2)
-          const y = Math.round(ccy + (rnd() - 0.5) * cr)
-          if (x < 0 || x >= LW || y < cTop(x) + 3 || y > cBase) continue
-          const v = rnd()
-          b.set(x, y, v > 0.93 ? 'goldHi' : v > 0.7 ? 'gold' : v > 0.4 ? 'ember' : v > 0.18 ? 'gold1' : 'emberDark')
-        }
+        const ccx = Math.round(cx - half * 1.4 + rnd() * half * 2.5)
+        const ccy = Math.round(cBase - 3 - rnd() * mh * 0.3)
+        const cr = 4 + rnd() * (P ? 4 : 8)
+        for (let y = Math.round(ccy - cr * 0.5) & ~1; y <= ccy + cr * 0.5; y += 2)
+          for (let x = Math.round(ccx - cr) & ~1; x <= ccx + cr; x += 2) {
+            const q = ((x - ccx) / cr) ** 2 + ((y - ccy) / (cr * 0.5)) ** 2
+            if (q > 1 || x < 0 || x >= LW || y < cTop(x) + 3 || y > cBase) continue
+            if (hash2(x, y) > 0.62 - (1 - q) * 0.2) continue
+            const v = hash2(y, x)
+            b.set(
+              x,
+              y,
+              v > 0.94 ? 'goldHi' : v > 0.72 ? 'gold' : v > 0.42 ? 'ember' : v > 0.18 ? 'gold1' : 'emberDark',
+            )
+            b.set(x, y + 1, 'gold0')
+          }
       }
       // estrada em zigue-zague: luzes pontilhadas, curvas abrindo para baixo
       {
         const y0 = peak + 4
-        const y1 = cBase - 2
+        const y1 = Math.round(peak + mh * 0.8)
         const n = Math.round((y1 - y0) * 8)
         let lastX = -1
         let lastY = -1
         let dist = 0
         for (let i = 0; i <= n; i++) {
           const v = i / n
-          const tri = 1 - 2 * Math.abs(((v * 5 + 0.25) % 1) * 2 - 1)
-          const amp = 1.5 + v * half * 0.22
-          const px = Math.round(cx - 1 - v * half * 0.7 + tri * amp)
+          const tri = Math.sin(v * Math.PI * 2 * 6)
+          const amp = 1.5 + v * half * 0.1
+          const px = Math.round(cx - 1 - v * half * 0.3 + tri * amp)
           let py = Math.round(y0 + v * (y1 - y0))
           const lim = cTop(px) + 2
           if (py < lim) py = lim
@@ -888,13 +1072,20 @@ export class Backdrop {
           dist += 1
           lastX = px
           lastY = py
-          if (dist % 2 === 0) b.set(px, py, 'gold0')
-          if (dist % 3 === 0) {
+          if (dist % 2 === 0) b.set(px, py, 'blood1')
+          if (dist % 2 === 1) {
             const r0 = rnd()
             const k: K = r0 > 0.75 ? 'goldHi' : r0 > 0.35 ? 'gold' : 'emberBright'
             b.set(px, py, k)
-            if (dist % 6 === 0)
-              this.lamps.push({ x: px - PAD, y: py - PY, k, ph: rnd() * 6.28, d: DEPTH.skyline, sp: 1 + rnd() * 2 })
+            if (dist % 8 === 1)
+              this.lamps.push({
+                x: px - PAD,
+                y: py - PY,
+                k,
+                ph: rnd() * 6.28,
+                d: DEPTH.skyline,
+                sp: 1 + rnd() * 2,
+              })
           }
         }
       }
@@ -912,7 +1103,7 @@ export class Backdrop {
       // orla curva: a areia desce para a esquerda (perspectiva da enseada)
       const xb = X(W * (P ? 0.14 : 0.34))
       const sMin = cityLine + (P ? 3 : 6)
-      const sMax = cityLine + Math.round(H * (P ? 0.05 : 0.15))
+      const sMax = cityLine + Math.round(H * (P ? 0.05 : 0.12))
       const sandY = (x: number) => (x < xb ? Math.round(sMin + (sMax - sMin) * (1 - x / xb) ** 1.8) : sMin)
       const sandT = (x: number) => 2 + Math.round((1 - Math.min(1, x / xb)) * (P ? 1 : 2))
       // água perto: escura, com a orla lavando de laranja e traços quebrados de luz
@@ -922,10 +1113,12 @@ export class Backdrop {
           if (x >= landR(y)) break
           if (y < s0) continue
           const dy = y - s0
-          let k: K = dith(x, y, 0.3 - Math.min(0.3, dy / 120)) ? 'dusk' : 'night'
-          if (dy < 7 && dith(x, y, (1 - dy / 7) * 0.7)) k = dy < 2 ? 'emberDark' : 'blood1'
+          // a enseada devolve o céu em brasa: perto da areia mais clara e quente, longe escurece
+          const f = Math.min(1, dy / (H * 0.12))
+          let k: K = dith(x, y, 0.75 - f * 0.6) ? 'dusk' : 'night'
+          if (dy < 9 && dith(x, y, (1 - dy / 9) * 0.75)) k = dy < 3 ? 'emberDark' : 'blood1'
           const rip = nz.n2(x / 9, y * 1.1)
-          if (rip > 0.74 && dy > 4) k = 'hazeDark'
+          if (rip > 0.7 && dy > 4) k = f < 0.5 ? (dith(x, y, 0.5) ? 'blood1' : 'hazeDark') : 'hazeDark'
           b.set(x, y, k)
         }
       }
@@ -938,25 +1131,37 @@ export class Backdrop {
         while (xe < LW && sandY(xe) - 1 > yb && xe < landR(yb)) xe++
         cityRow(b, rnd, 0, xe, () => yb, 2, P ? 4 : 5 + r * 1.5, tier, r > 0 ? this.cityAnchors : undefined)
       }
-      // chão aceso (ruas) entre a cidade e a areia
+      // morros perto da enseada: abraçam a curva da areia (escuros, mata, aro grená) com luz rara
+      const nhTop = (x: number) => {
+        const f = Math.max(0, 1 - x / xb)
+        const hgt = (sandY(x) - cityLine) * 0.5 * f ** 0.8 + nz.fbm(x / 10, 31, 3) * H * 0.02 * f
+        return Math.round(sandY(x) - 2 - hgt)
+      }
+      for (let x = 0; x < xb; x++) {
+        const t0 = nhTop(x)
+        const s = sandY(x) - 1
+        for (let y = t0; y < s; y++) {
+          let k: K = y === t0 ? 'blood1' : 'night'
+          if (y > t0 && nz.n2(x / 4, y / 3.5) > 0.6) k = dith(x, y, 0.5) ? 'vine0' : 'void'
+          if (y > t0 + 2 && (y & 1) === 0 && hash2(x, y) > 0.965) k = hash2(y, x) > 0.5 ? 'gold' : 'ember'
+          b.set(x, y, k)
+        }
+      }
+      // chão aceso (ruas) entre a cidade de lá e a areia, na parte reta da orla
       for (let x = 0; x < LW; x++) {
         const s = sandY(x) - 1
         for (let y = cityLine + 2; y < s; y++) {
           if (x >= landR(y)) break
           if (b.get(x, y)) continue
           b.set(x, y, 'void')
-          if ((y & 1) === 0 && hash2(x, y) > 0.72) {
+          if ((y & 1) === 0 && hash2(x, y) > 0.8) {
             const v = hash2(y, x)
             b.set(x, y, v > 0.9 ? 'goldHi' : v > 0.6 ? 'gold' : v > 0.3 ? 'ember' : 'gold1')
           }
         }
       }
-      for (let r = 0; r < 4 && !P; r++) {
-        const yb = cityLine + 6 + rowsL * 4 + r * 9
-        let xe = 0
-        while (xe < xb && sandY(xe) - 3 > yb) xe++
-        if (xe > 4) cityRow(b, rnd, 0, xe, () => yb, 3, 8, CITY.mid, this.cityAnchors)
-      }
+      // prédios da orla: de pé na areia, seguindo a curva, fachada acesa pela rua
+      cityRow(b, rnd, 0, landR(sMin), (x) => sandY(x) - 1, 3, P ? 5 : 11, CITY.lit, this.cityAnchors, 0.1)
       // areia acesa + calçadão com postes; reflexos dos postes na água
       for (let x = 0; x < LW; x++) {
         const sy = sandY(x)
@@ -974,7 +1179,7 @@ export class Backdrop {
           b.set(x, sy - 1, k)
           if (x % 9 === 0) this.cityAnchors.push({ x: x - PAD, y: sy - 1 - PY })
           // reflexo estático em traços quebrados (cai e esfria com a distância)
-          const len = 4 + Math.floor(hash2(x, 3) * (P ? 6 : 12))
+          const len = 6 + Math.floor(hash2(x, 3) * (P ? 8 : 18))
           for (let j = 1; j <= len; j++) {
             const yy = sy + st + j * 2 - 1
             const xx = x + (hash2(x, j) > 0.7 ? 1 : 0)
@@ -999,38 +1204,53 @@ export class Backdrop {
           k: 'crimson',
         })
 
-      // terra da direita: cidade subindo o pé do Corcovado em fileiras separadas por morros escuros
-      for (let y = hz + 2; y < LH; y++)
-        for (let x = Math.max(0, Math.floor(landR(y))); x < LW; x++)
-          b.set(x, y, nz.n2(x / 4, y / 4) > 0.66 ? 'night' : 'void')
-      const rowsR: [number, number, number, CityTier][] = P
+      // terra da direita: morros em faixas (de trás para a frente), cada um com bairros em cachos
+      // subindo a encosta; o morro da frente cobre o pé dos bairros de trás
+      const bandsR: [number, number, number, number, CityTier][] = P
         ? [
-            [hz + 3, 2, 5, CITY.far],
-            [hz + Math.round(H * 0.03), 3, 8, CITY.mid],
-            [hz + Math.round(H * 0.07), 4, 12, CITY.mid],
+            [hz + 3, H * 0.008, 2, 5, CITY.far],
+            [hz + Math.round(H * 0.035), H * 0.015, 3, 8, CITY.mid],
+            [hz + Math.round(H * 0.075), H * 0.02, 4, 12, CITY.mid],
           ]
         : [
-            [hz + 3, 2, 6, CITY.far],
-            [hz + Math.round(H * 0.045), 3, 9, CITY.far],
-            [hz + Math.round(H * 0.09), 4, 12, CITY.mid],
-            [hz + Math.round(H * 0.15), 6, 18, CITY.mid],
+            [hz + Math.round(H * 0.05), H * 0.045, 2, 7, CITY.far],
+            [hz + Math.round(H * 0.1), H * 0.03, 4, 12, CITY.mid],
+            [hz + Math.round(H * 0.16), H * 0.035, 5, 16, CITY.mid],
           ]
-      rowsR.forEach(([yb, h0, h1, tier], i) => {
-        const x0 = Math.floor(landR(yb)) + 2
-        cityRow(b, rnd, x0, LW, (x) => yb + Math.round((x - x0) * 0.04), h0, h1, tier, this.cityAnchors)
-        // morro escuro de mata atravessando entre as fileiras
-        if (i === 1 || i === 2) {
-          const ph = rnd() * 10
-          for (let x = x0; x < LW; x++) {
-            const hgt = Math.max(0, Math.sin(x / (W * 0.05) + ph) * H * 0.02 + nz.n2(x / 5, i * 9) * 4 - 1)
-            for (let y = Math.round(yb + 3 - hgt); y < yb + 4; y++)
-              b.set(x, y, y === Math.round(yb + 3 - hgt) ? 'blood0' : nz.n2(x / 3, y / 3) > 0.55 ? 'vine0' : 'void')
+      bandsR.forEach(([yb, amp, h0, h1, tier], i) => {
+        const x0 = Math.max(0, Math.floor(landR(yb)) - 4)
+        const ph = rnd() * 10
+        const hTop = (x: number) =>
+          Math.round(yb - Math.max(0, Math.sin(x / (W * 0.06) + ph)) * amp - nz.n2(x / 6, i * 7 + 1) * 3)
+        const body: K = i === 0 ? 'dusk' : 'night'
+        const rim: K = i === 0 ? 'hazeDark' : 'blood0'
+        for (let x = x0; x < LW; x++) {
+          const t0 = hTop(x)
+          for (let y = t0; y < LH; y++) {
+            if (x < landR(y)) continue
+            let k: K = y === t0 ? rim : body
+            if (i > 0 && y > t0 + 1 && nz.n2(x / 4, y / 3.5) > 0.62) k = 'void'
+            if (y > t0 + 2 && (y & 1) === 0 && hash2(x, y) > 0.975) k = hash2(y, x) > 0.5 ? 'gold1' : 'ember'
+            b.set(x, y, k)
           }
         }
+        const tr = i === bandsR.length - 1 ? CITY.lit : tier
+        cityRow(b, rnd, x0, LW, (x) => hTop(x) + 3, h0, h1, tr, this.cityAnchors, i === 0 ? 0.1 : 0.3)
       })
       // prédios de perto, na direita e na esquerda (silhuetas com janelas maiores)
       const nearTop = P ? H * 0.06 : H * 0.14
-      cityRow(b, rnd, X(W * (P ? 0.84 : 0.72)), LW, () => wb + 2, nearTop * 0.4, nearTop, CITY.near)
+      cityRow(
+        b,
+        rnd,
+        X(W * (P ? 0.84 : 0.7)),
+        LW,
+        () => wb + 2,
+        nearTop * 0.3,
+        nearTop * 0.75,
+        CITY.lit,
+        this.cityAnchors,
+        0.2,
+      )
       cityRow(b, rnd, 0, X(W * (P ? 0.12 : 0.19)), () => LH, nearTop * 0.9, nearTop * 2, CITY.near)
       this.bay = b.canvas()
     }
@@ -1051,10 +1271,13 @@ export class Backdrop {
           by - u * 0.3 + Math.max(0, d - plateau) * slope + (nz.fbm(x / 7, 40, 3) - 0.5) * u * 0.5,
         )
       }
-      const glow = { x: bx, y: by - u * 1.6, r: u * 6.2 }
+      const glow = { x: bx, y: by - u * 1.6, r: u * 5.4 }
+      const rows = P ? 3 : 2
       for (let x = 0; x < LW; x++) {
         const t0 = top(x)
-        for (let y = Math.max(0, t0); y < LH; y++) {
+        // abaixo disso a textura de copa cobre tudo (não pinta duas vezes)
+        const yEnd = Math.min(LH, Math.round(t0 + u * (rows + 1) + u * 1.7))
+        for (let y = Math.max(0, t0); y < yEnd; y++) {
           const n = nz.n2(x / 3, y / 3)
           let k: K = n > 0.72 ? 'night' : 'void'
           const gd = Math.hypot((x - glow.x) * 0.8, (y - by) * 1.6) / glow.r
@@ -1088,55 +1311,63 @@ export class Backdrop {
         })
         x += rx * (1.1 + rnd() * 0.5)
       }
-      const rows = P ? 3 : 2
       for (let row = 1; row <= rows; row++) {
         let xx = -u + rnd() * u
         while (xx < LW + u) {
-          const rx = u * (0.6 + rnd() * 0.9)
+          // pedras grandes descendo o morro (a encosta é de pedra até ~85% da altura, depois mata)
+          const rx = u * (0.8 + rnd() * 0.8)
           const ry = rx * 0.65
-          const yy = top(xx) + row * u * 1.05 + rnd() * u * 0.4
+          const yy = top(xx) + row * u * 0.95 + rnd() * u * 0.4
           if (yy < LH + ry)
             rocks.push({
               x: xx,
               y: yy,
               rx,
               ry,
-              fade: Math.min(0.82, 0.25 + row * 0.15),
+              fade: Math.min(0.82, 0.08 + row * 0.12),
               seed: Math.floor(rnd() * 1e6),
               lip: false,
             })
-          xx += rx * (1.5 + rnd() * 1.2)
+          xx += rx * (1.25 + rnd() * 0.8)
         }
       }
       for (const r of rocks) {
         const dist = Math.hypot((r.x - bx) / 1.3, r.y - by) / (u * 9)
-        r.fade = Math.min(0.8, Math.max(r.fade, (dist - 0.45) * 0.9))
+        r.fade = Math.min(0.8, Math.max(r.fade, (dist - 0.6) * 0.8))
       }
       rocks.sort((a, c) => a.y - c.y)
       for (const r of rocks) {
         if (r.lip) continue
-        drawRock(hill, r.x, r.y, r.rx, r.ry, r.seed, r.fade, glow)
-        if (r.fade < 0.35) moss(hill, r.x, r.y, r.rx, r.ry, r.seed)
+        drawRock(hill, r.x, r.y, r.rx, r.ry, r.seed, r.fade, glow, 0.12)
+        if (r.fade < 0.45) moss(hill, r.x, r.y, r.rx, r.ry, r.seed)
         if (rnd() < 0.6)
-          foliage(hill, r.x + (rnd() - 0.5) * r.rx * 1.6, r.y - r.ry * 0.45, u * (0.35 + rnd() * 0.45), r.seed + 7, {
-            fade: r.fade,
-            glow: r.fade < 0.3 ? glow : null,
-          })
+          foliage(
+            hill,
+            r.x + (rnd() - 0.5) * r.rx * 1.6,
+            r.y - r.ry * 0.45,
+            u * (0.35 + rnd() * 0.45),
+            r.seed + 7,
+            {
+              fade: r.fade,
+              glow: r.fade < 0.3 ? glow : null,
+            },
+          )
       }
       // mata que desce do morro: copas escuras abaixo das pedras
       const canopyY = (xx: number) => top(xx) + u * (rows + 1) * 1.0
-      for (let xx = -u; xx < LW + u; xx += u * (0.7 + rnd() * 0.5)) {
-        const cy = canopyY(xx) + rnd() * u * 0.6
-        if (cy > LH + u) continue
-        foliage(hill, xx, cy, u * (0.7 + rnd() * 0.5), Math.floor(rnd() * 1e6), {
-          tones: ['void', 'night', 'vine0'],
-          hi: null,
-          spread: 1.8,
-        })
-      }
+      for (let row = 0; row < 2; row++)
+        for (let xx = -u + row * u * 0.4; xx < LW + u; xx += u * (0.7 + rnd() * 0.5)) {
+          const cy = canopyY(xx) + row * u * 0.9 + rnd() * u * 0.6
+          if (cy > LH + u) continue
+          foliage(hill, xx, cy, u * (0.7 + rnd() * 0.5), Math.floor(rnd() * 1e6), DARK_CANOPY)
+        }
+      // mais abaixo, só textura de copa (barato): manchas noite com 1 px verde-escuro raro
       for (let xx = 0; xx < LW; xx++) {
-        const y0 = Math.round(canopyY(xx) + u * 0.6)
-        if (y0 < LH) hill.rect(xx, y0, 1, LH - y0, 'void')
+        const y0 = Math.round(canopyY(xx) + u * 1.7)
+        for (let y = Math.max(0, y0); y < LH; y++) {
+          const n = nz.n2(xx / 4.5, y / 3.2)
+          hill.set(xx, y, n > 0.64 ? (n > 0.8 && hash2(xx, y) > 0.7 ? 'vine0' : 'night') : 'void')
+        }
       }
       // borda da frente: pedras e moitas que tocam a base do monumento
       const lipSpots = [-4.6, -2.9, -0.4, 1.6, 3.6, 5.1]
@@ -1153,27 +1384,37 @@ export class Backdrop {
             Math.floor(rnd() * 1e6),
             0,
             glow,
+            0.12,
           )
         foliage(lip, lx + u * 0.4, ly, u * (0.35 + rnd() * 0.35), Math.floor(rnd() * 1e6), { glow })
       }
       for (const r of rocks)
-        if (r.lip) drawRock(lip, r.x, r.y + u * 0.3, r.rx * 0.8, r.ry * 0.8, r.seed, 0, glow)
+        if (r.lip) drawRock(lip, r.x, r.y + u * 0.3, r.rx * 0.8, r.ry * 0.8, r.seed, 0, glow, 0.12)
 
       // primeiro plano: copas quase pretas emoldurando a cena (altas nos cantos, baixas no meio)
-      const cornerH = P ? H * 0.13 : H * 0.24
+      // paisagem: morro escuro alto à esquerda (atrás do menu) e mais baixo à direita (minimapa)
+      const cornerH = P ? H * 0.13 : H * 0.38
       const midH = P ? H * 0.03 : H * 0.05
       const fh = (xx: number) => {
-        const e = Math.abs((xx - LW / 2) / (LW / 2))
-        return midH + (cornerH - midH) * e ** 2.4
+        if (P) {
+          const e = Math.abs((xx - LW / 2) / (LW / 2))
+          return midH + (cornerH - midH) * e ** 2.4
+        }
+        const l = Math.max(0, 1 - xx / (W * 0.21)) ** 1.2 * cornerH
+        const r = Math.max(0, 1 - (LW - xx) / (W * 0.24)) ** 1.4 * H * 0.3
+        return Math.max(midH, l, r) + (nz.n2(xx / 9, 77) - 0.5) * u * 0.6
       }
       for (let xx = -u; xx < LW + u; xx += u * (0.5 + rnd() * 0.4)) {
         const h0 = fh(Math.max(0, Math.min(LW - 1, xx)))
         const cy = LH - h0 * (0.55 + rnd() * 0.45)
-        foliage(front, xx, cy, u * (0.6 + rnd() * 0.7) * (0.6 + h0 / cornerH), Math.floor(rnd() * 1e6), {
-          tones: ['void', 'night', 'vine0'],
-          hi: rnd() < 0.5 ? 'vine1' : null,
-          spread: 1.6,
-        })
+        foliage(
+          front,
+          xx,
+          cy,
+          u * (0.6 + rnd() * 0.7) * (0.6 + h0 / cornerH),
+          Math.floor(rnd() * 1e6),
+          DARK_CANOPY,
+        )
       }
       for (let xx = 0; xx < LW; xx++) {
         const y0 = Math.round(LH - fh(xx) * 0.5)
@@ -1330,7 +1571,10 @@ function moss(b: Buf, cx: number, cy: number, rx: number, ry: number, seed: numb
   }
 }
 
-/** Pedra facetada: luz de cima-esquerda (lua), borda vermelha do lado dos anéis, contorno seletivo. */
+/**
+ * Pedra facetada: luz de cima-esquerda (lua), borda vermelha do lado dos anéis, contorno seletivo.
+ * `lift` clareia as faces (0 = padrão; 0,12 = pedra de primeiro plano iluminada, como no título).
+ */
 export function drawRock(
   b: Buf,
   cx: number,
@@ -1340,6 +1584,7 @@ export function drawRock(
   seed: number,
   fade: number,
   glow: Glow,
+  lift = 0,
 ) {
   const r = mulberry32(seed)
   const a1 = r() * 6.28
@@ -1390,7 +1635,7 @@ export function drawRock(
         nzv = 0.57
       }
       const lam = nx * LX + ny * LY + nzv * LZ
-      let val = 0.08 + lam * 0.72 - fade * 0.75
+      let val = 0.08 + lift + lam * 0.72 - fade * 0.75
       let k: K = stone[Math.max(0, Math.min(5, Math.floor(val * 6)))] ?? 'void'
       if (glow) {
         const gx = glow.x - x

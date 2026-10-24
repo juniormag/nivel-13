@@ -4,6 +4,7 @@
 import { Container, Graphics, type Sprite, type Text, type Texture } from 'pixi.js'
 import { px } from '../engine/textures'
 import type { GameCtx, MicroGame } from '../engine/types'
+import { finale, HandHint, LastFrame, showRight } from './fx-b'
 import {
   Combo,
   clamp01,
@@ -55,24 +56,68 @@ function bookTex() {
   })
 }
 
-/** cofrinho dourado 28×22 (Pé-de-Meia) */
-function piggyTex() {
-  return gridTex('ritmo-piggy', () => {
-    const m = new Grid(28, 22)
-    m.ellipse(13, 11, 10.5, 7.5, 1)
-    m.ellipse(23, 11, 3, 2.6, 2)
-    m.rect(7, 16, 3, 4, 3).rect(16, 16, 3, 4, 3)
-    m.rect(8, 3, 3, 3, 3)
-    const g = shade(m, {
-      1: { ramp: [P.gold0, P.gold1, P.gold, P.goldHi, P.sparkle], rim: P.redHot, grain: 0.05 },
-      2: { ramp: [P.gold0, P.gold1, P.gold, P.goldHi] },
-      3: { ramp: [P.gold0, P.gold1, P.gold, P.gold] },
-    })
-    g.set(18, 8, P.void)
-    g.rect(23, 10, 1, 2, P.gold0)
-    g.rect(10, 4, 6, 1, P.void)
-    g.set(3, 9, P.gold1)
-    g.set(2, 8, P.gold1)
+/**
+ * cofrinho Pé-de-Meia 30×24 com personalidade: corpo dourado com rim red-hot, focinho, orelha, rabinho,
+ * fenda escura no topo. Quadros: 0 parado, 1 respira (1 px mais alto), 2 pisca, 3 feliz (olho fechado,
+ * sorriso e bochecha) quando a moeda cai.
+ */
+function piggyGrid(f: number) {
+  const m = new Grid(30, 24)
+  const up = f === 1 ? 0.5 : 0
+  m.ellipse(14, 13 - up, 11, 8 + up, 1)
+  m.ellipse(25, 13, 3, 2.8, 2)
+  m.rect(18, 3, 3, 3, 3).rect(19, 2, 2, 1, 3)
+  m.rect(8, 19, 3, 4, 3).rect(17, 19, 3, 4, 3)
+  const g = shade(m, {
+    1: { ramp: [P.gold0, P.gold1, P.gold, P.goldHi, P.sparkle], rim: P.redHot, grain: 0.04 },
+    2: { ramp: [P.gold0, P.gold1, P.gold, P.goldHi], rim: P.redHot },
+    3: { ramp: [P.gold0, P.gold1, P.gold, P.gold], rim: P.redHot },
+  })
+  // fenda da moeda no topo, com lábio claro do lado da luz
+  g.rect(11, 6 - Math.round(up), 6, 1, P.void)
+  g.rect(11, 5 - Math.round(up), 6, 1, P.goldHi)
+  // rabinho enrolado
+  g.set(2, 11, P.gold1)
+  g.set(1, 10, P.gold1)
+  g.set(2, 9, P.gold)
+  // narinas
+  g.set(26, 12, P.gold0)
+  g.set(26, 14, P.gold0)
+  // olho
+  if (f === 2) g.rect(19, 10, 3, 1, P.gold0)
+  else if (f === 3) {
+    g.set(19, 10, P.void)
+    g.set(20, 9, P.void)
+    g.set(21, 10, P.void)
+    g.set(22, 14, P.redGlow)
+    g.set(21, 14, P.red)
+    g.set(23, 17, P.void)
+    g.rect(24, 18, 2, 1, P.void)
+    g.set(26, 17, P.void)
+  } else {
+    g.rect(20, 9, 2, 2, P.void)
+    g.set(20, 9, P.white)
+  }
+  return g
+}
+const piggyTex = (f: number) => gridTex(`ritmo-piggy3q${f}`, () => piggyGrid(f))
+
+/** pista em pontilhado (sem alfa): xadrez void com bordas e marcas de luz perto do receptor */
+function laneTex(h: number) {
+  return gridTex(`ritmo-lane${h}`, () => {
+    const g = new Grid(28, h, -1)
+    for (let y = 0; y < h; y++) {
+      const t = y / h
+      for (let x = 1; x < 27; x++)
+        if ((x + y) % 2 === 0 || (t > 0.75 && (x * 3 + y) % 4 === 0)) g.set(x, y, P.void)
+      g.set(0, y, t > 0.7 ? P.crimsonDeep : P.hazeDark)
+      g.set(27, y, t > 0.7 ? P.crimsonDeep : P.hazeDark)
+      if (t > 0.85 && y % 2 === 0) {
+        g.set(1, y, P.crimson)
+        g.set(26, y, P.crimson)
+      }
+    }
+    for (let x = 0; x < 28; x++) g.set(x, 0, P.haze)
     return g
   })
 }
@@ -121,6 +166,14 @@ export default function ritmo(): MicroGame {
   const lanes = new Graphics()
   const bar = new Graphics()
   let piggy: Sprite
+  let piggyFr: Texture[] = []
+  const last = new LastFrame(26)
+  let hand: HandHint
+  /** a próxima nota ainda não julgada (para a demonstração e para o erro ensinar) */
+  function nextNote(lane?: Lane) {
+    for (const n of notes) if (!n.judged && (lane === undefined || n.lane === lane)) return n
+    return null
+  }
   let piggyPop = -1
   let comboFx: Combo
   let recOn: Texture
@@ -192,6 +245,7 @@ export default function ritmo(): MicroGame {
   }
 
   function tapLane(lane: Lane) {
+    hand.dismiss()
     press[lane] = c.time
     if (!judge(lane)) buffered[lane] = c.time + 0.1
   }
@@ -228,12 +282,7 @@ export default function ritmo(): MicroGame {
       total = notes.length
 
       // pistas: faixa escura, bordas, e marcas de compasso descendo
-      for (const x of laneX) {
-        lanes.rect(x - 13, top, 26, lineY - top + 12).fill({ color: P.night, alpha: 0.75 })
-        lanes.rect(x - 14, top, 1, lineY - top + 12).fill(P.hazeDark)
-        lanes.rect(x + 13, top, 1, lineY - top + 12).fill(P.hazeDark)
-        lanes.rect(x - 13, top, 26, 1).fill(P.haze)
-      }
+      const laneSpr = laneX.map((x) => spr(laneTex(lineY - top + 12), x - 14, top, 0, 0))
       for (let i = 0; i < 16; i++) {
         const b = spr(px(), 0, 0, 0.5, 0.5)
         b.width = 24
@@ -241,7 +290,7 @@ export default function ritmo(): MicroGame {
         b.tint = P.hazeDark
         bars.push(b)
       }
-      root.addChild(lanes, ...bars)
+      root.addChild(...laneSpr, lanes, ...bars)
       for (const lane2 of [0, 1] as const) {
         const g = spr(glowTex(14, ENERGY), laneX[lane2], lineY)
         g.blendMode = 'add'
@@ -267,9 +316,12 @@ export default function ritmo(): MicroGame {
       root.addChild(rings)
       for (const n of notes) root.addChild(n.s)
       const shadow = spr(shadowTex(26), px0, py0 + 11)
-      piggy = spr(piggyTex(), px0, py0)
+      // recorte escuro atrás do cofrinho: o herói sempre lê contra o cenário (valor, não matiz)
+      const spot = spr(glowTex(22, [P.void, P.void, P.void, P.night, P.night]), px0, py0 - 2)
+      piggyFr = [0, 1, 2, 3].map(piggyTex)
+      piggy = spr(piggyFr[0] as Texture, px0, py0)
       comboFx = new Combo(c, field, 2.2)
-      root.addChild(shadow, piggy, bar, comboFx.text)
+      root.addChild(spot, shadow, piggy, bar, comboFx.text)
       for (let i = 0; i < 8; i++) {
         const s = spr(coins[0] as Texture, 0, 0)
         s.visible = false
@@ -278,10 +330,15 @@ export default function ritmo(): MicroGame {
       }
       root.addChild(field.root)
       for (const j of judges) root.addChild(j.t)
+      // demonstração: a mão fica no receptor da primeira nota (2 s) até o primeiro toque
+      hand = new HandHint(c, 4.2)
+      root.addChild(hand.root)
       drawBar()
     },
     update(dt) {
       const now = c.time
+      const nn = nextNote()
+      hand.update(nn ? { x: laneX[nn.lane], y: lineY } : null)
       // buffer: um toque até 100 ms adiantado ainda conta quando a nota entra na janela
       for (const lane of [0, 1] as const) {
         const until = buffered[lane]
@@ -290,6 +347,9 @@ export default function ritmo(): MicroGame {
           else if (now > until) {
             buffered[lane] = -1
             c.sfx('tap')
+            // o erro ensina: se a nota estava na outra pista, ela acende
+            const other = nextNote(lane ? 0 : 1)
+            if (other && Math.abs(other.t - now) < 0.3) showRight(c, laneX[other.lane], lineY)
           }
         }
       }
@@ -301,6 +361,7 @@ export default function ritmo(): MicroGame {
           comboFx.reset()
           misses++
           missFlash[n.lane] = now
+          c.fx.ring(laneX[n.lane], lineY, P.crimson, 12)
           if (misses % 4 === 0) c.hit(laneX[n.lane], lineY)
           else c.sfx('tick')
         }
@@ -350,7 +411,14 @@ export default function ritmo(): MicroGame {
         if (!r || !g) continue
         const pressed = now - (press[lane] ?? -1) < 0.08
         const missed = now - (missFlash[lane] ?? -1) < 0.15
-        r.texture = pressed || onBeat ? recOn : recOff
+        // telegrafa: o receptor acende quando a próxima nota da pista está a menos de 0,15 s
+        let near = false
+        for (const n of notes)
+          if (!n.judged && n.lane === lane && n.t - now < 0.15 && n.t - now > -0.1) {
+            near = true
+            break
+          }
+        r.texture = pressed || onBeat || (near && frameAt(now, 20, 2) === 0) ? recOn : recOff
         r.tint = missed ? P.stone2 : 0xffffff
         r.y = lineY + (pressed ? 1 : 0)
         g.alpha = pressed ? 0.7 : onBeat ? 0.3 : 0
@@ -380,8 +448,19 @@ export default function ritmo(): MicroGame {
           drawBar()
         }
       }
+      // cofrinho vivo: respira a 2 fps, pisca a cada ~3 s, sorri quando a moeda cai
+      const happy = piggyPop >= 0 && now - piggyPop < 0.3
+      const blink = now % 3.1 < 0.12
+      piggy.texture = piggyFr[happy ? 3 : blink ? 2 : frameAt(now, 2, 2)] as Texture
       const [sx, sy] = popScale(piggyPop < 0 ? 1 : now - piggyPop)
       setSquash(piggy, sx, sy)
+      // final de fase: o cofrinho cheio explode em ouro (só se a fase foi vencida)
+      last.check(c, () => {
+        if (jar < total * 0.5) return
+        piggy.texture = piggyFr[3] as Texture
+        finale(c, px0, py0)
+        c.sfx('perfect', { x: px0 })
+      })
       comboFx.update()
       if (c.rnd() < 0.06) field.ember(c.rnd() * c.W, c.bottom, ENERGY)
       field.update(dt)

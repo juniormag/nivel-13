@@ -6,7 +6,7 @@
 import { Container, Graphics, Sprite, type Text, type Texture } from 'pixi.js'
 import { px } from '../engine/textures'
 import type { GameCtx } from '../engine/types'
-import { bake, clamp01, type Col, domRect, easeOutBack, easeOutQuad, label, P, type Painter } from './kit-b'
+import { bake, type Col, clamp01, domRect, easeOutQuad, label, P, type Painter } from './kit-b'
 
 // ---------- desenho ----------
 
@@ -456,9 +456,11 @@ export class Banner {
       return
     }
     let total = 0
-    for (const tx of this.texts) total += Math.round(tx.height) + 2
-    const wMax = Math.max(...this.texts.map((x) => Math.round(x.width)), 40)
-    const sc = this.c.reduced ? 1 : t < 0.05 ? 3 : t < 0.1 ? 2 : 1
+    for (const tx of this.texts) total += Math.round(tx.height / tx.scale.y) + 2
+    let wMax = 40
+    for (const tx of this.texts) wMax = Math.max(wMax, Math.round(tx.width / tx.scale.x))
+    // batida: entra em 2× (segura durante o hit-stop do impacto final) e assenta em 1×
+    const sc = this.c.reduced ? 1 : t < 0.08 ? 2 : 1
     const out = t > this.hold ? clamp01((t - this.hold) / 0.3) : 0
     const pw = Math.min(this.c.W - 4, wMax + 28)
     const ph = total + 10
@@ -466,8 +468,8 @@ export class Banner {
     const py0 = Math.round(this.cy - ph / 2)
     const g = this.plate
     g.clear()
-    // a placa abre na horizontal em 120 ms (ease-out-back) e fecha em degraus
-    const open = this.c.reduced ? 1 : easeOutBack(clamp01(t / 0.12)) * (1 - out)
+    // a placa entra inteira (quadro de impacto) e fecha na horizontal na saída
+    const open = 1 - out
     const w = Math.max(2, Math.round(pw * open))
     const x = Math.round(this.cx - w / 2)
     g.rect(x - 1, py0 - 1, w + 2, ph + 2).fill(P.void)
@@ -489,12 +491,12 @@ export class Banner {
     }
     let y = py0 + 5
     for (const tx of this.texts) {
-      const h = Math.round(tx.height)
+      const h = Math.round(tx.height / tx.scale.y)
       tx.scale.set(sc)
       tx.x = this.cx
       tx.y = Math.round(y + h / 2)
       tx.alpha = out > 0 ? (Math.floor(t * 20) % 2 ? 0 : 1) : 1
-      tx.visible = open > 0.6
+      tx.visible = open > 0.5
       y += h + 2
     }
   }
@@ -510,4 +512,130 @@ export function pix(color: Col, w = 1, h = 1) {
   s.width = w
   s.height = h
   return s
+}
+
+// ---------- mão de demonstração (aprender jogando) ----------
+
+/** luva pixel apontando para cima (12×14), ponta do dedo em (3, 0); `press` = dedo afundado */
+export function handTex(press: boolean): Texture {
+  return bake(`fxc-hand${press ? 'p' : ''}`, 12, 15, (p) => {
+    const o = press ? 1 : 0
+    // dedo indicador
+    p.rect(2, 0 + o, 3, 7, P.stoneHi)
+    p.rect(4, 1 + o, 1, 6, P.stone3)
+    // palma e dedos dobrados
+    p.rect(1, 6, 9, 6, P.stoneHi)
+    p.rect(5, 5, 2, 2, P.stoneHi)
+    p.rect(7, 6, 2, 1, P.stone3)
+    p.rect(9, 7, 1, 4, P.stone3)
+    p.rect(1, 11, 9, 1, P.stone2)
+    p.rect(6, 8, 1, 2, P.stone2)
+    // punho vermelho (cor do jogo)
+    p.rect(2, 12, 7, 2, P.red)
+    p.rect(2, 12, 7, 1, P.redGlow)
+    p.dot(3, 0 + o, P.white)
+    p.outline(P.void, P.stone0)
+  })
+}
+
+export type HandMode =
+  | { kind: 'tap'; x: number; y: number }
+  | { kind: 'drag'; x0: number; y0: number; x1: number; y1: number }
+  | { kind: 'circle'; x: number; y: number; r: number }
+
+/**
+ * Demonstração do gesto nos primeiros segundos da fase: uma mão pixel toca, arrasta ou gira em cima do
+ * primeiro alvo e some no primeiro toque do jogador (ou depois de `dur` segundos). Ouve o ponteiro na
+ * janela, então funciona também sobre cartas e botões DOM. Movimento reduzido: a mão fica parada e pisca.
+ */
+export class TutorialHand {
+  readonly root = new Container()
+  private s = new Sprite(handTex(false))
+  private ring = new Graphics()
+  private age = 0
+  private gone = -1
+  private off: (() => void) | null = null
+  constructor(
+    private c: GameCtx,
+    public mode: HandMode,
+    private dur = 3.2,
+  ) {
+    this.root.addChild(this.ring, this.s)
+    const dn = () => this.dismiss()
+    addEventListener('pointerdown', dn, { passive: true })
+    addEventListener('keydown', dn)
+    this.off = () => {
+      removeEventListener('pointerdown', dn)
+      removeEventListener('keydown', dn)
+    }
+  }
+  dismiss() {
+    if (this.gone < 0) this.gone = this.age
+    this.off?.()
+    this.off = null
+  }
+  get active() {
+    return this.gone < 0 || this.age - this.gone < 0.25
+  }
+  update(dt: number) {
+    if (!this.root.visible) return
+    this.age += dt
+    if (this.age > this.dur) this.dismiss()
+    const fade = this.gone < 0 ? 1 : 1 - (this.age - this.gone) / 0.25
+    if (fade <= 0) {
+      this.root.visible = false
+      this.off?.()
+      return
+    }
+    // some em degraus (pisca) em vez de alfa contínuo
+    this.root.alpha = fade < 1 ? (Math.floor(this.age * 20) % 2 ? 0.3 : 0.9) : 1
+    const m = this.mode
+    const T = 1.1
+    const k = (this.age % T) / T
+    let x = 0
+    let y = 0
+    let press = false
+    if (this.c.reduced) {
+      const p = m.kind === 'tap' ? m : m.kind === 'drag' ? { x: m.x0, y: m.y0 } : { x: m.x + m.r, y: m.y }
+      x = p.x
+      y = p.y
+      press = Math.floor(this.age * 2) % 2 === 0
+    } else if (m.kind === 'tap') {
+      // aproxima 8 px, afunda 1 quadro, volta
+      const lift = k < 0.45 ? (1 - easeOutQuad(k / 0.45)) * 8 : k < 0.6 ? 0 : easeOutQuad((k - 0.6) / 0.4) * 8
+      x = m.x + lift * 0.6
+      y = m.y + lift
+      press = k >= 0.45 && k < 0.6
+    } else if (m.kind === 'drag') {
+      const e = k < 0.15 ? 0 : k > 0.85 ? 1 : (k - 0.15) / 0.7
+      const ee = e < 0.5 ? 2 * e * e : 1 - 2 * (1 - e) * (1 - e)
+      x = m.x0 + (m.x1 - m.x0) * ee
+      y = m.y0 + (m.y1 - m.y0) * ee
+      press = k > 0.1 && k < 0.9
+    } else {
+      const a = -Math.PI / 2 + k * Math.PI * 2 * 0.75
+      x = m.x + Math.cos(a) * m.r
+      y = m.y + Math.sin(a) * m.r
+      press = true
+    }
+    this.s.texture = handTex(press)
+    this.s.x = Math.round(x - 3)
+    this.s.y = Math.round(y)
+    const g = this.ring
+    g.clear()
+    if (press) {
+      // anel pontilhado na ponta do dedo
+      const R = m.kind === 'tap' ? 5 : 3
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2
+        if (i % 2) continue
+        g.rect(Math.round(x + Math.cos(a) * R), Math.round(y + Math.sin(a) * R), 1, 1)
+      }
+      g.fill({ color: P.goldHi, alpha: 0.9 })
+    }
+  }
+  destroy() {
+    this.off?.()
+    this.off = null
+  }
 }

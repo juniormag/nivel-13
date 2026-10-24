@@ -2,12 +2,32 @@
 // Lições da ref v2: volume em três quartos com lateral grossa e saturada, chanfro de 1 px,
 // luzes de cidade em 1 px agrupadas, reflexos em traços quebrados, primeiro plano quase preto.
 import { mulberry32 } from '../../lib/rng'
-import { drawBush, drawRock } from '../backdrop'
+import {
+  CITY,
+  type CityTier,
+  cityRow,
+  cumulusLayer,
+  DARK_CANOPY,
+  drawRock,
+  foliage,
+  type Puff,
+  ridge as ridgeV2,
+  type Stratus,
+  stratusLayer,
+} from '../backdrop'
 import type { Ctx } from '../levels'
 import { bayer, clamp01, DARKER, dith, type K } from '../pal'
 
 /** luzes de cidade: bairros de pontos de 1 px em 2–3 tons, com um ponto quente aqui e ali */
-export function cityLights(c: Ctx, x0: number, x1: number, y0: number, y1: number, dens: number, seed: number) {
+export function cityLights(
+  c: Ctx,
+  x0: number,
+  x1: number,
+  y0: number,
+  y1: number,
+  dens: number,
+  seed: number,
+) {
   const r = mulberry32(seed)
   const hoods = Math.max(2, Math.round((x1 - x0) / 22))
   for (let h = 0; h < hoods; h++) {
@@ -23,7 +43,11 @@ export function cityLights(c: Ctx, x0: number, x1: number, y0: number, y1: numbe
       const y = Math.round(cy + Math.sin(a) * ry * d)
       if (x < x0 || x >= x1 || y < y0 || y > y1) continue
       const v = r()
-      c.b.set(x, y, v > 0.97 ? 'sparkle' : v > 0.85 ? 'goldHi' : v > 0.6 ? 'gold' : v > 0.3 ? 'gold1' : 'emberDark')
+      c.b.set(
+        x,
+        y,
+        v > 0.97 ? 'sparkle' : v > 0.85 ? 'goldHi' : v > 0.6 ? 'gold' : v > 0.3 ? 'gold1' : 'emberDark',
+      )
     }
   }
 }
@@ -127,7 +151,8 @@ export function box3q(c: Ctx, o: Box) {
     for (let y = top + 2; y < o.base - 2; y += o.win.sy)
       for (let x = x0 + 2; x < x1 - 2; x += o.win.sx) {
         const v = r()
-        if (v < o.win.rate) b.set(x, y, v < o.win.rate * 0.12 ? 'sparkle' : v < o.win.rate * 0.4 ? 'goldHi' : 'gold1')
+        if (v < o.win.rate)
+          b.set(x, y, v < o.win.rate * 0.12 ? 'sparkle' : v < o.win.rate * 0.4 ? 'goldHi' : 'gold1')
         else b.set(x, y, DARKER[o.front[1]])
       }
   }
@@ -138,7 +163,8 @@ export function haze(c: Ctx, x0: number, y0: number, x1: number, y1: number, k: 
   const { b } = c
   for (let y = Math.max(0, y0); y < Math.min(c.H, y1); y++) {
     const t = clamp01((y - y0) / Math.max(1, y1 - y0))
-    for (let x = Math.max(0, x0); x < Math.min(c.W, x1); x++) if (dith(x, y, amt * (1 - t * 0.6))) b.set(x, y, k)
+    for (let x = Math.max(0, x0); x < Math.min(c.W, x1); x++)
+      if (dith(x, y, amt * (1 - t * 0.6))) b.set(x, y, k)
   }
 }
 
@@ -194,40 +220,146 @@ export function halo(c: Ctx, x: number, y: number, r: number, k: K, amt = 0.5) {
 }
 
 /**
- * Primeiro plano quase preto emoldurando os cantos de baixo: massas de pedra/mato em void/night,
- * com cachos de folha de 3 tons e rim vermelho do lado da energia (centro da tela).
+ * Primeiro plano quase preto emoldurando os cantos de baixo (lições 12–13): massa escura saindo do canto,
+ * pedras grandes com faces até stone3 (lift) e copas DARK_CANOPY com 1 px de vine0 nos topos.
+ * Aro vermelho só nas bordas viradas para a energia, perto dela.
  */
 export function fgFrame(c: Ctx, seed: number, o: { h?: number; leaves?: boolean; glowY?: number } = {}) {
   const r = mulberry32(seed)
   const { W, H, s } = c
   const hh = (o.h ?? 0.12) * H
-  const glow = { x: W / 2, y: o.glowY ?? H * 0.5, r: W * 0.7 }
+  const glow = { x: W / 2, y: o.glowY ?? H * 0.62, r: W * 0.45 }
   for (const side of [0, 1]) {
-    // massa escura: perfil irregular saindo do canto
-    const reach = W * (0.22 + r() * 0.08)
+    const reach = W * (0.2 + r() * 0.08)
     for (let i = 0; i < reach; i++) {
       const x = side ? W - 1 - i : i
       const t = i / reach
       const top = Math.round(H - hh * (1 - t * t) - Math.sin(i * 0.35 + seed) * s * 1.2)
-      for (let y = top; y < H; y++) c.b.set(x, y, y === top && t > 0.3 ? 'night' : 'void')
-      if (t > 0.35 && t < 0.95) c.b.set(x, top, dith(x, top, 0.5) ? 'blood0' : 'night')
+      for (let y = top; y < H; y++) c.b.set(x, y, 'void')
+      if (t > 0.3 && t < 0.95 && dith(x, top, 0.5)) c.b.set(x, top, 'night')
     }
-    for (let i = 0; i < 3; i++) {
-      const x = side ? W - r() * W * 0.16 : r() * W * 0.16
-      const y = H - r() * hh * 0.7
-      drawRock(c.b, x, y, s * (5 + r() * 5), s * (3 + r() * 3), Math.floor(r() * 1e6), 0.72, glow)
+    for (let i = 0; i < 2; i++) {
+      const x = side ? W - r() * W * 0.14 : r() * W * 0.14
+      const y = H - r() * hh * 0.6
+      drawRock(c.b, x, y, s * (5 + r() * 4), s * (3 + r() * 3), Math.floor(r() * 1e6), 0.55, glow, 0.12)
     }
     if (o.leaves !== false)
       for (let i = 0; i < 3; i++) {
         const x = side ? W - s * 2 - r() * W * 0.2 : s * 2 + r() * W * 0.2
-        const y = H - hh * (0.5 + r() * 0.6)
-        drawBush(c.b, x, y, s * (3 + r() * 3), Math.floor(r() * 1e6), 0.45 + r() * 0.2, glow)
+        const y = H - hh * (0.45 + r() * 0.6)
+        foliage(c.b, x, y, s * (3 + r() * 3), Math.floor(r() * 1e6), DARK_CANOPY)
       }
   }
 }
 
+/** cúmulos legíveis (lição 5): cachos de 4–9 sopros grandes, raio em fração da altura */
+export function cumulus(c: Ctx, clusters: { x: number; y: number; r: number; n: number }[], seed: number) {
+  const rr = mulberry32(seed)
+  const puffs: Puff[] = []
+  for (const cl of clusters) {
+    // no celular em pé a altura é grande: o raio segue o lado menor para os sopros não engolirem o céu
+    const R = cl.r * Math.min(c.H, c.W * 1.1)
+    for (let i = 0; i < cl.n; i++) {
+      const f = cl.n > 1 ? i / (cl.n - 1) : 0.5
+      const env = Math.sin(Math.PI * (0.15 + f * 0.7))
+      puffs.push({
+        x: Math.round(cl.x * c.W + (f - 0.5) * R * cl.n * 0.9 + (rr() - 0.5) * R * 0.4),
+        y: Math.round(cl.y * c.H - env * R * 0.55 + rr() * R * 0.2),
+        r: R * (0.55 + 0.45 * env * (0.7 + rr() * 0.4)),
+        flat: 0.35 + rr() * 0.15,
+      })
+    }
+  }
+  if (puffs.length) c.b.blit(cumulusLayer(c.W, c.H, puffs, seed), 0, 0)
+}
+
+/** estratos finos colados no horizonte (lição 6) */
+export function stratus(c: Ctx, bands: Stratus[], seed: number) {
+  c.b.blit(stratusLayer(c.W, c.H, bands, seed), 0, 0)
+}
+
+/** serra/morro com névoa no pé e aro de 1 px (lições 2–3) */
+export function range(
+  c: Ctx,
+  base: number,
+  top: (x: number) => number,
+  body: K,
+  rim: K,
+  fog: K | undefined,
+  fogFrac = 0.035,
+) {
+  ridgeV2(c.b, 0, c.W, base, top, {
+    body,
+    rim,
+    fog,
+    fogH: Math.max(2, Math.round(c.H * fogFrac)),
+    fogMax: 0.55,
+  })
+}
+
+/** fileira de cidade sobre um morro escuro (lições 7–8) */
+export function city(
+  c: Ctx,
+  x0: number,
+  x1: number,
+  base: (x: number) => number,
+  hMin: number,
+  hMax: number,
+  tier: keyof typeof CITY | CityTier,
+  seed: number,
+  gap = 0,
+) {
+  cityRow(
+    c.b,
+    mulberry32(seed),
+    x0,
+    x1,
+    base,
+    hMin,
+    hMax,
+    typeof tier === 'string' ? CITY[tier] : tier,
+    undefined,
+    gap,
+  )
+}
+
+/** faixa de água no horizonte, a parte mais clara do meio da tela (lição 4) */
+export function horizonWater(c: Ctx, y0: number, h: number, seed: number) {
+  const r = mulberry32(seed)
+  for (let y = y0; y < y0 + h; y++) {
+    const dark = (y - y0) % 3 === 2
+    for (let x = 0; x < c.W; ) {
+      const len = 1 + Math.floor(r() * 6)
+      const v = r()
+      const k: K | null = dark
+        ? 'blood0'
+        : v < 0.4
+          ? null
+          : v < 0.42
+            ? 'goldHi'
+            : v < 0.55
+              ? 'emberBright'
+              : v < 0.75
+                ? 'ember'
+                : v < 0.9
+                  ? 'emberDark'
+                  : 'blood1'
+      if (k) c.b.rect(x, y, len, 1, k)
+      x += len + (r() < 0.3 ? 1 : 0)
+    }
+  }
+}
+
 /** palmeira escura (silhueta) com cacho de folhas pendendo */
-export function palmSil(c: Ctx, x: number, base: number, h: number, lean: number, k: K = 'void', rim: K | null = null) {
+export function palmSil(
+  c: Ctx,
+  x: number,
+  base: number,
+  h: number,
+  lean: number,
+  k: K = 'void',
+  rim: K | null = null,
+) {
   const { b } = c
   let px = x
   let py = base

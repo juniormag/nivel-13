@@ -1,6 +1,7 @@
 @import "./base.css";
 @import "./hud.css";
 @import "./pages.css";
+@import "./meta.css";
 /* Pixelify Sans desenha o 5 parecido com S: algarismos vêm da Silkscreen (legibilidade de números e fontes) */
 @font-face {
   font-family: "n13-digits";

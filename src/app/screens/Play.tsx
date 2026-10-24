@@ -1,18 +1,17 @@
-// Tela de fase: hospeda o Runner (PixiJS) e desenha o HUD, as habilidades e os overlays em React.
+// Tela de fase: hospeda o Runner (PixiJS) e desenha o HUD e os overlays em React.
 import { useEffect, useRef, useState } from 'react'
 import { playMusic, sfx, stinger } from '../../audio/audio'
-import { LEVELS, type GameKind, type Level } from '../../content/levels'
+import { type GameKind, LEVELS, type Level } from '../../content/levels'
 import { Runner } from '../../engine/runner'
 import type { MicroGame } from '../../engine/types'
 import { loadGame } from '../../games'
-import { getSave, levelsDone, useSave } from '../../state/save'
-import { type SkillKind, usePlay } from '../../state/play'
+import { usePlay } from '../../state/play'
+import { getSave } from '../../state/save'
 import { CountUp } from '../../ui/CountUp'
 import { Hearts } from '../../ui/Hearts'
 import { fmt, useCountUp } from '../../ui/hooks'
 import { Banner, Corners, IconTile, LevelCard, SegBar, StarRow, tipIcon, useBeats } from '../../ui/LevelCard'
 import { PixelButton, Tap } from '../../ui/PixelButton'
-import { SkillBar } from '../../ui/SkillBar'
 import { go, useNav } from '../nav'
 
 export interface CustomRun {
@@ -26,13 +25,6 @@ export interface CustomRun {
   onEnd: (score: number, success: boolean) => void
 }
 
-export const SKILLS: { kind: SkillKind; label: string; key: string; unlock: number; desc: string }[] = [
-  { kind: 'checar', label: 'Checar', key: 'Q', unlock: 0, desc: 'Desmonta as ameaças da tela' },
-  { kind: 'lembrar', label: 'Lembrar', key: 'W', unlock: 3, desc: 'Mostra a resposta certa' },
-  { kind: 'foco', label: 'Foco', key: 'E', unlock: 6, desc: 'Câmera lenta por 4 segundos' },
-  { kind: 'proteger', label: 'Proteger', key: 'R', unlock: 9, desc: 'Escudo contra o próximo golpe' },
-]
-
 export const starsFor = (score: number, goal: number) => (score >= goal ? 3 : score >= goal * 0.6 ? 2 : 1)
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -43,7 +35,6 @@ export default function Play() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const layerRef = useRef<HTMLDivElement>(null)
   const topRef = useRef<HTMLDivElement>(null)
-  const skillsRef = useRef<HTMLDivElement>(null)
   const runnerRef = useRef<Runner | null>(null)
   const gameRef = useRef<MicroGame | null>(null)
   const [count, setCount] = useState<number | null>(null)
@@ -56,10 +47,6 @@ export default function Play() {
   const score = usePlay((s) => s.score)
   const timeLeft = usePlay((s) => s.timeLeft)
   const duration = usePlay((s) => s.duration)
-  const used = usePlay((s) => s.used)
-  const slow = usePlay((s) => s.slow)
-  const shield = usePlay((s) => s.shield)
-  const done = useSave((s) => levelsDone(s))
 
   useEffect(() => {
     if (!custom && !level) {
@@ -85,7 +72,7 @@ export default function Play() {
         reduced: reducedMotion(),
         safeArea: () => ({
           top: topRef.current?.getBoundingClientRect().bottom ?? 40,
-          bottom: custom ? innerHeight - 8 : (skillsRef.current?.getBoundingClientRect().top ?? innerHeight - 80),
+          bottom: innerHeight - 8,
         }),
         onEnd: ({ success, score: sc }) => {
           if (custom) {
@@ -125,7 +112,6 @@ export default function Play() {
 
   // teclado
   useEffect(() => {
-    const map: Record<string, SkillKind> = { q: 'checar', w: 'lembrar', e: 'foco', r: 'proteger' }
     const onKey = (e: KeyboardEvent, down: boolean) => {
       const r = runnerRef.current
       if (!r) return
@@ -137,11 +123,6 @@ export default function Play() {
       }
       if ((e.target as HTMLElement | null)?.tagName === 'INPUT') return
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key
-      const s = map[k]
-      if (down && s && !custom) {
-        triggerSkill(s)
-        return
-      }
       if (k.startsWith('Arrow')) e.preventDefault()
       r.key(k, down)
     }
@@ -157,17 +138,6 @@ export default function Play() {
       document.removeEventListener('visibilitychange', vis)
     }
   })
-
-  const unlocked = (k: SkillKind) => done >= (SKILLS.find((s) => s.kind === k)?.unlock ?? 99)
-  const supported = (k: SkillKind) => {
-    const g = gameRef.current
-    if (!g) return false
-    return k === 'checar' ? !!g.clear : k === 'lembrar' ? !!g.hint : true
-  }
-  function triggerSkill(k: SkillKind) {
-    if (!unlocked(k) || usePlay.getState().used.includes(k)) return
-    runnerRef.current?.useSkill(k)
-  }
 
   function startCountdown() {
     const reduce = reducedMotion()
@@ -221,19 +191,6 @@ export default function Play() {
             </Tap>
           </div>
         </div>
-        {!custom && (
-          <SkillBar
-            ref={skillsRef}
-            className="play-skills"
-            skills={SKILLS}
-            disabled={phase !== 'run'}
-            state={(k) =>
-              !unlocked(k) ? 'locked' : used.includes(k) ? 'used' : supported(k) ? 'ready' : 'na'
-            }
-            onUse={triggerSkill}
-          />
-        )}
-        {(slow || shield) && <div className={`status-glow${shield ? ' shield' : ''}`} aria-hidden="true" />}
       </div>
 
       {phase === 'intro' && (
@@ -259,14 +216,16 @@ export default function Play() {
       )}
       {goFlash > 0 && count === null && phase !== 'intro' && (
         <div className="mt-go" key={goFlash} aria-hidden="true" onAnimationEnd={() => setGoFlash(0)}>
-          <span>Vai!</span>
+          <span className="mt-go-text">Vai!</span>
         </div>
       )}
       {phase === 'pause' && (
         <div className="overlay-center mt-ov">
           <div className="mt-card mt-card--pause" role="dialog" aria-labelledby="pause-t">
             <Corners />
-            <div className="mt-kicker mt-kicker--stone">{custom ? custom.sub : `Fase ${level?.n} · ${title}`}</div>
+            <div className="mt-kicker mt-kicker--stone">
+              {custom ? custom.sub : `Fase ${level?.n} · ${title}`}
+            </div>
             <h2 id="pause-t" className="mt-title mt-title--icon">
               <IconTile name="pause" />
               Pausa
@@ -280,15 +239,10 @@ export default function Play() {
               ))}
             </ul>
             <div className="mt-actions">
-              {/* biome-ignore lint/a11y/noAutofocus: continuar é a ação esperada */}
-              <PixelButton tone="red" size="big" wide autoFocus onClick={() => runnerRef.current?.resume()}>
+              <PixelButton tone="red" size="big" autoFocus onClick={() => runnerRef.current?.resume()}>
                 Continuar ▶
               </PixelButton>
-              {!custom && (
-                <PixelButton wide onClick={() => setRunKey((k) => k + 1)}>
-                  Recomeçar
-                </PixelButton>
-              )}
+              {!custom && <PixelButton onClick={() => setRunKey((k) => k + 1)}>Recomeçar</PixelButton>}
               <PixelButton tone="ghost" commit="back" onClick={() => go(custom ? 'title' : 'map')}>
                 {custom ? 'Sair' : 'Voltar ao mapa'}
               </PixelButton>
@@ -296,7 +250,8 @@ export default function Play() {
           </div>
         </div>
       )}
-      {end && level &&
+      {end &&
+        level &&
         (end.success ? (
           <WinCard level={level} end={end} />
         ) : (
@@ -323,7 +278,12 @@ function WinCard({ level, end }: { level: Level; end: EndInfo }) {
   // faixa, estrela 1, 2, 3, pontos, fim
   const beats = useBeats([60, 420, 800, 1180, 1500, 2050])
   const { stage, skipped } = beats
-  const pts = useCountUp(stage >= 5 ? end.score : 0, { from: 0, ms: 520, tick: skipped ? null : 'score', done: skipped ? null : 'total' })
+  const pts = useCountUp(stage >= 5 ? end.score : 0, {
+    from: 0,
+    ms: 520,
+    tick: skipped ? null : 'score',
+    done: skipped ? null : 'total',
+  })
   const xp = end.firstTime ? xpFor(end.stars) : 0
   useEffect(() => {
     if (stage === 1 && !skipped) sfx('stamp')
@@ -347,16 +307,16 @@ function WinCard({ level, end }: { level: Level; end: EndInfo }) {
         <div className={`mt-tally${stage >= 5 ? ' is-in' : ''}`}>
           <div className="mt-pts" role="status" aria-label={`${fmt(end.score)} pontos`}>
             <b aria-hidden="true">{fmt(pts)}</b>
-            <span aria-hidden="true">pontos</span>
+            <span className="mt-pts-label" aria-hidden="true">
+              pontos
+            </span>
           </div>
           {xp > 0 && <div className="mt-xpchip">+{fmt(xp)} XP</div>}
         </div>
         <div className="mt-actions">
-          {/* biome-ignore lint/a11y/noAutofocus: próxima ação óbvia */}
           <PixelButton
             tone="red"
             size="big"
-            wide
             autoFocus
             className={beats.done ? 'is-ready' : ''}
             onClick={() => go('result', { level: level.n, xp, seen: 1 })}
@@ -382,7 +342,9 @@ function LoseCard({ level, end, retry }: { level: Level; end: EndInfo; retry: ()
     <div className="overlay-center mt-ov mt-ov--lose">
       <div className="mt-card mt-card--lose" role="dialog" aria-labelledby="end-t">
         <Corners />
-        <div className="mt-kicker">Fase {level.n} · {level.title}</div>
+        <div className="mt-kicker">
+          Fase {level.n} · {level.title}
+        </div>
         <h2 id="end-t" className="mt-title mt-title--big">
           Quase!
         </h2>
@@ -405,15 +367,16 @@ function LoseCard({ level, end, retry }: { level: Level; end: EndInfo; retry: ()
           )}
         </div>
         <div className="mt-actions">
-          {/* biome-ignore lint/a11y/noAutofocus: tentar de novo é a ação esperada */}
-          <PixelButton tone="red" size="big" wide autoFocus onClick={retry}>
+          <PixelButton tone="red" size="big" autoFocus onClick={retry}>
             Tentar de novo
           </PixelButton>
           <PixelButton
-            wide
             onClick={() => {
               const { firstTime } = getSave().completeLevel(level.n, 1, end.score, level.facts)
-              go(level.n === 13 && firstTime ? 'final' : 'result', { level: level.n, xp: firstTime ? xpFor(1) : 0 })
+              go(level.n === 13 && firstTime ? 'final' : 'result', {
+                level: level.n,
+                xp: firstTime ? xpFor(1) : 0,
+              })
             }}
           >
             Seguir com 1 estrela

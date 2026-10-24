@@ -41,6 +41,8 @@ const KEY: Record<string, PaletteKey> = {
 }
 
 const cache = new Map<string, HTMLCanvasElement>()
+/** canvas decorativo: fora da árvore de acessibilidade (não recebe foco) */
+const HIDDEN = true
 
 function paint(rows: readonly string[], key = rows.join('|')) {
   const hit = cache.get(key)
@@ -81,7 +83,7 @@ export function Bitmap({ rows, className }: { rows: readonly string[]; className
       ref={ref}
       className={`mt-bmp${className ? ` ${className}` : ''}`}
       style={{ ['--bw' as string]: w, ['--bh' as string]: rows.length }}
-      aria-hidden="true"
+      aria-hidden={HIDDEN}
     />
   )
 }
@@ -542,7 +544,17 @@ export function Banner({ children, size = 'big' }: { children: ReactNode; size?:
 }
 
 /** Barra em segmentos vermelhos com número branco à direita (lição 14 da ref v2). */
-export function SegBar({ label, value, text, segs = 10 }: { label: string; value: number; text: string; segs?: number }) {
+export function SegBar({
+  label,
+  value,
+  text,
+  segs = 10,
+}: {
+  label: string
+  value: number
+  text: string
+  segs?: number
+}) {
   const on = Math.round(Math.max(0, Math.min(1, value)) * segs)
   return (
     <div className="mt-seg" role="img" aria-label={`${label}: ${text}`}>
@@ -599,7 +611,7 @@ function LevelArt({ n }: { n: number }) {
       alive = false
     }
   }, [n])
-  return <canvas ref={ref} className={`mt-art-cv${ready ? ' is-ready' : ''}`} aria-hidden="true" />
+  return <canvas ref={ref} className={`mt-art-cv${ready ? ' is-ready' : ''}`} aria-hidden={HIDDEN} />
 }
 
 // ---------------------------------------------------------------- card de introdução
@@ -684,8 +696,7 @@ export function LevelCard({
             ))}
           </ul>
           <div className="mt-actions">
-            {/* biome-ignore lint/a11y/noAutofocus: o botão de começar é a única ação */}
-            <PixelButton tone="red" size="big" wide autoFocus onClick={onStart}>
+            <PixelButton tone="red" size="big" autoFocus onClick={onStart}>
               Começar ▶
             </PixelButton>
             <PixelButton tone="ghost" commit="back" onClick={onBack}>

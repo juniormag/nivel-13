@@ -5,16 +5,24 @@
 import { Container, Sprite, type Texture } from 'pixi.js'
 import type { GameCtx } from '../engine/types'
 import { mulberry32 } from '../lib/rng'
+import { bank, cumulusLayer, type Stratus, stratusLayer } from '../scene/backdrop'
 import type { Ctx } from '../scene/levels'
-import { bayer, type Buf, dith, type K } from '../scene/pal'
-import { clamp01, Grid, gridTex, P } from './kit-a'
+import { type Buf, bayer, dith, type K } from '../scene/pal'
+import { clamp01, Grid, gridTex, P, rowsTex } from './kit-a'
 
 // =====================================================================================
 // Cenário
 // =====================================================================================
 
 /** névoa de atmosfera: pontilha `k` por cima do que já existe, mais densa em `y1` (perspectiva atmosférica) */
-export function haze(c: Ctx, y0: number, y1: number, k: K, max = 0.5, only?: (x: number, y: number) => boolean) {
+export function haze(
+  c: Ctx,
+  y0: number,
+  y1: number,
+  k: K,
+  max = 0.5,
+  only?: (x: number, y: number) => boolean,
+) {
   for (let y = Math.max(0, Math.floor(y0)); y < Math.min(c.H, y1); y++) {
     const t = ((y - y0) / Math.max(1, y1 - y0)) * max
     for (let x = 0; x < c.W; x++) {
@@ -54,8 +62,46 @@ export function range(
   }
 }
 
+/**
+ * Cúmulos legíveis (lição de cenário 5): poucos sopros grandes, aro vermelho no alto-esquerda e a base
+ * acesa de laranja. `xs` em frações de W; `y` é a base do cacho e `h` a altura.
+ */
+export function cumulus(c: Ctx, y: number, h: number, xs: [number, number][], seed: number) {
+  const r = mulberry32(seed)
+  const puffs = []
+  for (const [a, z] of xs) {
+    const n = Math.max(4, Math.min(9, Math.round(((z - a) * c.W) / (h * 0.9))))
+    puffs.push(...bank(r, a * c.W, z * c.W, y, h, n))
+  }
+  c.b.blit(cumulusLayer(c.W, c.H, puffs, seed), 0, 0)
+}
+
+/** estratos colados no horizonte (lição de cenário 6): mais finos e quentes quanto mais baixos */
+export function stratus(c: Ctx, bands: Stratus[], seed: number) {
+  c.b.blit(stratusLayer(c.W, c.H, bands, seed), 0, 0)
+}
+
+/** brilho do horizonte sem o "pente" do Bayer: faixa orgânica (ruído) entre `lo` e `hi` nas últimas linhas do céu */
+export function horizonGlow(c: Ctx, rows: number, lo: K, hi: K, bottom = c.hz) {
+  for (let y = Math.max(0, bottom - rows); y <= bottom; y++) {
+    const t = (y - (bottom - rows)) / Math.max(1, rows)
+    for (let x = 0; x < c.W; x++) {
+      const n = c.nz.n2(x / 7, y / 1.6) * 0.6 + c.nz.n2(x / 2.3, y * 1.3) * 0.4
+      c.b.set(x, y, n < t * 0.9 + 0.05 ? hi : lo)
+    }
+  }
+}
+
 /** luzes de cidade: pontos de 1 px agrupados em bairros, 3 tons e um ponto quente aqui e ali (lição 7) */
-export function cityLights(c: Ctx, x0: number, x1: number, y0: number, y1: number, density: number, seed: number) {
+export function cityLights(
+  c: Ctx,
+  x0: number,
+  x1: number,
+  y0: number,
+  y1: number,
+  density: number,
+  seed: number,
+) {
   const r = mulberry32(seed)
   const n = Math.round(((x1 - x0) * (y1 - y0) * density) / 10)
   const hubs: [number, number][] = []
@@ -66,7 +112,11 @@ export function cityLights(c: Ctx, x0: number, x1: number, y0: number, y1: numbe
     const y = Math.round(h[1] + (r() - 0.5) * (y1 - y0) * 0.7)
     if (x < x0 || x >= x1 || y < y0 || y >= y1) continue
     const v = r()
-    c.b.set(x, y, v > 0.97 ? 'sparkle' : v > 0.8 ? 'goldHi' : v > 0.5 ? 'gold' : v > 0.25 ? 'ember' : 'emberDark')
+    c.b.set(
+      x,
+      y,
+      v > 0.97 ? 'sparkle' : v > 0.8 ? 'goldHi' : v > 0.5 ? 'gold' : v > 0.25 ? 'ember' : 'emberDark',
+    )
   }
 }
 
@@ -165,7 +215,8 @@ export function fgFrame(c: Ctx, seed: number, rim: K, rimLeft: K = 'dusk', reach
     if (t >= H - 1) continue
     const hh = 2 + Math.floor(r() * 6)
     const lean = r() < 0.5 ? -1 : 1
-    for (let k = 0; k < hh; k++) b.set(x + Math.round((k / hh) * lean * 2), t - k, k === hh - 1 && r() < 0.4 ? rim : 'void')
+    for (let k = 0; k < hh; k++)
+      b.set(x + Math.round((k / hh) * lean * 2), t - k, k === hh - 1 && r() < 0.4 ? rim : 'void')
   }
 }
 
@@ -275,17 +326,23 @@ export function bird(b: Buf, x: number, y: number, k: K, wide = false) {
 export function hudScore(c: GameCtx) {
   const el = typeof document !== 'undefined' ? document.querySelector<HTMLElement>('.play-top .score') : null
   const r = el?.getBoundingClientRect()
-  if (!r || !r.width) return { x: c.W - 14, y: Math.max(6, c.top - 14), el: null }
+  if (!r?.width) return { x: c.W - 14, y: Math.max(6, c.top - 14), el: null }
   return { x: Math.round((r.left + r.width / 2) / c.css), y: Math.round((r.top + r.height / 2) / c.css), el }
 }
 
 /** pulso curto no placar quando a recompensa chega (respeita movimento reduzido) */
 export function pulseEl(el: HTMLElement | null, reduced: boolean) {
   if (!el || reduced || typeof el.animate !== 'function') return
-  el.animate([{ transform: 'scale(1.22)', filter: 'brightness(1.6)' }, { transform: 'scale(1)', filter: 'none' }], {
-    duration: 160,
-    easing: 'ease-out',
-  })
+  el.animate(
+    [
+      { transform: 'scale(1.22)', filter: 'brightness(1.6)' },
+      { transform: 'scale(1)', filter: 'none' },
+    ],
+    {
+      duration: 160,
+      easing: 'ease-out',
+    },
+  )
 }
 
 /**
@@ -349,7 +406,19 @@ export class Flyers {
       s.anchor.set(0.5)
       s.visible = false
       this.root.addChild(s)
-      this.list.push({ s, x0: 0, y0: 0, mx: 0, my: 0, t: 0, dur: 0.5, delay: 0, frames: null, alive: false, done: null })
+      this.list.push({
+        s,
+        x0: 0,
+        y0: 0,
+        mx: 0,
+        my: 0,
+        t: 0,
+        dur: 0.5,
+        delay: 0,
+        frames: null,
+        alive: false,
+        done: null,
+      })
     }
     this.retarget()
   }
@@ -477,3 +546,96 @@ export function whiteTex(key: string, make: () => Grid, col: number = P.white) {
 
 /** escala de "pop" em degraus inteiros de 1/8 (sem escala fracionária visível em sprite pequeno) */
 export const step8 = (v: number) => Math.round(v * 8) / 8
+
+// ---------- demonstração do gesto (primeiros 3 s) ----------
+
+const HAND_ROWS = [
+  '....kk.......',
+  '...kTTk......',
+  '...kTtk......',
+  '...kTtkkk....',
+  '...kTtkTTkk..',
+  '.kkkTtkTtkTk.',
+  'kTTkTtTtTtTtk',
+  'kTtkTTTTTTTtk',
+  '.kTtTTTTTTTtk',
+  '..kTTTTTTTttk',
+  '..kTTTTTTTtk.',
+  '...kTTTTTttk.',
+  '....kTTTTtk..',
+  '....k4444k...',
+  '....k3333k...',
+]
+
+/** mão pixel 13×15 (dedo indicador); quadro 1 = apertando (dedo 1 px mais baixo e sombra) */
+export function handFrames(): Texture[] {
+  const press = ['.............', ...HAND_ROWS.slice(0, 14)]
+  return [rowsTex('fxa-hand0', HAND_ROWS), rowsTex('fxa-hand1', press)]
+}
+
+/**
+ * Mão de demonstração em PixiJS: toca no alvo (aperta a cada 0,8 s com um anel) ou arrasta de `from`
+ * para `to`. Some no primeiro toque do jogador ou depois de `maxT` segundos.
+ */
+export class Hand {
+  readonly s: Sprite
+  private fr: Texture[]
+  private t = 0
+  private ring = 0
+  done = false
+  x = 0
+  y = 0
+  to: { x: number; y: number } | null = null
+  constructor(
+    private c: GameCtx,
+    private maxT = 3,
+  ) {
+    this.fr = handFrames()
+    this.s = new Sprite(this.fr[0])
+    this.s.anchor.set(0.3, 0)
+  }
+  hide() {
+    this.done = true
+    this.s.visible = false
+  }
+  update(dt: number) {
+    if (this.done) return
+    this.t += dt
+    if (this.t > this.maxT) {
+      this.hide()
+      return
+    }
+    const ph = this.t % 0.8
+    const press = ph > 0.45 && ph < 0.65
+    let x = this.x
+    let y = this.y
+    if (this.to) {
+      const k = Math.min(1, ph / 0.6)
+      const e = k * k * (3 - 2 * k)
+      x = this.x + (this.to.x - this.x) * e
+      y = this.y + (this.to.y - this.y) * e
+    }
+    this.s.texture = this.fr[press ? 1 : 0] as Texture
+    this.s.x = Math.round(x)
+    this.s.y = Math.round(y + (press ? 1 : 0))
+    // pisca nos últimos 0,4 s para não sumir seco
+    this.s.visible = this.t < this.maxT - 0.4 || Math.floor(this.t * 10) % 2 === 0
+    if (press && this.ring <= 0 && !this.to) {
+      this.ring = 0.5
+      this.c.fx.ring(x, y, P.white, 9)
+    }
+    this.ring -= dt
+  }
+}
+
+/** a mesma mão como elemento DOM (fica por cima das cartas e painéis em HTML) */
+export function domHand(c: GameCtx) {
+  const src = (handFrames()[0]?.source as unknown as { resource?: HTMLCanvasElement })?.resource
+  const img = document.createElement('img')
+  img.alt = ''
+  img.setAttribute('aria-hidden', 'true')
+  if (src?.toDataURL) img.src = src.toDataURL()
+  const k = Math.max(2, Math.round(c.css * 1.5))
+  img.style.cssText = `position:absolute;width:${13 * k}px;height:${15 * k}px;image-rendering:pixelated;pointer-events:none;z-index:5;left:0;top:0;transition:opacity .2s`
+  return img
+}

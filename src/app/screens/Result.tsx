@@ -85,17 +85,23 @@ function useXpFlight(
         [
           { transform: 'translate(0px, 0px)', opacity: 0 },
           { transform: `translate(${sx}px, -18px)`, opacity: 1, offset: 0.2 },
-          { transform: `translate(${Math.round(dx * 0.6 + sx)}px, ${Math.round(dy * 0.4 - 26)}px)`, offset: 0.6 },
+          {
+            transform: `translate(${Math.round(dx * 0.6 + sx)}px, ${Math.round(dy * 0.4 - 26)}px)`,
+            offset: 0.6,
+          },
           { transform: `translate(${dx}px, ${dy}px)`, opacity: 1 },
         ],
         { duration: 560, delay: i * 70, easing: 'steps(14, end)', fill: 'forwards' },
       )
       timers.push(
-        window.setTimeout(() => {
-          el.remove()
-          sfx('coin', { combo: i })
-          if (i === N - 1) land.current()
-        }, 560 + i * 70),
+        window.setTimeout(
+          () => {
+            el.remove()
+            sfx('coin', { combo: i })
+            if (i === N - 1) land.current()
+          },
+          560 + i * 70,
+        ),
       )
     }
     return () => {
@@ -164,17 +170,32 @@ export default function Result() {
           variants={rise}
           onPointerDownCapture={beats.onPointerDownCapture}
         >
+          <Corners />
           <div className="mt-res-banner">
             <Banner size="sm">Fase {n} concluída</Banner>
             <span className="mt-res-count">{done}/13</span>
           </div>
           <h1>{lv.title}</h1>
           <div ref={starsRef} className={seen ? 'mt-glint' : ''}>
-            <StarRow n={stars} landed={seen ? stars : beats.stage} instant={seen || beats.skipped} size="mid" />
+            <StarRow
+              n={stars}
+              landed={seen ? stars : beats.stage}
+              instant={seen || beats.skipped}
+              size="mid"
+            />
           </div>
           <div className={`res-xp mt-res-xp${landed ? ' is-land' : ''}`} ref={barRef}>
-            <XPBar value={xpLanded ? xpTotal(save) : xpTotal(save) - gained} max={XP_MAX} label="Experiência total" sound />
-            {gained > 0 && xpLanded && <span className="mt-xpchip mt-xpchip--pop">+{fmt(gained)} XP</span>}
+            <XPBar
+              value={xpLanded ? xpTotal(save) : xpTotal(save) - gained}
+              max={XP_MAX}
+              label="Experiência total"
+              sound
+            />
+            {gained > 0 && (
+              <span className={`mt-xpchip${xpLanded ? ' mt-xpchip--pop' : ' is-wait'}`}>
+                +{fmt(gained)} XP
+              </span>
+            )}
           </div>
           <div ref={layerRef} className="mt-orbs" aria-hidden="true" />
         </motion.header>

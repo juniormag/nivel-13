@@ -2,12 +2,12 @@
 // ponta de Niemeyer, vidro aceso atrás), a estátua da Justiça (sentada, olhos vendados, espada no colo)
 // grande na borda, as torres do Congresso ao longe e a praça escura no meio para as cartas e a bancada.
 import { mulberry32 } from '../../lib/rng'
-import { type Ctx, calm, clouds, moon, type Painter, sky } from '../levels'
-import { DARKER, dith, type K } from '../pal'
-import { bird, box3q, cityLights, fgFrame, fogBand, halo, reflect, star4 } from './b-kit'
+import { type Ctx, calm, moon, type Painter, sky } from '../levels'
+import { dith, type K } from '../pal'
+import { bird, box3q, city, cumulus, fgFrame, halo, range, star4, stratus } from './b-kit'
 
 /** Palácio do STF em três quartos: vidro recuado, colunas em ponta, laje com lateral grossa */
-function stf(c: Ctx, x0: number, x1: number, base: number, k: number) {
+function stf(c: Ctx, x0: number, x1: number, base: number, k: number, dim = false) {
   const { b } = c
   const h = Math.round(k * 11)
   const d = Math.max(3, Math.round(k * 5))
@@ -35,7 +35,8 @@ function stf(c: Ctx, x0: number, x1: number, base: number, k: number) {
       b.set(x, y, kk)
     }
   for (let y = base - h + 3; y < base - 1; y += 3)
-    for (let x = gx0 + 1; x < gx1; x += 2) if (r() < 0.32) b.set(x, y, r() < 0.2 ? 'goldHi' : r() < 0.6 ? 'gold' : 'gold1')
+    for (let x = gx0 + 1; x < gx1; x += 2)
+      if (r() < 0.32) b.set(x, y, r() < 0.2 ? 'goldHi' : r() < 0.6 ? 'gold' : 'gold1')
   // laje fina (cobertura) com lateral e chanfro
   box3q(c, {
     x: x0,
@@ -43,7 +44,7 @@ function stf(c: Ctx, x0: number, x1: number, base: number, k: number) {
     w: x1 - x0,
     h: Math.max(2, Math.round(k * 1.5)),
     d,
-    front: ['stone2', 'stone3', 'stoneHi', 'white'],
+    front: dim ? ['stone1', 'stone2', 'stone3', 'stoneHi'] : ['stone2', 'stone3', 'stoneHi', 'white'],
     side: ['blood1', 'crimsonDeep', 'crimson'],
     roof: 'stone3',
     rim: 'redHot',
@@ -55,7 +56,18 @@ function stf(c: Ctx, x0: number, x1: number, base: number, k: number) {
       const t = y / (h - 2)
       const half = Math.round(Math.sin(Math.PI * Math.min(1, t * 1.15)) ** 1.5 * k * 1.1)
       for (let xx = -half; xx <= half; xx++) {
-        const kk: K = xx < 0 ? 'stoneHi' : xx === 0 ? 'stone3' : 'stone2'
+        // no celular a balança do jogo fica bem na frente: as colunas descem um degrau de valor
+        const kk: K = dim
+          ? xx < 0
+            ? 'stone2'
+            : xx === 0
+              ? 'stone1'
+              : 'stone0'
+          : xx < 0
+            ? 'stoneHi'
+            : xx === 0
+              ? 'stone3'
+              : 'stone2'
         b.set(cx + xx, base - h + 2 + y, kk)
       }
       if (half > 0) b.set(cx + half + 1, base - h + 2 + y, 'void')
@@ -132,7 +144,8 @@ function justica(c: Ctx, cx: number, base: number, u: number, face: 1 | -1) {
         }
       })
     }
-  const at = (gx: number, gy: number) => (gx < 0 || gy < 0 || gx >= gw || gy >= gh ? -1 : (mask[gy * gw + gx] ?? -1))
+  const at = (gx: number, gy: number) =>
+    gx < 0 || gy < 0 || gx >= gw || gy >= gh ? -1 : (mask[gy * gw + gx] ?? -1)
   const X0 = cx - R
   const Y0 = oy - gh
   const px = (gx: number) => (face > 0 ? X0 + gx : X0 + gw - 1 - gx)
@@ -169,20 +182,29 @@ function justica(c: Ctx, cx: number, base: number, u: number, face: 1 | -1) {
 const paint: Painter = (c) => {
   const { W, H, hz, s } = c
   const portrait = W < H
-  sky(c, 'blood1', 1)
+  sky(c, 'crimsonDeep', 0.6)
   moon(c, portrait ? W * 0.78 : W * 0.86, H * (portrait ? 0.1 : 0.14), s * (portrait ? 3.8 : 3.4))
-  clouds(c, hz - H * 0.15, H * 0.06, 'bottom', 1, 29, [
-    [0, 0.4],
-    [0.6, 1],
-  ])
-  fogBand(c, hz - Math.round(H * 0.09), hz, 'blood1', 0.5)
-  // plano 6: cidade e as torres do Congresso ao longe (Praça dos Três Poderes)
-  for (let x = 0; x < W; x++) {
-    const hh = Math.round(s * (1 + c.nz.fbm(x / 8, 5, 3) * 2.5))
-    for (let y = hz - hh; y < hz; y++) c.b.set(x, y, y === hz - hh ? 'haze' : 'hazeDark')
-  }
-  cityLights(c, 0, W, hz - s * 3, hz, 0.28, 113)
-  const kx = Math.round(portrait ? W * 0.2 : W * 0.58)
+  cumulus(
+    c,
+    [
+      { x: 0.08, y: hz / H - 0.16, r: 0.045, n: 5 },
+      { x: 0.62, y: hz / H - 0.12, r: 0.05, n: 6 },
+    ],
+    29,
+  )
+  stratus(
+    c,
+    [
+      { x: 0, y: hz - Math.round(H * 0.02), len: W * 0.6, th: 2, heat: 0.95 },
+      { x: W * 0.45, y: hz - Math.round(H * 0.04), len: W * 0.55, th: 3, heat: 0.65 },
+      { x: W * 0.1, y: hz - Math.round(H * 0.075), len: W * 0.3, th: 4, heat: 0.3 },
+    ],
+    31,
+  )
+  // plano 6: cerrado baixo com névoa, cidade ao longe e as torres do Congresso (Praça dos Três Poderes)
+  range(c, hz, (x) => hz - s - c.nz.fbm(x / 12, 5, 3) * s * 2.5, 'hazeDark', 'crimsonDeep', 'blood1')
+  city(c, 0, W, () => hz, s, s * 3, 'far', 113, 0.3)
+  const kx = Math.round(portrait ? W * 0.93 : W * 0.33)
   const th = Math.round(s * 13)
   for (const dx of [-s * 2, s]) {
     c.b.rect(kx + dx, hz - th, s, th, 'haze')
@@ -194,30 +216,39 @@ const paint: Painter = (c) => {
     const t = (y - hz) / (H - hz)
     for (let x = 0; x < W; x++) {
       let kk: K = t < 0.08 ? 'dusk' : t < 0.3 ? 'night' : 'void'
-      if (Math.round(Math.sqrt(y - hz) * 2.2) % 5 === 0 && dith(x, y, 0.45 - t * 0.3)) kk = t < 0.4 ? 'hazeDark' : 'dusk'
+      if (Math.round(Math.sqrt(y - hz) * 2.2) % 5 === 0 && dith(x, y, 0.45 - t * 0.3))
+        kk = t < 0.4 ? 'hazeDark' : 'dusk'
       c.b.set(x, y, kk)
     }
   }
   // o Palácio
-  const k = s * (portrait ? 0.62 : 0.8)
+  // no recorte do card de introdução (168×104, s = 1) o marco cresce para continuar legível
+  const k = Math.max(s * (portrait ? 0.62 : 0.8), H < 160 ? 1.25 : 0)
   const base = hz + Math.round(s * 4)
-  if (portrait) stf(c, Math.round(W * 0.06), Math.round(W * 0.82), base, k)
-  else stf(c, Math.round(W * 0.34), Math.round(W * 0.92), base, k)
+  if (portrait) stf(c, Math.round(W * 0.06), Math.round(W * 0.82), base, k, true)
+  else stf(c, Math.round(W * 0.58), Math.round(W * 0.97), base, k)
   // espelho d'água na frente do STF com reflexos quebrados das colunas
-  const sx0 = portrait ? Math.round(W * 0.06) : Math.round(W * 0.34)
-  const sx1 = portrait ? Math.round(W * 0.82) : Math.round(W * 0.92)
+  const sx0 = portrait ? Math.round(W * 0.06) : Math.round(W * 0.58)
+  const sx1 = portrait ? Math.round(W * 0.82) : Math.round(W * 0.97)
   const wy = base + Math.round(k * 3)
   for (let y = wy; y < wy + Math.round(s * 3); y++)
     for (let x = sx0; x < sx1; x++) c.b.set(x, y, y === wy ? 'stone1' : 'night')
-  const ls: { x: number; k: K; len: number }[] = []
-  for (let x = sx0 + 3; x < sx1; x += Math.max(6, Math.round(k * 6))) ls.push({ x, k: 'stone2', len: Math.round(s * 3) })
-  reflect(c, wy + 1, wy + Math.round(s * 3), ls)
+  // reflexo das colunas: traços curtos e frios, sem cor quente (o centro fica calmo)
+  for (let x = sx0 + 3; x < sx1; x += Math.max(6, Math.round(k * 6)))
+    for (let i = 1; i < s * 3; i += 2)
+      c.b.rect(x - (i < s ? 1 : 0), wy + i, i < s ? 3 : 1, 1, i < s ? 'stone1' : 'stone0')
   // a Justiça na borda (no celular, à direita; no desktop, à esquerda, grande)
-  const u = s * (portrait ? 0.55 : 0.62)
+  const u = Math.max(s * (portrait ? 0.55 : 0.62), H < 160 ? 1 : 0)
   if (portrait) justica(c, Math.round(W * 0.83), Math.round(H * 0.78), u, -1)
   else justica(c, Math.round(W * 0.17), Math.round(H * 0.8), u, 1)
-  for (let i = 0; i < 3; i++) bird(c, W * (0.35 + i * 0.12), H * (0.22 + (i % 2) * 0.04), 'stone1', i % 2 === 0)
-  star4(c, portrait ? Math.round(W * 0.83) : Math.round(W * 0.17), Math.round(H * (portrait ? 0.78 : 0.8) - u * 28), 2)
+  for (let i = 0; i < 3; i++)
+    bird(c, W * (0.35 + i * 0.12), H * (0.22 + (i % 2) * 0.04), 'stone1', i % 2 === 0)
+  star4(
+    c,
+    portrait ? Math.round(W * 0.83) : Math.round(W * 0.17),
+    Math.round(H * (portrait ? 0.78 : 0.8) - u * 28),
+    2,
+  )
   calm(c, 0.42, 0.3, 0.24)
   fgFrame(c, 8, { h: 0.08 })
 }

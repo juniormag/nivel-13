@@ -3,9 +3,12 @@
 import { Container, type Sprite, type Text, type Texture } from 'pixi.js'
 import { LEVEL2_IDS, STATEMENTS, type Statement } from '../content/statements'
 import type { GameCtx, MicroGame } from '../engine/types'
+import { anchors } from '../scene/levels/l02'
+import { Driver, domHand, Flyers, reticleFrames } from './fx-a'
 import {
   Booms,
   clamp01,
+  coinFrames,
   ENERGY,
   FIRE,
   Field,
@@ -30,40 +33,82 @@ export interface SwipeOpts {
   onAnswer?: (s: Statement, correct: boolean) => void
 }
 
-/** mensagem-meteoro 32×26: balão de pedra granulada, rim light vermelho e selo "!" */
-function meteorTex() {
-  return gridTex('swipe-meteor2', () => {
-    const m = new Grid(32, 26)
-    m.rect(2, 3, 26, 16, 1)
-    for (const [cx, cy, sx, sy] of [
-      [2, 3, 1, 1],
-      [27, 3, -1, 1],
-      [2, 18, 1, -1],
-      [27, 18, -1, -1],
-    ] as const)
-      for (const [dx, dy] of [
-        [0, 0],
-        [1, 0],
-        [0, 1],
+/**
+ * mensagem-meteoro 36×30 em três quartos: balão de pedra osso com a lateral grossa de granito vermelho
+ * (direita e embaixo), chanfro de 1 px aceso, cara de fake (olhos espertos e sorriso torto) e o selo "!".
+ * Quadros: 0 = olhando, 1 = piscando, 2 = urgente (olhos em brasa, boca aberta).
+ */
+function meteorTex(f = 0) {
+  return gridTex(`swipe-meteor3-${f}`, () => {
+    const m = new Grid(36, 30)
+    // lateral grossa: o mesmo balão empurrado 3 px para baixo-direita
+    const bubble = (ox: number, oy: number, v: number) => {
+      m.rect(2 + ox, 4 + oy, 26, 16, v)
+      for (const [cx, cy, sx, sy] of [
+        [2, 4, 1, 1],
+        [27, 4, -1, 1],
+        [2, 19, 1, -1],
+        [27, 19, -1, -1],
       ] as const)
-        m.set(cx + dx * sx, cy + dy * sy, 0)
-    for (let i = 0; i < 4; i++) m.rect(6, 19 + i, 5 - i, 1, 1)
-    m.ellipse(26, 5, 4.6, 4.6, 2)
+        for (const [dx, dy] of [
+          [0, 0],
+          [1, 0],
+          [0, 1],
+        ] as const)
+          m.set(cx + ox + dx * sx, cy + oy + dy * sy, 0)
+      for (let i = 0; i < 4; i++) m.rect(6 + ox, 20 + oy + i, 5 - i, 1, v)
+    }
+    bubble(3, 3, 3)
+    bubble(0, 0, 1)
+    m.ellipse(27, 6, 4.6, 4.6, 2)
     const g = shade(m, {
-      1: { ramp: [P.stone0, P.stone1, P.stone2, P.stone3, P.stoneHi], rim: P.redHot, grain: 0.12 },
+      1: { ramp: [P.stone1, P.stone2, P.stone3, P.stoneHi, P.sparkle], grain: 0.1 },
       2: { ramp: [P.blood0, P.crimsonDeep, P.crimson, P.red, P.redGlow], rim: P.redHot },
+      3: { ramp: [P.blood0, P.blood1, P.crimsonDeep, P.crimson], grain: 0.25, rim: P.redHot },
     })
-    for (const [y, x0, x1] of [
-      [7, 6, 19],
-      [10, 6, 23],
-      [13, 6, 21],
-      [16, 6, 14],
+    // granito: pontos claros na lateral
+    for (let y = 0; y < 30; y++)
+      for (let x = 0; x < 36; x++) if (m.get(x, y) === 3 && (x * 7 + y * 3) % 9 === 0) g.set(x, y, P.red)
+    // rachaduras da pedra: linha escura com lábio claro em cima (lição 4)
+    for (const [x0, y0, len] of [
+      [4, 8, 5],
+      [20, 16, 6],
     ] as const)
-      for (let x = x0; x <= x1; x++) if ((x - x0) % 6 !== 5) g.set(x, y, P.stone2)
-    g.rect(26, 2, 1, 4, P.white)
-    g.set(26, 7, P.white)
-    // borda de baixo em brasa: é a frente que esquenta na queda
-    for (let x = 4; x < 27; x++) if (g.get(x, 19, -1) !== -1 && x % 3) g.set(x, 19, P.ember)
+      for (let i = 0; i < len; i++) {
+        g.set(x0 + i, y0 + (i >> 1), P.stone1)
+        g.set(x0 + i, y0 + (i >> 1) - 1, P.sparkle)
+      }
+    // cara de fake: sobrancelhas inclinadas, olhos espertos, sorriso torto
+    const ey = 10
+    const urgent = f === 2
+    for (const ex of [9, 17]) {
+      const inward = ex < 13 ? 1 : -1
+      g.set(ex - inward, ey - 3, P.stone0)
+      g.set(ex, ey - 3 + (inward > 0 ? 0 : 0), P.stone0)
+      g.set(ex + inward, ey - 2, P.stone0)
+      if (f === 1) {
+        g.rect(ex - 1, ey, 3, 1, P.stone0)
+      } else {
+        g.rect(ex - 1, ey - 1, 3, 3, P.stone0)
+        g.rect(ex, ey, 2, 2, urgent ? P.redHot : P.void)
+        g.set(ex, ey - 1, urgent ? P.goldHi : P.white)
+      }
+    }
+    // boca: sorriso torto (urgente: aberta com dentes)
+    if (urgent) {
+      g.rect(10, 15, 9, 3, P.blood0)
+      g.rect(11, 15, 7, 1, P.stoneHi)
+      g.set(14, 17, P.redHot)
+    } else {
+      for (let x = 10; x <= 18; x++) g.set(x, 15 + (x > 15 ? -1 : 0) + (x === 10 ? -1 : 0), P.stone0)
+      g.set(18, 13, P.stone0)
+      g.set(12, 16, P.stoneHi)
+    }
+    // selo "!" piscando em branco
+    g.rect(27, 3, 1, 4, P.white)
+    g.set(27, 8, P.white)
+    // borda de baixo em brasa: a frente esquenta na queda
+    for (let x = 4; x < 31; x++) if (m.get(x, 22) === 3 && x % 3) g.set(x, 22, P.ember)
     return g
   })
 }
@@ -107,6 +152,63 @@ function scorchTex() {
   })
 }
 
+/** lateral grossa da carta em três quartos (lição 2): faixa de granito à direita e embaixo, 3 px */
+function slabTex(w: number, h: number, kind: 0 | 1 | 2) {
+  return gridTex(`swipe-slab${w}x${h}-${kind}`, () => {
+    const D = 3
+    const g = new Grid(w + D, h + D, -1)
+    const ramp: number[] =
+      kind === 1
+        ? [P.gold0, P.gold1, P.gold]
+        : kind === 2
+          ? [P.blood0, P.crimsonDeep, P.red]
+          : [P.blood0, P.blood1, P.crimsonDeep]
+    for (let y = 0; y < h + D; y++)
+      for (let x = 0; x < w + D; x++) {
+        const inR = x >= w && y >= x - w && y < h + (x - w)
+        const inB = y >= h && x >= y - h && x < w + (y - h)
+        if (!inR && !inB) continue
+        let col: number = inR ? (ramp[1] ?? P.blood1) : (ramp[0] ?? P.blood0)
+        if ((x * 5 + y * 3) % 7 === 0) col = ramp[2] ?? col
+        if ((inR && x === w + D - 1) || (inB && y === h + D - 1)) col = P.void
+        g.set(x, y, col)
+      }
+    // aresta da quina acesa (chanfro)
+    for (let i = 0; i < D; i++) g.set(w + i, h + i, ramp[2] ?? P.red)
+    return g
+  })
+}
+
+/**
+ * facho do farol do Mucuripe (vivo): a luz gira; vista de lado, o facho encolhe e troca de lado.
+ * 12 quadros pré-desenhados (sem rotação em tempo real), pontilhado dourado para somar no céu.
+ */
+function beamFrames(len: number) {
+  const out: Texture[] = []
+  for (let f = 0; f < 12; f++)
+    out.push(
+      gridTex(`swipe-beam${len}-${f}`, () => {
+        const a = (f / 12) * Math.PI * 2
+        const L = Math.round(len * Math.abs(Math.cos(a)))
+        const dir = Math.cos(a) > 0 ? -1 : 1
+        const g = new Grid(len * 2 + 1, 13, -1)
+        for (let i = 2; i < L; i++) {
+          const t = i / Math.max(1, L)
+          const half = Math.round(1 + t * 5)
+          for (let k = -half; k <= half; k++) {
+            const edge = Math.abs(k) / (half + 0.01)
+            const dens = (1 - t) * (1 - edge * 0.7)
+            if ((i + k * 2) % 4 !== 0 && dens < 0.75) continue
+            if (dens < 0.18 || (dens < 0.4 && (i + k) % 2)) continue
+            g.set(len + dir * i, 6 + k, dens > 0.8 ? P.sparkle : dens > 0.5 ? P.goldHi : P.gold1)
+          }
+        }
+        return g
+      }),
+    )
+  return out
+}
+
 export default function swipe(opts?: SwipeOpts): MicroGame {
   const statements =
     opts?.statements ??
@@ -146,6 +248,97 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
   let count: Text
   let flames: Texture[] = []
   const aims: Texture[] = []
+  let meteorF: Texture[] = []
+  let slab: Sprite
+  let slabKind: 0 | 1 | 2 = 0
+  let slabEvery = 0
+  let reticle: Sprite
+  let retF: Texture[] = []
+  let flyers: Flyers
+  let coinF: Texture[] = []
+  let driver: Driver | null = null
+  let beam: Sprite | null = null
+  let beamF: Texture[] = []
+  let ended = false
+  let endT = 0
+  let hand: HTMLImageElement | null = null
+  let handAnim: Animation | null = null
+
+  /** demonstração do gesto: a mão arrasta a carta para os dois lados nos primeiros segundos */
+  function showHand() {
+    if (!card?.isConnected || c.reduced) return
+    hand = domHand(c)
+    const r = card.getBoundingClientRect()
+    const lr = c.layer.getBoundingClientRect()
+    const x = r.left - lr.left + r.width / 2
+    const y = r.top - lr.top + r.height * 0.62
+    hand.style.left = `${Math.round(x)}px`
+    hand.style.top = `${Math.round(y)}px`
+    c.layer.append(hand)
+    const d = Math.min(70, r.width * 0.3)
+    handAnim = hand.animate(
+      [
+        { transform: 'translate(0,0)', opacity: 0 },
+        { transform: 'translate(0,0)', opacity: 1, offset: 0.12 },
+        { transform: `translate(${-d}px,0)`, opacity: 1, offset: 0.42 },
+        { transform: 'translate(0,0)', opacity: 1, offset: 0.55 },
+        { transform: `translate(${d}px,0)`, opacity: 1, offset: 0.85 },
+        { transform: `translate(${d}px,0)`, opacity: 0 },
+      ],
+      { duration: 1700, iterations: 2, easing: 'ease-in-out' },
+    )
+    handAnim.onfinish = hideHand
+  }
+  function hideHand() {
+    handAnim?.cancel()
+    hand?.remove()
+    hand = null
+  }
+
+  /** a lateral grossa segue a carta (só quando ela não está girando no arrasto) */
+  function placeSlab() {
+    if (!card?.isConnected || state === 'done') {
+      slab.visible = false
+      return
+    }
+    const r = card.getBoundingClientRect()
+    const w = Math.round(r.width / c.css)
+    const hh = Math.round(r.height / c.css)
+    if (w < 8 || hh < 8 || (drag && Math.abs(drag.dx) > 6)) {
+      slab.visible = false
+      return
+    }
+    slab.texture = slabTex(w, hh, slabKind)
+    slab.x = Math.round(r.left / c.css)
+    slab.y = Math.round(r.top / c.css)
+    slab.visible = true
+  }
+
+  /** final como evento: câmera lenta curta (só visual) e chuva de faíscas douradas */
+  function finale() {
+    ended = true
+    endT = 0
+    const x = c.W / 2
+    const y = (c.top + c.bottom) / 2
+    field.blast(x, y, 40, 90, GOLD, { add: true })
+    field.blast(x, y, 24, 70, FIRE, { add: true })
+    c.fx.ring(x, y, P.goldHi, 60)
+    c.fx.ring(x, y, P.white, 28)
+    for (let i = 0; i < 6; i++) field.sparkle(x + (c.rnd() - 0.5) * c.W * 0.7, y + (c.rnd() - 0.5) * 60)
+    flyers.retarget()
+    flyers.send(x, y, coinF, 10, 26)
+  }
+
+  function live(dt: number) {
+    flyers.update(dt)
+    if (beam) beam.texture = beamF[Math.floor(performance.now() / 160) % beamF.length] as Texture
+    if (ended) {
+      endT += dt
+      const k = endT < 0.3 ? 0.3 : 1
+      field.update(dt * k)
+      booms.update(dt * k)
+    }
+  }
 
   const cur = () => statements[idx]
   const anim = (el: HTMLElement, frames: Keyframe[], ms: number) => {
@@ -157,6 +350,7 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
     if (!s) return
     card.className = 'fcard px-frame'
     card.style.transform = 'translate(-50%, -50%)'
+    slabKind = 0
     card.replaceChildren(
       h('div', { class: 'tag' }, `Mensagem ${idx + 1} de ${statements.length}`),
       h('div', { class: 'q' }, `“${s.text}”`),
@@ -195,6 +389,12 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
     field.blast(x, y, 12, 50, SMOKE, { grav: -10, life: 0.9 })
     rampBurst(c, x, y, GOLD, 10, 60)
     for (let i = 0; i < 3; i++) field.sparkle(x + (c.rnd() - 0.5) * 30, y + (c.rnd() - 0.5) * 16)
+    // o balão de pedra se parte em cacos e as moedas voam até o placar (sobe meio tom por sequência)
+    field.blast(x, y, 12, 70, [P.stoneHi, P.stone3, P.stone2, P.stone1], { grav: 160 })
+    field.blast(x + 6, y + 6, 6, 60, [P.red, P.crimson, P.blood1], { grav: 160 })
+    c.fx.ring(x, y, P.redHot, 22 + Math.min(16, streak * 4))
+    flyers.retarget()
+    flyers.send(x, y, coinF, Math.min(8, 3 + streak), 14)
   }
 
   function impact() {
@@ -223,6 +423,7 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
   function answer(fato: boolean | null) {
     const s = cur()
     if (!s || state !== 'ask') return
+    hideHand()
     const correct = fato === s.fato
     showT = 0
     btnFake.disabled = true
@@ -245,12 +446,15 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
       // o meteoro termina a queda (180 ms) e só então bate
       state = 'crash'
       streak = 0
+      // o erro ensina: o botão da resposta certa acende em dourado enquanto a explicação aparece
+      ;(s.fato ? btnFato : btnFake).classList.add('btn--gold')
       crashFrom = my
       crashT = 0
     }
     opts?.onAnswer?.(s, correct)
     card.style.transform = 'translate(-50%, -50%)'
     card.classList.add(correct ? 'px-frame--gold' : 'px-frame--red')
+    slabKind = correct ? 1 : 2
     card.replaceChildren(
       h(
         'div',
@@ -274,7 +478,9 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
       state = 'done'
       card.remove()
       btns.remove()
-      root.visible = false
+      slab.visible = false
+      meteor.visible = false
+      finale()
       c.finish()
       return
     }
@@ -307,9 +513,43 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
       glow.blendMode = 'add'
       glow.alpha = 0.6
       flame = spr(flames[0] as Texture, 0, 0, 0.5, 1)
-      meteor = spr(meteorTex(), 0, 0)
+      meteorF = [meteorTex(0), meteorTex(1), meteorTex(2)]
+      meteor = spr(meteorF[0] as Texture, 0, 0)
       count = label('', P.gold)
-      root.addChild(scorch, aim, glow, flame, meteor, booms.root, field.root, count)
+      slab = spr(slabTex(8, 8, 0), 0, 0, 0, 0)
+      slab.visible = false
+      retF = reticleFrames(24)
+      reticle = spr(retF[0] as Texture, 0, 0)
+      reticle.visible = false
+      coinF = coinFrames()
+      flyers = new Flyers(c, 24)
+      flyers.trail = (x, y) => field.spawn(x, y, { life: 0.22, ramp: GOLD, add: true })
+      flyers.onArrive = (x, y, n) => {
+        if (n % 2) c.sfx('coin', { x, combo: Math.min(12, n), volume: 0.5 })
+        if (c.rnd() < 0.4) field.sparkle(x + (c.rnd() - 0.5) * 8, y + 4)
+      }
+      // facho do farol (cenário vivo)
+      const A = anchors(c.W, c.H)
+      beamF = beamFrames(Math.round(c.W * 0.35))
+      beam = spr(beamF[0] as Texture, A.lamp.x, A.lamp.y)
+      beam.blendMode = 'add'
+      beam.alpha = c.reduced ? 0.25 : 0.4
+      root.addChild(
+        beam,
+        slab,
+        scorch,
+        aim,
+        reticle,
+        glow,
+        flame,
+        meteor,
+        booms.root,
+        field.root,
+        flyers.root,
+        count,
+      )
+      driver = new Driver(live)
+      driver.start()
 
       card = h('div', { class: 'fcard px-frame', role: 'group', 'aria-live': 'polite' })
       stamp = h('div', {
@@ -328,6 +568,7 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
           return
         }
         if (state !== 'ask') return
+        hideHand()
         const now = performance.now()
         drag = { x0: e.clientX, dx: 0, t0: now, lastX: e.clientX, lastT: now, v: 0 }
         card.setPointerCapture(e.pointerId)
@@ -359,7 +600,10 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
       }
       card.addEventListener('pointerup', release)
       card.addEventListener('pointercancel', release)
-      requestAnimationFrame(render)
+      requestAnimationFrame(() => {
+        render()
+        window.setTimeout(showHand, 320)
+      })
     },
     update(dt) {
       const limit = perFor(idx)
@@ -395,6 +639,16 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
         const wob = c.reduced ? 0 : Math.round(Math.sin(c.time * 23) * 0.6)
         meteor.x = Math.round(mx) + wob
         meteor.y = Math.round(my)
+        // idle: pisca a cada ~2,4 s; nos 3 s finais, olhos em brasa alternando a 6 fps (telegrafa)
+        meteor.texture = (
+          urgent ? meteorF[frameAt(c.time, 6, 2) ? 2 : 0] : meteorF[c.time % 2.4 < 0.12 ? 1 : 0]
+        ) as Texture
+        reticle.visible = urgent && state === 'ask'
+        if (reticle.visible) {
+          reticle.texture = retF[frameAt(c.time, 8, 4)] as Texture
+          reticle.x = Math.round(c.W / 2)
+          reticle.y = targetY - 2
+        }
         flame.texture = flames[frameAt(c.time, 14, 4)] as Texture
         flame.x = meteor.x
         flame.y = meteor.y + 6
@@ -429,6 +683,8 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
         count.x = meteor.x + 24
         count.y = meteor.y - 10
       }
+      if (!flying) reticle.visible = false
+      if (++slabEvery % 4 === 0) placeSlab()
       if (scorch.visible && c.rnd() < 0.3) field.ember(scorch.x + (c.rnd() - 0.5) * 24, scorch.y - 3)
       if (c.rnd() < 0.05) field.ember(c.rnd() * c.W, c.bottom, FIRE)
       field.update(dt)
@@ -460,6 +716,8 @@ export default function swipe(opts?: SwipeOpts): MicroGame {
       return true
     },
     dispose() {
+      driver?.stop()
+      hideHand()
       card?.remove()
       btns?.remove()
       root.destroy({ children: true })

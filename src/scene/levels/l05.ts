@@ -2,9 +2,23 @@
 // (pilono em arco com estais) à direita, a cidade em luzes de 1 px na margem e o Rio Negro embaixo.
 // O prédio do jogo ocupa o centro: os marcos ficam nas bordas e o miolo fica escuro.
 import { mulberry32 } from '../../lib/rng'
-import { type Ctx, calm, clouds, moon, type Painter, ridge, sky } from '../levels'
+import { type Ctx, calm, moon, type Painter, sky } from '../levels'
 import { DARKER, type K } from '../pal'
-import { bird, box3q, cityLights, fgFrame, fogBand, halo, palmSil, reflect, river, star4 } from './b-kit'
+import {
+  bird,
+  box3q,
+  city,
+  cumulus,
+  fgFrame,
+  halo,
+  horizonWater,
+  palmSil,
+  range,
+  reflect,
+  river,
+  star4,
+  stratus,
+} from './b-kit'
 
 /** Teatro Amazonas em três quartos: corpo rosado sob a luz vermelha, colunata clara, cúpula de escamas */
 function teatro(c: Ctx, cx: number, base: number, k: number) {
@@ -30,7 +44,8 @@ function teatro(c: Ctx, cx: number, base: number, k: number) {
   const px = Math.round(cx - pw / 2)
   const ph = Math.round(k * 3)
   b.rect(px, base - h - ph, pw, ph + h, 'crimsonDeep')
-  for (let i = 0; i < ph; i++) b.rect(px + i, base - h - ph - i, pw - i * 2, 1, i === ph - 1 ? 'stoneHi' : 'stone3')
+  for (let i = 0; i < ph; i++)
+    b.rect(px + i, base - h - ph - i, pw - i * 2, 1, i === ph - 1 ? 'stoneHi' : 'stone3')
   for (let x = px + 1; x < px + pw - 1; x += 2) {
     b.rect(x, base - h - 1, 1, h - 1, 'stone3')
     b.set(x, base - h - 1, 'stoneHi')
@@ -108,32 +123,40 @@ const paint: Painter = (c) => {
   const { W, H, hz, s } = c
   const portrait = W < H
   const r = mulberry32(505)
-  sky(c, 'emberDark', 0.9)
+  // céu com estrelas raras (lição 14) e o clarão quente colado no horizonte
+  sky(c, 'crimsonDeep', 0.6)
   moon(c, portrait ? W * 0.2 : W * 0.15, H * (portrait ? 0.12 : 0.16), s * (portrait ? 4.4 : 3.8))
-  // nuvens acesas por baixo pela cidade (lição 6)
-  clouds(c, hz - H * 0.13, H * 0.06, 'bottom', 1.4, 61, [
-    [0.55, 1],
-    [0, 0.2],
-  ])
-  clouds(c, hz - H * 0.04, H * 0.04, 'bottom', 0.6, 67, [[0.05, 0.6]])
-  // plano 5: mata da outra margem, fria e baixa
-  ridge(c, (x) => hz - s * 2 - c.nz.fbm(x / 18, 3, 3) * s * 4, 'hazeDark', 'haze', 'blood1')
-  fogBand(c, hz - s * 3, hz + 1, 'blood1', 0.45)
-  // plano 4: a cidade na margem, em luzes de 1 px
-  const cy0 = hz - s * 6
-  for (let x = 0; x < W; ) {
-    const bw = Math.round(s * (2 + r() * 4))
-    const bh = Math.round(s * (2 + r() ** 2 * 7))
-    c.b.rect(x, hz - bh, bw, bh, r() < 0.5 ? 'dusk' : 'night')
-    c.b.rect(x, hz - bh, bw, 1, 'hazeDark')
-    x += bw + (r() < 0.25 ? 1 : 0)
-  }
-  cityLights(c, 0, W, cy0, hz, 0.35, 71)
-  // plano 3: o Rio Negro (preto de verdade) com reflexos quebrados
-  const ry1 = Math.round(H * (portrait ? 0.86 : 0.86))
-  river(c, hz + 1, ry1, 'emberDark', 'night')
+  // cúmulos legíveis nas bordas (o miolo fica vazio) e estratos acesos colados no horizonte
+  cumulus(
+    c,
+    [
+      { x: 0.86, y: hz / H - 0.14, r: 0.055, n: 6 },
+      { x: 0.1, y: hz / H - 0.2, r: 0.04, n: 5 },
+    ],
+    61,
+  )
+  stratus(
+    c,
+    [
+      { x: 0, y: hz - Math.round(H * 0.025), len: W * 0.5, th: 3, heat: 0.9 },
+      { x: W * 0.55, y: hz - Math.round(H * 0.045), len: W * 0.5, th: 4, heat: 0.6 },
+      { x: W * 0.2, y: hz - Math.round(H * 0.08), len: W * 0.35, th: 5, heat: 0.3 },
+    ],
+    67,
+  )
+  // plano 6: mata da outra margem, com aro grená e névoa de brasa no pé
+  range(c, hz, (x) => hz - s * 3 - c.nz.fbm(x / 18, 3, 3) * s * 4, 'hazeDark', 'crimsonDeep', 'blood1')
+  // planos 5 e 4: a cidade na margem em duas fileiras (longe e meio), luzes de 1 px
+  city(c, 0, W, () => hz - s, s * 2, s * 7, 'far', 71, 0.15)
+  city(c, 0, W, () => hz + 1, s, s * 4, 'mid', 73, 0.35)
+  // plano 3: faixa de água acesa no horizonte (a mais clara do meio) e o Rio Negro escuro
+  const ry1 = Math.round(H * 0.86)
+  const band = Math.max(3, Math.round(H * 0.045))
+  horizonWater(c, hz + 2, band, 79)
+  river(c, hz + 2 + band, ry1, 'blood1', 'night')
   // marcos nas bordas
-  const k = s * (portrait ? 0.62 : 0.8)
+  // no recorte do card de introdução (168×104, s = 1) o marco cresce para continuar legível
+  const k = Math.max(s * (portrait ? 0.62 : 0.8), H < 160 ? 1.25 : 0)
   const tx = Math.round(portrait ? W * 0.09 : W * 0.15)
   const tBase = hz + Math.round(s * 1.5)
   teatro(c, tx, tBase, k)
@@ -144,7 +167,8 @@ const paint: Painter = (c) => {
     { x: tx + Math.round(k * 6), k: 'redGlow' },
     { x: pX, k: 'redHot' },
   ]
-  for (let x = 6; x < W; x += Math.round(9 + r() * 14)) lights.push({ x, k: r() < 0.6 ? 'gold1' : 'ember', len: 6 + Math.round(r() * 10) })
+  for (let x = 6; x < W; x += Math.round(9 + r() * 14))
+    lights.push({ x, k: r() < 0.6 ? 'gold1' : 'ember', len: 6 + Math.round(r() * 10) })
   reflect(c, hz + 2, ry1, lights)
   // barquinhos (recreios) parados com lanterna
   for (const bx of portrait ? [0.3] : [0.33, 0.7]) {
@@ -156,7 +180,8 @@ const paint: Painter = (c) => {
     c.b.rect(x - s * 3, y + s, s * 6, 1, 'gold1')
   }
   // feixe da cúpula e gaivotas
-  for (let i = 0; i < 3; i++) bird(c, W * (0.55 + i * 0.1), H * (0.2 + (i % 2) * 0.05), i ? 'stone1' : 'stone2', i % 2 === 0)
+  for (let i = 0; i < 3; i++)
+    bird(c, W * (0.55 + i * 0.1), H * (0.2 + (i % 2) * 0.05), i ? 'stone1' : 'stone2', i % 2 === 0)
   // margem de cá: chão escuro e palmeiras em silhueta
   for (let y = ry1; y < H; y++)
     for (let x = 0; x < W; x++) c.b.set(x, y, c.nz.n2(x / 5, y / 2) > 0.78 ? 'night' : 'void')

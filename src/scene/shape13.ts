@@ -6,11 +6,11 @@
 /** profundidade das lajes */
 export const D = 2.4
 /** giro do conjunto no eixo vertical (negativo: o lado direito vem para a câmera) */
-export const YAW = -0.16
+export const YAW = -0.12
 /** campo de visão vertical da câmera em perspectiva (graus) */
-export const FOV = 34
+export const FOV = 42
 /** altura do olho e do alvo, em unidades do 13 (olho abaixo do alvo: monumento heroico) */
-export const EYE_Y = 2.7
+export const EYE_Y = 2.2
 export const TARGET_Y = 4.5
 
 export type Pt = [number, number]
@@ -27,8 +27,8 @@ export interface DigitDef {
 
 /** 0 = o 1, 1 = o 3 */
 export const DIGITS: DigitDef[] = [
-  { x: -4.95, z: 0, yaw: -0.36, cx: 1.4 },
-  { x: -1.0, z: 0.2, yaw: -0.44, cx: 2.8 },
+  { x: -4.95, z: 0, yaw: -0.32, cx: 1.4 },
+  { x: -1.0, z: 0.2, yaw: -0.38, cx: 2.8 },
 ]
 
 export interface PieceDef {
@@ -72,7 +72,7 @@ export const PIECES: PieceDef[] = [
       [2.65, 2.55],
       [0.95, 3.25],
     ],
-    0.55,
+    0.22,
   ),
   piece(0, 1, [
     [0.95, 3.25],
@@ -113,9 +113,10 @@ export const PIECES: PieceDef[] = [
       [0.3, 0],
       [2.7, 0],
       [3.05, 1.45],
-      [1.05, 1.45],
-      [1.05, 2.35],
-      [0, 2.35],
+      [1.0, 1.45],
+      [1.0, 1.95],
+      [0.25, 1.95],
+      [0, 1.7],
       [0, 0.3],
     ],
     0.25,
@@ -125,52 +126,54 @@ export const PIECES: PieceDef[] = [
     0,
     [
       [2.7, 0],
-      [4.65, 0],
-      [5.65, 1.0],
+      [4.5, 0],
+      [5.65, 1.15],
       [5.65, 2.6],
       [3.95, 2.2],
       [3.95, 1.45],
       [3.05, 1.45],
     ],
-    0.4,
+    0.15,
   ),
+  // cintura do 3: o gomo de baixo recolhe em chanfro até a barra do meio e o de cima abre de novo
   piece(1, 2, [
     [3.95, 2.2],
     [5.65, 2.6],
-    [5.65, 3.65],
-    [5.15, 4.15],
-    [3.95, 4.15],
+    [5.65, 3.45],
+    [4.85, 4.25],
+    [3.95, 4.25],
   ]),
   piece(1, 3, [
-    [1.45, 4.0],
-    [3.95, 4.15],
-    [3.95, 5.25],
-    [1.85, 5.25],
-    [1.45, 4.85],
+    [2.05, 4.0],
+    [3.95, 4.0],
+    [3.95, 5.2],
+    [2.45, 5.2],
+    [2.05, 4.8],
   ]),
   piece(1, 6, [
-    [3.95, 4.15],
-    [5.15, 4.15],
-    [5.4, 4.45],
+    [3.95, 4.25],
+    [4.85, 4.25],
+    [5.4, 4.85],
     [5.4, 6.25],
     [3.95, 5.85],
   ]),
   piece(1, 7, [
-    [0, 6.0],
-    [1.05, 6.0],
-    [1.05, 6.7],
-    [2.45, 6.7],
+    [0, 6.55],
+    [0.25, 6.35],
+    [1.0, 6.35],
+    [1.0, 6.75],
+    [2.45, 6.75],
     [2.75, 8.2],
     [0.4, 8.2],
     [0, 7.8],
   ]),
   piece(1, 8, [
-    [2.45, 6.7],
-    [3.95, 6.7],
+    [2.45, 6.75],
+    [3.95, 6.75],
     [3.95, 5.85],
     [5.4, 6.25],
-    [5.4, 7.35],
-    [4.55, 8.2],
+    [5.4, 7.15],
+    [4.35, 8.2],
     [2.75, 8.2],
   ]),
 ]
@@ -227,9 +230,11 @@ export interface RingSpec {
   w: number
   ph: number
 }
-// a de baixo envolve os dois dígitos; as de cima envolvem o 3 (como na referência), todas subindo à direita
+// no máximo 4 (o shader da pedra ilumina por 4). A de baixo envolve os dois dígitos; as de cima envolvem o 3 (como na referência), todas subindo à direita
 export const RINGS: RingSpec[] = [
   { x: 0.1, y: 1.4, R: 6.9, tx: 0.2, tz: 0.12, speed: 0.22, arc: 0.74, w: 9, ph: 0.12 },
   { x: 1.8, y: 4.4, R: 4.3, tx: 0.42, tz: 0.22, speed: -0.3, arc: 0.66, w: 8, ph: 0.55 },
   { x: 2.0, y: 7.4, R: 3.6, tx: 0.5, tz: 0.3, speed: 0.38, arc: 0.55, w: 6, ph: 0.3 },
+  // fita fina que enrola o 1 (o laço da esquerda na referência)
+  { x: -3.4, y: 3.2, R: 2.3, tx: 0.45, tz: -0.25, speed: -0.45, arc: 0.6, w: 4, ph: 0.8 },
 ]

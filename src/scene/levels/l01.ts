@@ -3,9 +3,21 @@
 // um povoado, a casa de taipa em três quartos com a lamparina acesa e o cata-vento, e o primeiro plano
 // quase preto com chão rachado e mandacarus. Luz: brasa do poente à esquerda (rim quente), lua em
 // eclipse no alto à direita, lamparina dourada (prática). O meio fica vazio para o mapa.
-import { bird, box3q, cityLights, clump, cracks, fgFrame, haze, range } from '../../games/fx-a'
+import {
+  bird,
+  box3q,
+  cityLights,
+  clump,
+  cracks,
+  cumulus,
+  fgFrame,
+  haze,
+  horizonGlow,
+  range,
+  stratus,
+} from '../../games/fx-a'
 import { mulberry32 } from '../../lib/rng'
-import { type Ctx, calm, clouds, moon, type Painter, sky } from '../levels'
+import { type Ctx, calm, moon, type Painter, sky } from '../levels'
 import { dith, type K } from '../pal'
 
 /** posições compartilhadas com o jogo (lamparina e cata-vento vivos) */
@@ -16,8 +28,17 @@ export function anchors(W: number, H: number) {
   const house = { x: Math.round(W * (mob ? 0.04 : 0.05)), base: Math.round(hz + H * (mob ? 0.05 : 0.07)) }
   const hw = Math.round(Math.max(26, W * (mob ? 0.26 : 0.13)))
   const hh = Math.round(hw * 0.5)
-  const win = { x: house.x + Math.round(hw * 0.22), y: house.base - Math.round(hh * 0.62), w: Math.max(3, Math.round(hw * 0.14)), h: Math.max(3, Math.round(hh * 0.3)) }
-  const mill = { x: Math.round(W * (mob ? 0.86 : 0.88)), base: Math.round(hz + H * (mob ? 0.03 : 0.04)), h: Math.round(Math.max(30, H * (mob ? 0.13 : 0.2))) }
+  const win = {
+    x: house.x + Math.round(hw * 0.22),
+    y: house.base - Math.round(hh * 0.62),
+    w: Math.max(3, Math.round(hw * 0.14)),
+    h: Math.max(3, Math.round(hh * 0.3)),
+  }
+  const mill = {
+    x: Math.round(W * (mob ? 0.86 : 0.88)),
+    base: Math.round(hz + H * (mob ? 0.03 : 0.04)),
+    h: Math.round(Math.max(30, H * (mob ? 0.13 : 0.2))),
+  }
   return { hz, s, house, hw, hh, win, mill, mob }
 }
 
@@ -46,7 +67,8 @@ function mandacaru(c: Ctx, x: number, base: number, h: number, rim: K, dark = fa
   const arm = (dir: number, at: number, out: number, up: number) => {
     const ay = base - Math.round(h * at)
     const ax = dir > 0 ? x + w : x - out
-    for (let i = 0; i < out; i++) for (let j = 0; j < w - 1; j++) b.set(ax + i, ay - j, j === w - 2 ? rim : (ramp[1] ?? 'vine1'))
+    for (let i = 0; i < out; i++)
+      for (let j = 0; j < w - 1; j++) b.set(ax + i, ay - j, j === w - 2 ? rim : (ramp[1] ?? 'vine1'))
     col(dir > 0 ? x + w + out - w + 1 : x - out, ay - Math.round(h * up), ay + 1)
   }
   arm(1, 0.42, Math.round(w * 1.4), 0.32)
@@ -66,7 +88,13 @@ function catavento(c: Ctx, x: number, base: number, h: number) {
     const k = (y - top) / h
     const half = Math.round(spread * k)
     b.line(x - half, y, x + half, y, 'stone0')
-    b.line(x - half, y, x + Math.round(spread * Math.min(1, k + 0.12)), y + Math.max(3, Math.round(h / 8)), 'void')
+    b.line(
+      x - half,
+      y,
+      x + Math.round(spread * Math.min(1, k + 0.12)),
+      y + Math.max(3, Math.round(h / 8)),
+      'void',
+    )
   }
   // roda: 12 pás em leque, aro de 1 px com rim quente à esquerda
   const R = Math.max(5, Math.round(h * 0.2))
@@ -89,7 +117,8 @@ function catavento(c: Ctx, x: number, base: number, h: number) {
   b.set(x - 1, cy - 1, 'stone3')
   // leme
   b.line(x + 1, cy, x + R + 4, cy - 1, 'stone0')
-  for (let i = 0; i < 4; i++) b.line(x + R + 2, cy - 3 + i, x + R + 6, cy - 4 + i, i === 0 ? 'emberDark' : 'void')
+  for (let i = 0; i < 4; i++)
+    b.line(x + R + 2, cy - 3 + i, x + R + 6, cy - 4 + i, i === 0 ? 'emberDark' : 'void')
 }
 
 /** casa de taipa em três quartos: parede de barro (frente quente), lateral grossa em sombra, telhado de telha */
@@ -115,7 +144,8 @@ function casa(c: Ctx) {
   )
   // barro: pontos e rachaduras na frente
   const r = mulberry32(31)
-  for (let i = 0; i < w * h * 0.06; i++) b.set(g.fx + 1 + r() * (w - 2), g.fy + 2 + r() * (h - 3), r() < 0.5 ? 'blood1' : 'gold0')
+  for (let i = 0; i < w * h * 0.06; i++)
+    b.set(g.fx + 1 + r() * (w - 2), g.fy + 2 + r() * (h - 3), r() < 0.5 ? 'blood1' : 'gold0')
   for (let i = 0; i < 2; i++) {
     let px = g.fx + 2 + r() * (w - 4)
     let py = g.fy + 2
@@ -134,7 +164,8 @@ function casa(c: Ctx) {
     const x1 = g.fx + w + depth + over - Math.round(i * 0.15)
     for (let xx = x0; xx < x1; xx++) {
       const behind = xx > g.fx + w + Math.round(i * 0.6)
-      let k: K = i === 0 ? 'void' : (xx + (i % 2) * 2) % 4 === 0 ? 'blood1' : behind ? 'blood0' : 'crimsonDeep'
+      let k: K =
+        i === 0 ? 'void' : (xx + (i % 2) * 2) % 4 === 0 ? 'blood1' : behind ? 'blood0' : 'crimsonDeep'
       if (i === rh - 1) k = 'crimson'
       if (!behind && i % 3 === 1 && (xx >> 1) % 2 === 0) k = 'crimson'
       b.set(xx, y - Math.round((xx - x0) * 0.04), k)
@@ -145,12 +176,14 @@ function casa(c: Ctx) {
   const W0 = A.win
   b.rect(W0.x - 1, W0.y - 1, W0.w + 2, W0.h + 2, 'gold0')
   for (let yy = 0; yy < W0.h; yy++)
-    for (let xx = 0; xx < W0.w; xx++) b.set(W0.x + xx, W0.y + yy, yy < W0.h * 0.35 && xx < W0.w * 0.6 ? 'sparkle' : 'goldHi')
+    for (let xx = 0; xx < W0.w; xx++)
+      b.set(W0.x + xx, W0.y + yy, yy < W0.h * 0.35 && xx < W0.w * 0.6 ? 'sparkle' : 'goldHi')
   b.rect(W0.x + (W0.w >> 1), W0.y, 1, W0.h, 'gold1')
   for (let yy = -3; yy < W0.h + 3; yy++)
     for (let xx = -3; xx < W0.w + 3; xx++) {
       const out = xx < -1 || yy < -1 || xx > W0.w || yy > W0.h
-      if (out && dith(W0.x + xx, W0.y + yy, 0.35) && b.get(W0.x + xx, W0.y + yy)) b.set(W0.x + xx, W0.y + yy, 'gold1')
+      if (out && dith(W0.x + xx, W0.y + yy, 0.35) && b.get(W0.x + xx, W0.y + yy))
+        b.set(W0.x + xx, W0.y + yy, 'gold1')
     }
   // porta entreaberta
   const dx = g.fx + Math.round(w * 0.62)
@@ -159,7 +192,8 @@ function casa(c: Ctx) {
   b.rect(dx, base - Math.round(h * 0.78), 1, Math.round(h * 0.78), 'gold1')
   // luz no chão diante da janela e da porta
   for (let yy = 0; yy < 4; yy++)
-    for (let xx = -2; xx < dw + 6; xx++) if (dith(dx + xx, base + yy, 0.5 - yy * 0.12)) b.set(dx + xx, base + yy, 'gold0')
+    for (let xx = -2; xx < dw + 6; xx++)
+      if (dith(dx + xx, base + yy, 0.5 - yy * 0.12)) b.set(dx + xx, base + yy, 'gold0')
   // cisterna (cilindro) e pote ao lado
   const cx = g.sx + depth + Math.round(w * 0.12)
   const cr = Math.max(4, Math.round(w * 0.13))
@@ -183,20 +217,42 @@ const painter: Painter = (c) => {
   const A = anchors(W, H)
   const mob = A.mob
   sky(c, 'emberDark', 0.9)
+  horizonGlow(c, Math.round(H * 0.05), 'blood0', 'emberDark')
   moon(c, W * (mob ? 0.78 : 0.82), H * (mob ? 0.13 : 0.17), c.s * (mob ? 5 : 4.6))
   // nuvens acesas por baixo pela brasa do horizonte (lição 6)
-  clouds(c, hz - H * (mob ? 0.2 : 0.3), H * (mob ? 0.05 : 0.08), 'bottom', 1.2, 3, [
-    [-0.1, mob ? 0.45 : 0.3],
-    [0.72, 1.1],
-  ])
-  clouds(c, hz - H * (mob ? 0.08 : 0.12), H * 0.04, 'bottom', 2.2, 5, [[0.3, 0.7]])
+  cumulus(
+    c,
+    hz - H * (mob ? 0.2 : 0.28),
+    H * (mob ? 0.06 : 0.1),
+    [
+      [-0.08, mob ? 0.4 : 0.28],
+      [0.74, 1.08],
+    ],
+    3,
+  )
+  stratus(
+    c,
+    [
+      { x: W * 0.05, y: hz - Math.round(H * 0.035), len: W * 0.4, th: 3, heat: 0.8 },
+      { x: W * 0.5, y: hz - Math.round(H * 0.06), len: W * 0.45, th: 4, heat: 0.5 },
+      { x: W * 0.62, y: hz - Math.round(H * 0.02), len: W * 0.3, th: 2, heat: 1 },
+    ],
+    5,
+  )
   // plano 3: Chapada do Araripe, mesa de topo chato, clara e fria (longe)
   const nz = c.nz
   range(
     c,
     (x) => {
       const u = x / W
-      const mesa = u > 0.08 && u < 0.62 ? 1 : u > 0.02 && u < 0.08 ? (u - 0.02) / 0.06 : u >= 0.62 && u < 0.72 ? 1 - (u - 0.62) / 0.1 : 0
+      const mesa =
+        u > 0.08 && u < 0.62
+          ? 1
+          : u > 0.02 && u < 0.08
+            ? (u - 0.02) / 0.06
+            : u >= 0.62 && u < 0.72
+              ? 1 - (u - 0.62) / 0.1
+              : 0
       return hz - H * 0.02 - mesa * H * (mob ? 0.045 : 0.07) - nz.fbm(x / 9, 2, 2) * 1.5
     },
     'hazeDark',
@@ -238,7 +294,8 @@ const painter: Painter = (c) => {
     const hh = Math.round(2 + ((y - hz) / (H - hz)) * 14)
     for (let k = 0; k < 3 + Math.floor(r() * 3); k++) {
       const lean = (r() - 0.5) * 1.6
-      for (let j = 0; j < hh; j++) b.set(x + Math.round(lean * j * (j / hh)), y - j, j === hh - 1 ? 'emberDark' : 'void')
+      for (let j = 0; j < hh; j++)
+        b.set(x + Math.round(lean * j * (j / hh)), y - j, j === hh - 1 ? 'emberDark' : 'void')
     }
     clump(b, x, y - 1, Math.max(1.2, hh * 0.25), ['void', 'void', 'blood0'], Math.floor(r() * 1e6), null)
   }
@@ -251,16 +308,42 @@ const painter: Painter = (c) => {
   // plano 6: casa de taipa, cisterna e cata-vento
   casa(c)
   catavento(c, A.mill.x, A.mill.base, A.mill.h)
-  mandacaru(c, Math.round(W * (mob ? 0.33 : 0.27)), Math.round(hz + H * 0.035), Math.round(H * (mob ? 0.06 : 0.1)), 'emberDark')
-  mandacaru(c, Math.round(W * (mob ? 0.7 : 0.78)), Math.round(hz + H * 0.06), Math.round(H * (mob ? 0.08 : 0.13)), 'crimson')
+  mandacaru(
+    c,
+    Math.round(W * (mob ? 0.33 : 0.27)),
+    Math.round(hz + H * 0.035),
+    Math.round(H * (mob ? 0.06 : 0.1)),
+    'emberDark',
+  )
+  mandacaru(
+    c,
+    Math.round(W * (mob ? 0.7 : 0.78)),
+    Math.round(hz + H * 0.06),
+    Math.round(H * (mob ? 0.08 : 0.13)),
+    'crimson',
+  )
   // carcarás voando
   bird(b, Math.round(W * 0.3), Math.round(hz - H * 0.2), 'stone1', true)
   bird(b, Math.round(W * 0.36), Math.round(hz - H * 0.17), 'stone0')
   calm(c, mob ? 0.33 : 0.42, mob ? 0.42 : 0.26, mob ? 0.2 : 0.3)
   // plano 7: primeiro plano quase preto, com mandacarus em silhueta emoldurando
   fgFrame(c, 11, 'crimson', 'blood1', 0.24, mob ? 0.06 : 0.12)
-  mandacaru(c, Math.round(W * 0.93), H - Math.round(H * 0.02), Math.round(H * (mob ? 0.16 : 0.3)), 'crimson', true)
-  mandacaru(c, Math.round(W * 0.02), H - Math.round(H * 0.01), Math.round(H * (mob ? 0.1 : 0.18)), 'blood1', true)
+  mandacaru(
+    c,
+    Math.round(W * 0.93),
+    H - Math.round(H * 0.02),
+    Math.round(H * (mob ? 0.16 : 0.3)),
+    'crimson',
+    true,
+  )
+  mandacaru(
+    c,
+    Math.round(W * 0.02),
+    H - Math.round(H * 0.01),
+    Math.round(H * (mob ? 0.1 : 0.18)),
+    'blood1',
+    true,
+  )
 }
 
 export default painter

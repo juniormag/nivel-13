@@ -78,7 +78,6 @@ const ROUNDS = [
   },
 ]
 
-
 const PER = 14
 const WIND = 0.3
 const LUNGE = 0.08
@@ -121,17 +120,20 @@ const hash = (x: number, y: number) => {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296
 }
 
-const headSize = (f: number) => ({ w: Math.ceil(32 * f) + 2, h: Math.ceil(31 * f) + 2 })
+const headSize = (f: number) => ({ w: Math.ceil(36 * f) + 2, h: Math.ceil(36 * f) + 2 })
+/** posição dos olhos na textura da cabeça (para o brilho aditivo) */
+const EYE = { y: 14.5, x1: 13.5, x2: 22 }
 
 /**
- * Cabeça de dragão de origami feita de jornal, em três quartos: frente osso (stoneHi→stone2) e lateral
- * direita grossa em granito carmim; chifres de papel dobrado, faixa de manchete vermelha na testa,
- * sobrancelhas raivosas, olhos em fenda e mandíbula. `jaw` 0 fechada, 1 entreaberta, 2 escancarada;
- * `eye` 0 brasa, 1 acesa (ativa), 2 branca (bote), 3 piscando; `burn` 0..2 queima as pontas.
+ * Cabeça de dragão de origami feita de jornal, em três quartos: leque de jornal plissado atrás (a
+ * manchete vermelha corre na borda), chifres de papel varridos para trás, crânio osso (stoneHi→stone2)
+ * com lateral direita grossa em granito carmim, sobrancelhas raivosas, olhos em fenda e focinho com
+ * presas. `jaw` 0 fechada, 1 entreaberta, 2 escancarada; `eye` 0 brasa, 1 acesa (ativa), 2 branca
+ * (bote), 3 piscando; `burn` 0..2 queima as pontas do leque e dos chifres.
  */
 function headTex(f: number, jaw: number, eye: number, burn: number): Texture {
   const { w, h } = headSize(f)
-  return bake(`hydra2-${f}-${jaw}${eye}${burn}`, w, h, (p) => {
+  return bake(`hydra3-${f}-${jaw}${eye}${burn}`, w, h, (p) => {
     const o = 1
     const d = jaw === 0 ? 0 : jaw === 1 ? 2 : 5
     const Q = (pts: number[], col: number) => poly(p, pts, col, f, o, o)
@@ -143,115 +145,128 @@ function headTex(f: number, jaw: number, eye: number, burn: number): Texture {
         Math.max(1, Math.round(hh * f)),
         col,
       )
+    // leque plissado atrás da cabeça (silhueta grande e única)
+    for (let Y = 0; Y < h; Y++)
+      for (let X = 0; X < w; X++) {
+        const bx = (X + 0.5 - o) / f
+        const by = (Y + 0.5 - o) / f
+        if (by > 21) continue
+        const a = Math.atan2(by - 15, bx - 18)
+        const dd = Math.hypot(bx - 18, by - 15)
+        const sc = 0.82 + 0.18 * Math.abs(Math.cos(a * 4.5))
+        if (dd > 17 * sc || dd < 5) continue
+        const pleat = Math.floor((a + Math.PI) / (Math.PI / 9)) % 2
+        const side = bx > 24
+        let col: number = side ? (pleat ? P.blood1 : P.crimsonDeep) : pleat ? P.stone2 : P.stone3
+        if (dd > 17 * sc - 2.2) col = side ? P.crimson : pleat ? P.crimson : P.red
+        if (dd > 17 * sc - 1.2 && !side && pleat === 0) col = P.redHot
+        if (burn > 0 && dd > 17 * sc - 1.6 && hash(X, Y) < (burn > 1 ? 0.6 : 0.3))
+          col = burn > 1 && hash(Y, X) < 0.5 ? P.ember : P.emberDark
+        p.dot(X, Y, col)
+      }
     // boca por dentro (atrás de tudo): garganta em brasa
     if (d > 0) {
-      Q([8, 19, 23, 19, 21, 22 + d, 10, 22 + d], P.blood0)
-      Q([11, 20 + d * 0.4, 20, 20 + d * 0.4, 19, 22 + d, 12, 22 + d], P.crimsonDeep)
-      R(13, 20 + d * 0.5, 4, 1, jaw === 2 ? P.redHot : P.crimson)
-      if (jaw === 2) R(14, 20 + d * 0.5, 2, 1, P.emberBright)
+      Q([12, 24, 25, 24, 23, 27 + d, 14, 27 + d], P.blood0)
+      Q([15, 25 + d * 0.4, 22, 25 + d * 0.4, 21, 27 + d, 16, 27 + d], P.crimsonDeep)
+      R(17, 25 + d * 0.5, 3, 1, jaw === 2 ? P.redHot : P.crimson)
+      if (jaw === 2) R(18, 25 + d * 0.5, 1, 1, P.emberBright)
     }
     // mandíbula: frente, lateral e dentes de baixo
-    Q([9, 21 + d, 21, 21 + d, 19, 26 + d, 11, 26 + d], P.stone2)
-    Q([10, 24 + d, 20, 24 + d, 19, 26 + d, 11, 26 + d], P.stone1)
-    Q([21, 21 + d, 26, 22 + d, 24, 26 + d, 19, 26 + d], P.blood1)
-    R(21, 21 + d, 4, 1, P.crimsonDeep)
-    for (let x = 11; x <= 19; x += 2) R(x, 20 + d, 1, 1, P.stoneHi)
-    // chifres de papel: o de trás (direita) com lateral escura
-    Q([19, 0, 16, 7, 22, 7], P.stone3)
-    Q([19, 0, 22, 7, 26, 7], P.crimsonDeep)
-    Q([0, 0, 9, 5, 9, 9, 3, 9], P.stone3)
-    Q([0, 0, 9, 5, 5, 6], P.stoneHi)
-    // crânio: lateral grossa em granito (lição 2) e frente
-    Q([23, 4, 30, 8, 30, 15, 24, 14], P.crimsonDeep)
-    Q([24, 11, 30, 12, 30, 15, 24, 14], P.blood1)
-    Q([4, 5, 23, 4, 24, 14, 3, 14, 2, 9], P.stone3)
-    Q([4, 5, 23, 4, 23.5, 7, 2.6, 7.5], P.stoneHi)
-    // manchete vermelha na testa, continuando na lateral
-    Q([2.6, 7.5, 23.6, 7, 23.8, 9, 2.8, 9.5], P.red)
-    Q([2.8, 9, 23.8, 8.6, 23.8, 9.6, 2.9, 10], P.crimson)
-    Q([23.6, 7, 30, 10, 30, 12, 23.8, 9.6], P.crimson)
-    for (let x = 4; x < 22; x += 2) if (hash(x, 7) < 0.7) R(x, 7.6, 1, 1, P.sparkle)
-    // linhas de texto no papel da testa
-    for (let x = 6; x < 20; x++) if (x % 4 !== 3) R(x, 5.4, 1, 1, P.stone3)
-    // aresta frente/lateral: chanfro com highlight de 1 px (lição 3)
-    Q([22.6, 4, 23.6, 4, 24.4, 14, 23.4, 14], P.stoneHi)
-    // focinho: frente com dobra de origami no meio, lateral escura
-    Q([5, 14, 24, 14, 22, 21, 8, 21], P.stone3)
-    Q([15, 14, 24, 14, 22, 21, 16, 21], P.stone2)
-    Q([6.5, 18.5, 23, 18.5, 22, 21, 8, 21], P.stone2)
-    Q([16, 18.5, 23, 18.5, 22, 21, 16, 21], P.stone1)
-    Q([24, 14, 29, 15.5, 27, 21, 22, 21], P.blood1)
-    Q([24, 14, 29, 15.5, 29, 16.5, 23.8, 15], P.crimsonDeep)
-    // bochechas: chanfro aceso no lado da luz
-    Q([3, 14, 6, 14, 8, 20, 6, 19], P.stoneHi)
-    // dentes de cima e presas
-    for (let x = 9; x <= 21; x += 2) R(x, 21, 1, 1, P.stoneHi)
-    R(10, 21, 1, d > 0 ? 3 : 2, P.sparkle)
-    R(20, 21, 1, d > 0 ? 3 : 2, P.stoneHi)
-    // narinas
-    R(11, 17, 2, 1, P.void)
-    R(17, 17, 2, 1, P.void)
-    // olhos em fenda sob a sobrancelha raivosa
-    Q([3, 9.6, 12, 11.6, 12, 12.6, 3, 10.6], P.stone0)
-    Q([22, 9.2, 13, 11.6, 13, 12.6, 22, 10.2], P.stone0)
+    Q([12, 26 + d, 24, 26 + d, 22, 30 + d, 14, 30 + d], P.stone2)
+    Q([13, 28.5 + d, 23, 28.5 + d, 22, 30 + d, 14, 30 + d], P.stone1)
+    Q([24, 26 + d, 28, 27 + d, 26, 30 + d, 22, 30 + d], P.blood1)
+    for (let x = 14; x <= 22; x += 2) R(x, 25 + d, 1, 1, P.stoneHi)
+    // chifres varridos para trás
+    Q([13, 8, 3, 0, 1, 0, 5, 2.5, 12, 10], P.stone3)
+    Q([13, 8, 3, 0, 1, 0, 4, 1], P.stoneHi)
+    Q([24, 8, 33, 0, 35, 0, 31, 3, 26, 10], P.crimsonDeep)
+    Q([24, 8, 33, 0, 35, 0, 32, 1], P.crimson)
+    // crânio: lateral grossa em granito e frente osso
+    Q([25, 6, 31, 9, 31, 16, 27, 17, 28, 11], P.crimsonDeep)
+    Q([28, 12, 31, 13, 31, 16, 27, 17], P.blood1)
+    Q([11, 6, 25, 6, 28, 11, 27, 17, 9, 17, 8, 11], P.stone3)
+    Q([11, 6, 25, 6, 26.5, 9, 9.5, 9], P.stoneHi)
+    for (let x = 12; x < 24; x++) if (x % 4 !== 3) R(x, 7.4, 1, 1, P.stone3)
+    // chanfro frente/lateral com highlight de 1 px
+    Q([24.6, 6, 25.6, 6, 28.6, 11, 27.6, 11], P.stoneHi)
+    // sobrancelhas raivosas
+    Q([8, 10, 17.5, 13, 17.5, 14.6, 8, 12], P.stone0)
+    Q([28, 10, 19, 13, 19, 14.6, 28, 12], P.stone0)
+    // olhos em fenda
     if (eye === 3) {
-      R(5, 12, 6, 1, P.void)
-      R(14, 12, 6, 1, P.void)
+      R(10, 14, 6, 1, P.void)
+      R(20, 14, 6, 1, P.void)
     } else {
-      Q([4, 11, 11.5, 12.6, 11.5, 14, 5, 13.2], P.void)
-      Q([20.5, 10.8, 13.5, 12.6, 13.5, 14, 19.5, 13.2], P.void)
+      Q([9, 12.6, 17, 14.6, 16.4, 16.4, 10, 15.4], P.void)
+      Q([27, 12.6, 19.5, 14.6, 20, 16.4, 26, 15.4], P.void)
       const ec = eye === 2 ? P.white : eye === 1 ? P.redHot : P.red
-      R(8, 12.6, 3, 1, ec)
-      R(14, 12.6, 3, 1, ec)
+      R(12, 14.4, 3, 1.2, ec)
+      R(21, 14.4, 3, 1.2, ec)
       if (eye >= 1) {
-        R(9, 12.6, 1, 1, eye === 2 ? P.white : P.sparkle)
-        R(15, 12.6, 1, 1, eye === 2 ? P.white : P.sparkle)
+        R(13, 14.4, 1, 1, eye === 2 ? P.white : P.sparkle)
+        R(22, 14.4, 1, 1, eye === 2 ? P.white : P.sparkle)
       }
     }
-    // pontas queimando (fases de dano)
-    if (burn > 0) {
-      R(0, 0, 2, 2, burn > 1 ? P.ember : P.emberDark)
-      R(18, 0, 2, 2, burn > 1 ? P.ember : P.emberDark)
-      if (burn > 1) {
-        R(0, 0, 1, 1, P.goldHi)
-        R(19, 0, 1, 1, P.emberBright)
-        R(29, 9, 1, 2, P.ember)
-      }
+    // focinho em dobra de origami, lateral escura
+    Q([9, 17, 27, 17, 25, 25, 12, 25], P.stone3)
+    Q([18.5, 17, 27, 17, 25, 25, 18.5, 25], P.stone2)
+    Q([10.5, 21, 26, 21, 25, 25, 12, 25], P.stone2)
+    Q([18.5, 21, 26, 21, 25, 25, 18.5, 25], P.stone1)
+    Q([27, 17, 31, 18, 28, 25, 25, 25], P.blood1)
+    Q([27, 17, 31, 18, 31, 19, 26.8, 18], P.crimsonDeep)
+    Q([9, 17, 11, 17, 12.5, 24, 11, 23], P.stoneHi)
+    // narinas e presas
+    R(14, 22, 2, 1, P.void)
+    R(21, 22, 2, 1, P.void)
+    for (let x = 13; x <= 24; x += 2) R(x, 25, 1, 1, P.stoneHi)
+    R(13, 25, 1, d > 0 ? 3 : 2, P.sparkle)
+    R(23, 25, 1, d > 0 ? 3 : 2, P.stoneHi)
+    if (burn > 1) {
+      R(1, 0, 2, 1, P.ember)
+      R(33, 0, 2, 1, P.emberBright)
     }
     p.outline(P.void, P.stone0)
     p.rim(P.redHot, 'r')
   })
 }
 
-/** disco de pescoço em três quartos: frente clara, crescente lateral carmim; 1 = faixa, 2 = toco queimado */
-function neckTex(r: number, kind: number): Texture {
+/**
+ * Disco de pescoço em três quartos (frente clara, crescente lateral carmim). Desenhado em 2 passes:
+ * `shell` = só a silhueta escura 1 px maior (contorno do tubo inteiro), depois os discos sem contorno,
+ * para o pescoço ler como um tubo liso e não como molas. kind 1 = faixa de manchete, 2 = toco queimado.
+ */
+function neckTex(r: number, kind: number, shell = false): Texture {
   const S = 2 * r + 5
-  return bake(`hydra2-neck${r}-${kind}`, S, S, (p) => {
+  return bake(`hydra3-neck${r}-${kind}${shell ? 's' : ''}`, S, S, (p) => {
     const cx = r + 1.5
     const cy = r + 1.5
     for (let y = 0; y < S; y++)
       for (let x = 0; x < S; x++) {
         const dx = x + 0.5 - cx
         const dy = y + 0.5 - cy
-        const inF = dx * dx + dy * dy <= r * r
         const sx = dx - 1.6
         const sy = dy - 0.8
+        if (shell) {
+          const R1 = r + 1
+          if (dx * dx + dy * dy <= R1 * R1 || sx * sx + sy * sy <= R1 * R1) p.dot(x, y, P.void)
+          continue
+        }
+        const inF = dx * dx + dy * dy <= r * r
         const inS = sx * sx + sy * sy <= r * r
         if (!inF && !inS) continue
         if (!inF) {
           p.dot(x, y, graniteAt(x, y, P.crimsonDeep, P.blood1, P.crimson))
           continue
         }
-        const l = -(dx * 0.8 + dy) / (r * 1.3)
-        let col: number = l > 0.3 ? P.stoneHi : l > -0.15 ? P.stone3 : l > -0.5 ? P.stone2 : P.stone1
-        if (kind === 1 && Math.abs(dy) <= 1) col = dy < 0 ? P.red : P.crimson
+        const l = -(dx * 0.8 + dy * 0.3) / (r * 0.9)
+        let col: number = l > 0.45 ? P.stoneHi : l > 0 ? P.stone3 : l > -0.5 ? P.stone2 : P.stone1
+        if (kind === 1 && Math.abs(dy) <= 0.6) col = l > 0 ? P.red : P.crimson
         if (kind === 2) {
           const k = Math.hypot(dx, dy) / r
           col = k < 0.35 ? P.redHot : k < 0.6 ? P.ember : hash(x, y) < 0.3 ? P.emberDark : P.blood1
         }
         p.dot(x, y, col)
       }
-    p.outline(P.void, P.stone0)
   })
 }
 
@@ -296,15 +311,14 @@ function bodyTex(bw: number, bh: number, stage: number): Texture {
             break
           }
       }
-    const r = seeded(77 + stage * 0)
+    const r = seeded(77)
     const STEP = [P.stone1, P.stone2, P.stone3, P.stoneHi]
-    const darker = (i: number) => Math.max(0, i - 1)
     // rasgos abertos neste estágio
     const rifts = RIFTS.slice(0, stage).map((q, i) => ({
       x: 1 + ((q.u + 1) / 2) * fw,
       y: top0 + q.v * Hd,
-      a: fw * 0.075 * q.s * (1 + i * 0.12),
-      b: bh * 0.15 * q.s * (1 + i * 0.1),
+      a: Math.max(2.2, fw * 0.03 * q.s * (1 + i * 0.1)),
+      b: bh * 0.2 * q.s * (1 + i * 0.08),
     }))
     for (let y = 0; y < bh; y++)
       for (let x = 0; x < bw; x++) {
@@ -323,44 +337,45 @@ function bodyTex(bw: number, bh: number, stage: number): Texture {
         const top = yT(x - 1)
         const v = (y - top) / Math.max(1, bot - top)
         // luz de cima-esquerda (lua/eclipse), sombra puxando para violeta
-        let L = 0.72 - u * 0.3 - v * 0.55 - (y - top0) / (bh * 3)
+        let L = 0.68 - u * 0.32 - v * 0.72 - (y - top0) / (bh * 4)
         if (y - top < 1.2) L += 0.35
         let i = L > 0.62 ? 3 : L > 0.4 ? 2 : L > 0.16 ? 1 : 0
-        // escamas de jornal: linhas curvas acompanham o domo
-        const ry = y + u * u * 6
-        const RH = 5
+        // escamas de jornal (dragão de papel): fileiras curvas acompanham o domo, borda de baixo em arco
+        const ry = y + u * u * 7
+        const RH = 6
         const row = Math.floor(ry / RH)
         const inRow = ry - row * RH
-        const sx = x + row * 4 + (row % 2) * 2
-        const SW = 9
+        const SW = 11
+        const sx = x + (row % 2) * 5.5 + hash(row, 3) * 3
         const col = Math.floor(sx / SW)
-        const inCol = sx - col * SW
-        if (inRow >= RH - 1) i = darker(i)
-        else if (inCol < 1 && i > 0) i = darker(i)
-        else if (inRow < 1 && u < 0.4 && i < 3) i++
-        else if (inRow >= 2 && inRow < 3 && inCol > 1 && inCol < SW - 1 && inCol % 3 !== 0 && i >= 2) i = darker(i)
+        const lx = (sx - col * SW + 0.5 - SW / 2) / (SW / 2)
+        const arc = RH * 0.35 + RH * 0.65 * Math.sqrt(Math.max(0, 1 - lx * lx))
+        if (inRow > arc + 0.2) i = Math.max(0, i - 1)
+        else if (inRow > arc - 0.9) i = Math.max(0, i - 2)
+        else if (inRow < 1.2 && lx < 0.3 && i < 3) i++
+        else if (inRow >= 2 && inRow < 3 && Math.abs(lx) < 0.6 && Math.floor(sx) % 3 !== 0 && i >= 2) i--
         let c: number = STEP[i] ?? P.stone1
-        if (inRow >= 1 && inRow < 2 && inCol > 0 && inCol < SW - 1 && hash(row, col) < 0.16)
+        if (inRow >= 1 && inRow < 2 && Math.abs(lx) < 0.7 && hash(row, col) < 0.14)
           c = i >= 2 ? P.red : P.crimson
         // luz vermelha do chão na base (núcleo e brasas)
         if (y > bot - 2) c = i >= 2 ? P.stone2 : P.blood1
         if (y === bot) c = P.crimsonDeep
         // chamuscado e rasgos (dano)
         for (const q of rifts) {
-          const nx = (x - q.x) / q.a
+          const nx = (x - q.x - Math.sin((y - q.y) * 0.9) * q.a * 0.55) / q.a
           const ny = (y - q.y) / q.b
           const j = 1 + (hash(x, y) - 0.5) * 0.25 + Math.sin(ny * 5 + q.x) * 0.12
           const dd = Math.sqrt(nx * nx + ny * ny) / j
           if (dd < 1) {
-            c = dd < 0.3 ? P.goldHi : dd < 0.5 ? P.emberBright : dd < 0.72 ? P.ember : dd < 0.88 ? P.redHot : P.red
-            if (dd < 0.12) c = P.white
+            c = dd < 0.3 ? P.goldHi : dd < 0.55 ? P.emberBright : dd < 0.8 ? P.redHot : P.red
+            if (dd < 0.15) c = P.white
             break
           }
           if (dd < 1.18) {
             c = P.void
             break
           }
-          if (dd < 1.9 && hash(x + 7, y) < 1.9 - dd) c = dd < 1.45 ? P.emberDark : P.blood1
+          if (dd < 1.7 && hash(x + 7, y) < 1.7 - dd) c = dd < 1.4 ? P.emberDark : P.blood1
         }
         p.dot(x, y, c)
       }
@@ -446,6 +461,7 @@ export default function chefe(): MicroGame {
   const bodyFlash = new Sprite()
   const rubble = new Sprite()
   const neckLayer = new Container()
+  const shellLayer = new Container()
   const headLayer = new Container()
   const ghosts = [new Sprite(), new Sprite()]
   const glow = new Graphics()
@@ -466,6 +482,7 @@ export default function chefe(): MicroGame {
   let banner: Banner
   /** discos dos pescoços (pool fixo por cabeça) */
   let neckSpr: Sprite[][] = []
+  let shellSpr: Sprite[][] = []
   let bodyTexs: Texture[] = []
   let neckR = { base: 7, tip: 4 }
   /** cabeças derrubadas de primeira, sem errar */
@@ -496,12 +513,13 @@ export default function chefe(): MicroGame {
   let stage = 0
   let beamUntil = -1
   let large = false
+  let wideScr = false
 
   const dead = () => heads.reduce((n, hd) => n + (hd.alive ? 0 : 1), 0)
 
   function headRest(i: number) {
     const n = heads.length
-    const spread = Math.min(c.W - BHW - 6, 250)
+    const spread = Math.min(c.W - BHW - 4, wideScr ? 300 : 250)
     const base = bodyX - spread / 2 + (spread / (n - 1)) * i
     const hd = heads[i]
     const ph = hd?.phase ?? 0
@@ -606,7 +624,7 @@ export default function chefe(): MicroGame {
     hd.s.texture = solidTex(`h2b${BHF}`, base, P.white)
     bodyFlash.texture = solidTex(`hb${stage}`, body.texture, P.white)
     bodyFlash.visible = true
-    bodyFlash.alpha = 0.55
+    bodyFlash.alpha = 0.4
     if (btn?.isConnected) {
       const r = domRect(c, btn)
       drawBeam({ x: r.cx, y: r.y }, { x: p.x, y: p.y + 6 })
@@ -845,6 +863,7 @@ export default function chefe(): MicroGame {
     for (let i = 0; i < heads.length; i++) {
       const hd = heads[i] as Head
       const list = neckSpr[i] ?? []
+      const shells = shellSpr[i] ?? []
       const ax = anchorX(i)
       const ay = bodyY - bh * 0.18 + sinkY
       let hx: number
@@ -863,12 +882,13 @@ export default function chefe(): MicroGame {
       }
       const len = Math.hypot(hx - ax, hy - ay)
       const segN = hd.alive
-        ? Math.min(NECK_SEGS, Math.max(9, Math.round(len / 3)))
-        : Math.max(3, Math.round(len / 3))
+        ? Math.min(NECK_SEGS, Math.max(9, Math.round(len / 2)))
+        : Math.max(3, Math.round(len / 2))
       for (let s = 0; s < list.length; s++) {
         const spr = list[s] as Sprite
         if (s > segN || (!hd.alive && dying >= 0 && c.time - dying > 1.5)) {
           spr.visible = false
+          ;(shells[s] as Sprite).visible = false
           continue
         }
         const t = (s / segN) * reach
@@ -882,11 +902,16 @@ export default function chefe(): MicroGame {
         const y = (1 - t) * (1 - t) * ay + 2 * (1 - t) * t * ctrlY + t * t * hy
         const rr = Math.round(neckR.base + (neckR.tip - neckR.base) * t)
         const last = s === segN
-        const kind = !hd.alive && last ? 2 : s % 4 === 2 ? 1 : 0
+        const kind = !hd.alive && last ? 2 : s % 6 === 3 ? 1 : 0
         spr.texture = neckTex(rr, kind)
         spr.visible = true
         spr.x = Math.round(x - rr - 2)
         spr.y = Math.round(y - rr - 2)
+        const sh = shells[s] as Sprite
+        sh.texture = neckTex(rr, 0, true)
+        sh.visible = true
+        sh.x = spr.x
+        sh.y = spr.y
       }
     }
   }
@@ -923,17 +948,20 @@ export default function chefe(): MicroGame {
       // mede o espaço livre acima da pergunta e escolhe o tamanho da hidra
       const free = domRect(c, ui).y - c.top
       large = free >= 140
-      HF = large ? 1 : 0.78
-      BHF = large ? 1.125 : 0.875
+      wideScr = c.W > c.H && large
+      HF = wideScr ? 1 : large ? 0.875 : 0.7
+      BHF = wideScr ? 1.125 : large ? 1 : 0.8
       HW = headSize(HF).w
       HH = headSize(HF).h
       BHW = headSize(BHF).w
       BHH = headSize(BHF).h
-      bh = large ? 60 : 40
+      bh = wideScr ? 64 : large ? 60 : 40
       barTop = c.top + (large ? 2 : 0)
-      neckR = large ? { base: 7, tip: 4 } : { base: 5, tip: 3 }
+      neckR = wideScr ? { base: 8, tip: 5 } : large ? { base: 7, tip: 4 } : { base: 5, tip: 3 }
       neckH = large ? Math.min(96, Math.round(free * 0.36)) : 30
-      bw = Math.round(Math.min(c.W * (large ? 0.8 : 0.74), large ? 200 : 210))
+      bw = Math.round(
+        Math.min(c.W * (wideScr ? 0.56 : large ? 0.8 : 0.74), wideScr ? 270 : large ? 200 : 210),
+      )
       measureUi()
       bodyY = targetBodyY
       floorY = bodyY + Math.round(bh / 2) + 2
@@ -979,12 +1007,23 @@ export default function chefe(): MicroGame {
         }
         return list
       })
+      shellSpr = heads.map(() => {
+        const list: Sprite[] = []
+        for (let s = 0; s <= NECK_SEGS; s++) {
+          const spr = new Sprite()
+          spr.visible = false
+          shellLayer.addChild(spr)
+          list.push(spr)
+        }
+        return list
+      })
       headLayer.sortableChildren = true
       root.addChild(
         shadow,
         rubble,
         ribbons.back,
         embers.root,
+        shellLayer,
         neckLayer,
         body,
         bodyFlash,
@@ -1107,9 +1146,9 @@ export default function chefe(): MicroGame {
         hd.x = p.x
         hd.y = p.y
         // olhos: brilho em 3 camadas, mais forte na cabeça ativa e na antecipação
-        const ey = Math.round(hd.s.y + 1 + 13.1 * f)
-        const e1 = Math.round(hd.s.x + 1 + 9 * f)
-        const e2 = Math.round(hd.s.x + 1 + 15 * f)
+        const ey = Math.round(hd.s.y + 1 + EYE.y * f)
+        const e1 = Math.round(hd.s.x + 1 + EYE.x1 * f)
+        const e2 = Math.round(hd.s.x + 1 + EYE.x2 * f)
         if ((active || winding) && eye !== 3) {
           const core = winding ? P.white : P.sparkle
           energyDot(glow, e1, ey, core, P.redHot, P.crimson)
@@ -1136,7 +1175,12 @@ export default function chefe(): MicroGame {
           for (let a = 0; a < 20; a++) {
             const ang = (a / 20) * Math.PI * 2
             aim
-              .rect(Math.round(c.W / 2 + Math.cos(ang) * rr), Math.round(hitY + Math.sin(ang) * rr * 0.4), 1, 1)
+              .rect(
+                Math.round(c.W / 2 + Math.cos(ang) * rr),
+                Math.round(hitY + Math.sin(ang) * rr * 0.4),
+                1,
+                1,
+              )
               .fill({ color: a % 2 ? P.red : P.redHot, alpha: 0.8 })
           }
         }
@@ -1173,7 +1217,11 @@ export default function chefe(): MicroGame {
         embers.spark(bodyX + (c.rnd() - 0.5) * bw * 0.5, bodyY + sinkY, 12, 0, -40)
       // estrela de 4 pontas nos nós das fitas, de vez em quando
       if (body.visible && !c.reduced && c.rnd() < dt * 1.2)
-        sparkles.spawn(Math.round(bodyX + (c.rnd() - 0.5) * bw * 1.1), Math.round(bodyY + (c.rnd() - 0.5) * bh), 8)
+        sparkles.spawn(
+          Math.round(bodyX + (c.rnd() - 0.5) * bw * 1.1),
+          Math.round(bodyY + (c.rnd() - 0.5) * bh),
+          8,
+        )
       embers.update(dt, c.time)
       sparkles.update(dt)
       debris.update(dt)

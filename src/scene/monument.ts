@@ -33,8 +33,8 @@ import {
   YAW,
 } from './shape13'
 
-const BEVEL = 0.12
-const INSET = 0.025
+const BEVEL = 0.08
+const INSET = 0.012
 
 // ---------- GLSL: paleta como constantes ----------
 const v3 = (k: K) => {
@@ -52,11 +52,11 @@ float bayer4(vec2 p){
 }`
 
 const RING_LIGHT_GLSL = `
-uniform mat4 uRingInv[3];
-uniform vec4 uRingP[3]; // R, head, arc, intensidade
+uniform mat4 uRingInv[4];
+uniform vec4 uRingP[4]; // R, head, arc, intensidade
 float ringLight(vec3 pw){
   float acc = 0.0;
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 4; i++) {
     vec3 q = (uRingInv[i] * vec4(pw, 1.0)).xyz;
     float rr = length(q.xz);
     float d = length(vec2(rr - uRingP[i].x, q.y));
@@ -125,25 +125,37 @@ void main(){
     gl_FragColor = vec4(col, 1.0);
     return;
   }
+  float bay = bayer4(gl_FragCoord.xy);
   if (nO.z > 0.75) {
-    // frente: placas entre rachaduras, cada uma com seu tom
+    // frente: osso quase uniforme, granulação fina em pontilhado, tom por placa sutil;
+    // vermelho só como mancha escorrendo no pé das lajes pintadas (o glifo nunca se parte)
     float wy = vObj.y + uYBase;
-    float redChance = uPaint * 0.85 + clamp(0.3 - wy * 0.045, 0.0, 0.3) + uWear * 0.05;
+    float redChance = uPaint * clamp(1.5 - wy * 0.55, 0.0, 1.0) * 0.75;
     kind = tone < redChance ? 1 : 0;
-    float v = 0.55 + (lam - 0.6) * 0.8 + (tone - 0.5) * 0.55 + wy * 0.015 - uWear * 0.08;
-    if (vObj.y < 0.22) v -= 0.25;
-    // fuligem fina (pixel a pixel), nunca placas inteiras escuras
-    if (speck < uWear * 0.07) v -= 0.3;
-    band = int(clamp(v, 0.0, 0.999) * 4.0);
-    if (kind == 1) band += 1;
-    if (speck > 0.975) band += 1;
-    if (speck < 0.025) band -= 1;
-    if (crack > 0.4 && crack < 0.6) band += 1;
+    float v = 0.97 + (lam - 0.6) * 0.7 + (tone - 0.5) * 0.36 - max(0.0, 2.0 - wy) * 0.06 - uWear * 0.07;
+    if (vObj.y < 0.25) v -= 0.18;
+    if (speck < uWear * 0.06) v -= 0.3;
+    // pontilhado só na transição entre faixas (superfície lisa, não estática)
+    band = int(clamp(v * 3.0 + (bay - 0.5) * 0.3, 0.0, 3.0));
+    // poucas manchas: algumas placas encardidas, o resto liso com grão fino e raro
+    if (tone < 0.09) v -= 0.22;
+    band = int(clamp(v * 3.0 + (bay - 0.5) * 0.3, 0.0, 3.0));
+    if (speck > 0.992) band += 1;
+    if (speck < 0.022) band -= 1;
+    if (crack > 0.4 && crack < 0.6) band = 3;
     if (crack > 0.2 && crack < 0.3) band -= 1;
     band = clamp(band, 0, kind == 1 ? 4 : 3);
+    bool hot = rl > 0.75 + bay * 0.4;
     if (crack > 0.9) col = kind == 1 ? C_blood0 : C_stone0;
-    else if (lit) col = kind == 1 ? rampLitRed(band) : rampLitStone(band);
-    else col = kind == 1 ? rampRed(band) : rampStone(band);
+    else if (kind == 1) col = hot ? rampLitRed(band) : rampRed(band);
+    else col = hot ? rampLitStone(band) : rampStone(band);
+    // calor raro nas placas mais claras (o pêssego da referência), sem virar ruído
+    if (kind == 0 && crack < 0.1 && band == 3 && tone > 0.55 && speck > 0.5 && speck < 0.525) col = C_redGlow;
+    // grão fino: pontos isolados de um tom vizinho, nunca manchas
+    if (kind == 0 && crack < 0.1 && !hot) {
+      if (band == 3 && speck > 0.3 && speck < 0.36) col = C_stone3;
+      else if (band == 2 && speck > 0.3 && speck < 0.35) col = C_stoneHi;
+    }
   } else if (nO.y > 0.75) {
     // topo: pedra mais clara, musgo pontilhado onde o tom é alto
     band = tone > 0.35 ? 3 : 2;
@@ -152,24 +164,32 @@ void main(){
     if (tone > 0.72 && bayer4(gl_FragCoord.xy) < (tone - 0.6) * 2.5) col = speck > 0.5 ? C_green : C_vine1;
     if (lit) col = rampLitStone(band);
   } else if (nO.y < -0.6) {
-    col = speck > 0.85 ? C_blood1 : C_blood0;
+    // face de baixo (câmera baixa): sombra vermelha escura, acende onde a fita passa
+    col = speck > 0.8 || bay < 0.25 ? C_blood1 : C_blood0;
+    if (lit) col = bay < 0.5 ? C_crimson : C_crimsonDeep;
   } else if (abs(nO.x) > 0.75) {
-    // laterais pintadas de vermelho, salpicadas
-    float v = 0.5 + lam * 0.35 + (tone - 0.5) * 0.3 + rl * 0.5;
-    band = int(clamp(v, 0.0, 0.999) * 4.0);
-    if (speck > 0.9) band += 1;
-    if (speck < 0.07) band -= 1;
+    // laterais: granito vermelho profundo, mais escuro para trás e embaixo, salpico claro raro
+    // gradiente de luz: escuro embaixo e atrás, acende para cima e para a quina da frente
+    float v = 0.07 + lam * 0.2 + (tone - 0.5) * 0.1 + vObj.z * 0.14 + (vObj.y + uYBase) * 0.035 + rl * 0.3;
+    float f = clamp(v, 0.0, 0.999) * 4.0;
+    band = int(f) + (bay < fract(f) ? 1 : 0);
+    // quina da frente acesa (fio vermelho vivo) e fundo da lateral em sombra funda
+    if (vObj.z > 0.85) band += 1;
+    if (vObj.z < -0.35 && bay < 0.6) band -= 1;
+    // granito pontilhado: grãos claros e escuros finos
+    if (speck > 0.95) band += 1;
+    if (speck < 0.06) band -= 1;
     band = clamp(band, 0, 4);
     col = lit ? rampLitRed(band) : rampRed(band);
-    // granito vermelho: salpico fino claro
-    if (speck > 0.985) col = C_stoneHi;
-    else if (speck > 0.955) col = C_redGlow;
-    if (crack > 0.9 && tone > 0.5) col = C_blood0;
+    if (speck > 0.997) col = C_stoneHi;
+    else if (speck > 0.986) col = C_redGlow;
+    if (crack > 0.9) col = tone > 0.6 ? C_void : C_blood0;
   } else {
     // bisel: degrau de luz que faz a geometria ler (lábio claro em cima/esquerda, escuro embaixo/direita)
     if (nO.x > 0.3) {
-      col = lam > 0.2 ? C_redHot : C_red;
-      if (lit) col = C_redGlow;
+      // chanfro virado para a lateral: escuro (as emendas na frente leem como fenda, não como faixa vermelha)
+      col = lam > 0.2 ? C_crimson : C_crimsonDeep;
+      if (lit) col = C_red;
     } else if (nO.y < -0.3) {
       col = C_blood1;
     } else {
@@ -214,9 +234,12 @@ void main(){
   vec3 nW = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
   if (nV.z < 0.0) nW = -nW;
   float lam = dot(nW, uKey);
-  float v = 0.3 + lam * 0.65 + (vShade - 0.5) * 0.5;
-  int b = int(clamp(v, 0.0, 0.999) * 4.0);
-  vec3 col = b <= 0 ? C_vine0 : b == 1 ? C_vine1 : b == 2 ? C_green : C_leafHi;
+  // folhagem oliva escura: quase toda vine1/vine0, verde só no lado da lua, leafHi raro
+  float v = 0.2 + lam * 0.5 + (vShade - 0.5) * 0.4;
+  float bq = bayer4(gl_FragCoord.xy);
+  int b = int(clamp(v + (bq - 0.5) * 0.15, 0.0, 0.999) * 4.0);
+  // oliva: o verde saturado só pontilha, o topo pega leafHi (amarelado) como na referência
+  vec3 col = b <= 0 ? C_vine0 : b == 1 ? C_vine1 : b == 2 ? (bq < 0.5 ? C_green : C_vine1) : C_leafHi;
   float rl = ringLight(vWorld);
   if (rl > 0.55 + bayer4(gl_FragCoord.xy) * 0.4 && b >= 2) col = b == 3 ? C_redHot : C_crimson;
   gl_FragColor = vec4(col, 1.0);
@@ -335,8 +358,12 @@ void main(){
     }
     bool bgR = C(p + ivec2(1,0)).a < 0.1;
     bool bgD = C(p - ivec2(0,1)).a < 0.1;
+    bool bgU = C(p + ivec2(0,1)).a < 0.1;
+    bool bgL = C(p - ivec2(1,0)).a < 0.1;
     if (edge) idx = uDark[uDark[idx]];
     else if (bgR) idx = uRedHot;
+    else if (bgU) idx = bayer4(gl_FragCoord.xy) < 0.7 ? uRedHot : uCrimson;
+    else if (bgL) idx = bayer4(gl_FragCoord.xy) < 0.5 ? uCrimson : idx;
     else if (bgD) idx = uDark[idx];
   }
   gl_FragColor = vec4(uPal[idx], 1.0);
@@ -345,7 +372,7 @@ void main(){
 /** textura de pedra: placas de Voronoi, rachaduras de 1 px com lábio, salpico e tom por placa */
 function stoneTexture(ppu: number) {
   const S = 256
-  const G = Math.max(4, Math.round(S / (ppu * 1.35)))
+  const G = Math.max(4, Math.round(S / (ppu * 1.25)))
   const cell = S / G
   const r = mulberry32(1302)
   const pts: [number, number][] = []
@@ -383,7 +410,7 @@ function stoneTexture(ppu: number) {
   }
   const pairSkip = (a: number, b: number) => {
     const h = Math.sin(Math.min(a, b) * 12.9898 + Math.max(a, b) * 78.233) * 43758.5453
-    return h - Math.floor(h) < 0.22
+    return h - Math.floor(h) < 0.12
   }
   for (let y = 0; y < S; y++)
     for (let x = 0; x < S; x++) {
@@ -526,8 +553,8 @@ export class Monument3D {
   private leafData: Leaf[] = []
   private ribbons: { spec: RingSpec; mat: THREE.ShaderMaterial; holder: THREE.Object3D }[] = []
   private ringUniforms = {
-    uRingInv: { value: [new THREE.Matrix4(), new THREE.Matrix4(), new THREE.Matrix4()] },
-    uRingP: { value: [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()] },
+    uRingInv: { value: [0, 1, 2, 3].map(() => new THREE.Matrix4()) },
+    uRingP: { value: [0, 1, 2, 3].map(() => new THREE.Vector4()) },
   }
   private key = new THREE.Vector3(-0.6, 0.72, 0.5).normalize()
   private progress = -1
@@ -630,7 +657,7 @@ export class Monument3D {
       ;(this.digits[def.digit] as THREE.Group).add(mesh)
       // lajes de cima "escorregadas" no monumento gasto; cada fase conserta uma
       const sgn = def.rank % 2 ? 1 : -1
-      const rz = def.rank ? sgn * (0.035 + def.rank * 0.006) : 0
+      const rz = def.rank ? sgn * (0.018 + def.rank * 0.003) : 0
       this.pieces.push({
         mesh,
         def,
@@ -684,7 +711,7 @@ export class Monument3D {
       const dg = p.digit
       const w = p.x1 - p.x0
       // musgo no topo, em manchas (não confete): só onde a borda de cima é topo de verdade
-      const patches = Math.max(1, Math.round(w * (0.5 + r() * 0.8)))
+      const patches = Math.max(1, Math.round(w * (0.8 + r() * 0.9)))
       for (let k = 0; k < patches; k++) {
         const cx = p.x0 + 0.2 + r() * (w - 0.4)
         const n = 5 + Math.floor(r() * 9)
@@ -693,18 +720,18 @@ export class Monument3D {
           const ty = topAt(p.pts, x)
           if (ty === null || ty < p.y1 - 1.2) continue
           const z = -D / 2 + r() ** 0.5 * D
-          add(dg, pi, x, ty + 0.05, x, ty + 0.02, z, 0.2 + r() * 0.2)
+          add(dg, pi, x, ty + 0.05, x, ty + 0.02, z, 0.22 + r() * 0.24)
         }
       }
       // touceiras derramando pela beira da frente
       for (let x = p.x0 + 0.2; x < p.x1 - 0.1; x += 0.4 + r() * 0.6) {
-        if (r() > 0.4) continue
+        if (r() > 0.65) continue
         const ty = topAt(p.pts, x)
         if (ty === null) continue
-        const n = 5 + Math.floor(r() * 8)
+        const n = 8 + Math.floor(r() * 10)
         for (let q = 0; q < n; q++) {
           const a2 = r() * Math.PI * 2
-          const d2 = Math.sqrt(r()) * 0.3
+          const d2 = Math.sqrt(r()) * 0.36
           add(
             dg,
             pi,
@@ -718,12 +745,12 @@ export class Monument3D {
         }
       }
       // tufos que escorrem pela frente
-      const drapes = r() < 0.6 ? 1 + Math.floor(r() * (w > 2 ? 2 : 1)) : 0
+      const drapes = r() < 0.8 ? 1 + Math.floor(r() * (w > 2 ? 3 : 2)) : 0
       for (let d = 0; d < drapes; d++) {
         const x0 = p.x0 + 0.25 + r() * (w - 0.5)
         const ty = topAt(p.pts, x0)
         if (ty === null) continue
-        const len = 0.4 + r() * Math.min(2.4, ty - p.y0 + 0.8)
+        const len = 0.5 + r() * Math.min(2.6, ty - p.y0 + 0.8)
         const ph = r() * 6
         for (let k = 0; k * 0.17 < len; k++) {
           const y = ty - k * 0.17
@@ -731,11 +758,14 @@ export class Monument3D {
           const x = x0 + Math.sin(k * 0.8 + ph) * 0.1
           const s = (0.27 - t * 0.15) * (0.8 + r() * 0.4)
           add(dg, pi, x0, ty + 0.05, x, y, front + r() * 0.08, s)
-          if (r() < 0.6) add(dg, pi, x0, ty + 0.05, x + (r() - 0.5) * 0.35, y - r() * 0.1, front + 0.04, s * 0.8)
+          // cacho: mais folhas perto da borda, afinando para baixo
+          const extra = t < 0.35 ? 3 : 1
+          for (let q = 0; q < extra; q++)
+            if (r() < 0.75) add(dg, pi, x0, ty + 0.05, x + (r() - 0.5) * (0.5 - t * 0.3), y - r() * 0.1, front + 0.04, s * 0.85)
         }
       }
       // trepadeira pela lateral direita (a face vermelha que a câmera vê)
-      if (r() < 0.6) {
+      if (r() < 0.8) {
         const z0 = -D / 2 + 0.3 + r() * (D - 0.6)
         const ty = topAt(p.pts, p.x1 - 0.02) ?? p.y1
         const len = 0.6 + r() * (ty - p.y0)
@@ -768,6 +798,10 @@ export class Monument3D {
     bush(0, 2.9, 0.05, front - 0.2, 0.55, 34)
     bush(0, -0.1, 0.05, front - 0.1, 0.5, 26)
     bush(1, 5.7, 0.05, front - 0.6, 0.5, 26)
+    // tufos grandes como na referência: em cima da serifa do 1 e no canto de cima à direita do 3
+    bush(0, 0.2, 6.9, 0.2, 0.45, 26)
+    bush(1, 5.1, 7.6, 0.4, 0.4, 24)
+    bush(1, 5.5, 6.2, 0.6, 0.35, 16)
 
     const geo = new THREE.IcosahedronGeometry(0.5, 0)
     const mat = new THREE.ShaderMaterial({
@@ -999,7 +1033,7 @@ export class Monument3D {
       if (u.uFlick) u.uFlick.value = Math.floor(step / 3) % 2
       if (u.uFlare) u.uFlare.value = this.flare
       const power = 0.78 + 0.22 * Math.max(0, this.progress)
-      if (u.uW) u.uW.value = rb.spec.w * 1.35 * power * (1 + this.flare * 0.5)
+      if (u.uW) u.uW.value = rb.spec.w * 1.6 * power * (1 + this.flare * 0.5)
       if (u.uArc) u.uArc.value = rb.spec.arc * (0.7 + 0.3 * power)
       rb.holder.rotation.y = Math.sin(t * 0.13 + i * 2) * 0.25
       rb.holder.updateMatrixWorld()

@@ -75,7 +75,7 @@
 .mt-card--red,
 .mt-card--intro {
   --cc: var(--red-hot);
-  --line: var(--crimson-deep);
+  --line: var(--stone-2);
 }
 .mt-card--win {
   --cc: var(--gold-hi);
@@ -166,17 +166,43 @@
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 16px;
+}
+/* botões do tamanho do conteúdo, com piso comum: nada de faixa de borda a borda */
+.mt-actions > .btn:not(.btn--ghost) {
+  width: auto;
+  min-width: min(232px, 100%);
 }
 
 /* ---------- card de intro: arte-chave ---------- */
 .mt-art {
+  --cc: var(--stone-hi);
+  --l: calc(var(--px) * 4);
   position: relative;
   line-height: 0;
-  margin: 0 0 calc(var(--px) * 5);
-  box-shadow: 0 0 0 var(--px) var(--blood-1);
+  margin: 0 0 calc(var(--px) * 6);
+  box-shadow:
+    0 0 0 var(--px) var(--stone-2),
+    0 0 0 calc(var(--px) * 2) var(--void);
   overflow: hidden;
   background: var(--void);
+}
+/* cantoneiras claras por dentro da miniatura (mesma moldura dos ícones) */
+.mt-art::after {
+  content: "";
+  position: absolute;
+  inset: var(--px);
+  pointer-events: none;
+  z-index: 3;
+  background:
+    linear-gradient(var(--cc), var(--cc)) left top / var(--l) var(--px) no-repeat,
+    linear-gradient(var(--cc), var(--cc)) left top / var(--px) var(--l) no-repeat,
+    linear-gradient(var(--cc), var(--cc)) right top / var(--l) var(--px) no-repeat,
+    linear-gradient(var(--cc), var(--cc)) right top / var(--px) var(--l) no-repeat,
+    linear-gradient(var(--cc), var(--cc)) left bottom / var(--l) var(--px) no-repeat,
+    linear-gradient(var(--cc), var(--cc)) left bottom / var(--px) var(--l) no-repeat,
+    linear-gradient(var(--cc), var(--cc)) right bottom / var(--l) var(--px) no-repeat,
+    linear-gradient(var(--cc), var(--cc)) right bottom / var(--px) var(--l) no-repeat;
 }
 .mt-art-cv {
   display: block;
@@ -338,6 +364,26 @@
   margin: 10px 0 4px;
 }
 
+/* celular em pé: o card sobe e o véu clareia embaixo, para o marco do lugar (no horizonte, ~66% da
+   altura) aparecer atrás, como no desktop */
+@media (max-width: 720px) and (orientation: portrait) {
+  .mt-ov--intro {
+    align-items: flex-start;
+    padding-top: calc(60px + var(--safe-t));
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--void) 82%, transparent) 0,
+      color-mix(in srgb, var(--void) 82%, transparent) 50%,
+      color-mix(in srgb, var(--void) 30%, transparent) 64%,
+      color-mix(in srgb, var(--void) 20%, transparent) 78%,
+      color-mix(in srgb, var(--void) 55%, transparent) 100%
+    );
+  }
+  .mt-ov--intro .mt-card {
+    margin-top: 0;
+  }
+}
+
 /* entrada do card de intro, em degraus (180 a 320 ms), escalonada */
 .mt-ov--intro .mt-card {
   animation: mt-drop 0.22s steps(4) both;
@@ -418,7 +464,7 @@
   pointer-events: none;
   z-index: 6;
 }
-.mt-go span {
+.mt-go-text {
   font-family: var(--f-hud);
   font-size: 64px;
   letter-spacing: 0.1em;
@@ -438,11 +484,19 @@
 .mt-rays {
   position: absolute;
   inset: 0;
-  pointer-events: none !important;
+  pointer-events: none;
   background:
-    radial-gradient(circle at 50% 38%, transparent 0 22%, var(--void) 22.1% 23%, transparent 23.1% 34%, var(--void) 34.1% 36%, transparent 36.1% 50%, var(--void) 62%),
-    repeating-conic-gradient(from 3deg at 50% 38%, var(--blood-1) 0deg 6deg, transparent 6deg 20deg);
-  opacity: 0.85;
+    radial-gradient(
+      circle at 50% 38%,
+      transparent 0 24%,
+      var(--void) 24.1% 25%,
+      transparent 25.1% 38%,
+      var(--void) 38.1% 40%,
+      transparent 40.1% 48%,
+      var(--void) 58%
+    ),
+    repeating-conic-gradient(from 3deg at 50% 38%, var(--blood-0) 0deg 6deg, transparent 6deg 20deg);
+  opacity: 1;
   animation: mt-breathe 1.6s steps(2) infinite;
 }
 .mt-card--win {
@@ -485,7 +539,7 @@
     0 var(--px) 0 var(--stone-1),
     0 calc(var(--px) * 2) 0 var(--void);
 }
-.mt-pts span {
+.mt-pts-label {
   font-family: var(--f-hud);
   font-size: 12px;
   letter-spacing: 0.18em;
@@ -790,7 +844,19 @@
 
 /* ---------- resultado ---------- */
 .mt-res-head {
+  --cc: var(--gold-hi);
   position: relative;
+  width: 100%;
+  padding: 12px 12px 14px;
+  background: var(--night);
+  box-shadow:
+    0 0 0 var(--px) var(--stone-1),
+    0 0 0 calc(var(--px) * 2) var(--void);
+}
+.mt-res-head h1 {
+  text-shadow:
+    0 var(--px) 0 var(--crimson-deep),
+    0 calc(var(--px) * 2) 0 var(--void);
 }
 .mt-res-banner {
   display: flex;
@@ -808,8 +874,9 @@
   box-shadow: 0 0 0 var(--px) var(--stone-1);
 }
 .mt-res-xp {
+  --xp-w: 168px;
   position: relative;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: center;
   padding: 8px 12px;
   background: var(--void);
@@ -817,6 +884,9 @@
 }
 .mt-res-xp.is-land .xp-bar {
   animation: mt-barhit 0.24s steps(1);
+}
+.mt-xpchip.is-wait {
+  visibility: hidden;
 }
 .mt-xpchip--pop {
   animation: mt-stamp 0.18s steps(3) both;
@@ -896,7 +966,7 @@
   .mt-count .count {
     font-size: 160px;
   }
-  .mt-go span {
+  .mt-go-text {
     font-size: 88px;
   }
   .mt-pts b {
@@ -907,6 +977,9 @@
   }
   .mt-stars--mid {
     --k: calc(var(--px) + 1px);
+  }
+  .mt-res-xp {
+    --xp-w: 240px;
   }
 }
 
@@ -1176,7 +1249,7 @@
 }
 @keyframes mt-breathe {
   50% {
-    opacity: 0.65;
+    opacity: 0.7;
   }
 }
 @keyframes mt-barhit {
@@ -1204,6 +1277,7 @@
   .mt-res-head *,
   .mt-glint::after,
   .mt-reward-kicker {
+    /* biome-ignore lint/complexity/noImportantStyles: movimento reduzido precisa vencer toda animação de entrada */
     animation: none !important;
   }
   .mt-twinkle,
@@ -1215,8 +1289,8 @@
   .mt-count-ring {
     display: none;
   }
-  .mt-go span {
-    animation: mt-go-still 0.4s steps(1) both !important;
+  .mt-go-text {
+    animation: mt-go-still 0.4s steps(1) both;
   }
 }
 @keyframes mt-go-still {

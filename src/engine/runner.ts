@@ -3,7 +3,7 @@ import { Application, Container, Sprite, Texture } from 'pixi.js'
 import { hitstop as audioHitstop, setIntensity, sfx } from '../audio/audio'
 import { mulberry32 } from '../lib/rng'
 import { type PixelFit, computeFit, ditherGradient, offscreen } from '../lib/pixel'
-import { type SkillKind, usePlay } from '../state/play'
+import { usePlay } from '../state/play'
 import { Ambient } from './ambient'
 import { haptic } from '../ui/prefs'
 import { JuiceLayer } from './juice'
@@ -94,8 +94,6 @@ export class Runner {
   ambient!: Ambient
   ctx!: GameCtx
   time = 0
-  slowUntil = 0
-  shield = false
   hearts: number
   score = 0
   ended = false
@@ -138,9 +136,6 @@ export class Runner {
       score: 0,
       duration: this.o.game.duration,
       timeLeft: this.o.game.duration,
-      used: [],
-      shield: false,
-      slow: false,
       combo: 0,
     })
     this.app.ticker.add((t) => this.tick(t.deltaMS / 1000))
@@ -215,14 +210,6 @@ export class Runner {
     if (!this.running) return
     const cx = x ?? this.fit.W / 2
     const cy = y ?? this.fit.H / 2
-    if (this.shield) {
-      this.shield = false
-      usePlay.setState({ shield: false })
-      sfx('shield', { x: cx / this.fit.W })
-      this.juice.ring(cx, cy, 0x4fae3f, 30)
-      this.juice.float('ESCUDO', cx, cy, 0x4fae3f)
-      return
-    }
     sfx('bad', { x: cx / this.fit.W })
     haptic('damage')
     audioHitstop(70)
@@ -233,34 +220,6 @@ export class Runner {
     this.hearts--
     usePlay.setState({ hearts: this.hearts, combo: 0 })
     if (this.hearts <= 0) this.end(false)
-  }
-
-  useSkill(kind: SkillKind): boolean {
-    if (!this.running) return false
-    const g = this.o.game
-    let ok = false
-    if (kind === 'checar') ok = !!g.clear?.()
-    else if (kind === 'lembrar') ok = !!g.hint?.()
-    else if (kind === 'foco') {
-      this.slowUntil = performance.now() + 4000
-      usePlay.setState({ slow: true })
-      ok = true
-    } else {
-      this.shield = true
-      usePlay.setState({ shield: true })
-      ok = true
-    }
-    if (!ok) {
-      sfx('error')
-      return false
-    }
-    sfx(kind === 'foco' ? 'slowmo' : kind === 'proteger' ? 'shield' : kind === 'checar' ? 'spark' : 'power')
-    const cx = this.fit.W / 2
-    const cy = this.fit.H / 2
-    this.juice.ring(cx, cy, kind === 'proteger' ? 0x4fae3f : kind === 'foco' ? 0xf5c04a : 0xff3b3b, 60)
-    this.juice.flash(kind === 'proteger' ? 0x4fae3f : 0xf5c04a, 120, 0.2)
-    usePlay.setState((s) => ({ used: [...s.used, kind] }))
-    return true
   }
 
   end(success: boolean) {
@@ -280,12 +239,9 @@ export class Runner {
     const dt0 = Math.min(0.05, realDt)
     this.juice.update(dt0)
     this.ambient.update(dt0, performance.now() / 1000)
-    const now = performance.now()
-    const slow = now < this.slowUntil
-    if (usePlay.getState().slow !== slow) usePlay.setState({ slow })
     if (this.running && this.juice.freeze <= 0) {
       // aparelho lento: até 100 ms por quadro, em subpassos de no máximo 1/30 s (o tempo não fica em câmera lenta)
-      let rest = Math.min(0.1, realDt) * (slow ? 0.45 : 1)
+      let rest = Math.min(0.1, realDt)
       while (rest > 1e-6 && this.running) {
         const step = Math.min(rest, 1 / 30)
         rest -= step
