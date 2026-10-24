@@ -20,8 +20,8 @@ const DONE_HINT = 'O 13 aparece entre os seus apps.'
 export const COPY: Record<Variant, SheetCopy> = {
   ios: {
     eyebrow: 'Jogue como app',
-    title: 'Instale o Nível 13',
-    lede: 'Três toques e o jogo abre da tela inicial, em tela cheia.',
+    title: 'Instale o 13',
+    lede: 'Três toques e o 13 abre da tela inicial.',
     steps: [
       { text: 'Toque em Compartilhar', icon: 'share', hint: 'Na barra do navegador, embaixo ou no alto.' },
       { text: 'Toque em Adicionar à Tela de Início', icon: 'add', hint: 'Role a lista se não aparecer.' },
@@ -30,8 +30,8 @@ export const COPY: Record<Variant, SheetCopy> = {
   },
   ios26: {
     eyebrow: 'Jogue como app',
-    title: 'Instale o Nível 13',
-    lede: 'Três toques e o jogo abre da tela inicial, em tela cheia.',
+    title: 'Instale o 13',
+    lede: 'Três toques e o 13 abre da tela inicial.',
     steps: [
       { text: 'Toque em ⋯ e em Compartilhar', icon: 'share', hint: 'O ⋯ fica ao lado do endereço.' },
       { text: 'Toque em Adicionar à Tela de Início', icon: 'add', hint: 'Role a lista se não aparecer.' },
@@ -40,8 +40,8 @@ export const COPY: Record<Variant, SheetCopy> = {
   },
   android: {
     eyebrow: 'Jogue como app',
-    title: 'Instale o Nível 13',
-    lede: 'Três toques e o jogo abre da tela inicial, em tela cheia.',
+    title: 'Instale o 13',
+    lede: 'Três toques e o 13 abre da tela inicial.',
     steps: [
       { text: 'Toque no menu do navegador', icon: 'kebab', hint: 'Os três pontinhos, no alto à direita.' },
       { text: 'Toque em Instalar app', icon: 'add', hint: 'Ou em Adicionar à tela inicial.' },
@@ -51,7 +51,7 @@ export const COPY: Record<Variant, SheetCopy> = {
   'inapp-ios': {
     eyebrow: 'Primeiro passo',
     title: 'Abra no Safari',
-    lede: 'Dentro do WhatsApp ou do Instagram não dá para instalar.',
+    lede: 'Dentro do WhatsApp ou Instagram não dá para instalar.',
     steps: [
       { text: 'Toque no menu do app', icon: 'meatball', hint: 'Os três pontinhos, no alto.' },
       { text: 'Toque em Abrir no Safari', icon: 'compass', hint: 'Ou em Abrir no navegador.' },
@@ -61,7 +61,7 @@ export const COPY: Record<Variant, SheetCopy> = {
   'inapp-android': {
     eyebrow: 'Primeiro passo',
     title: 'Abra no Chrome',
-    lede: 'Dentro do WhatsApp ou do Instagram não dá para instalar.',
+    lede: 'Dentro do WhatsApp ou Instagram não dá para instalar.',
     steps: [
       { text: 'Toque no menu do app', icon: 'kebab', hint: 'Os três pontinhos, no alto.' },
       { text: 'Toque em Abrir no Chrome', icon: 'compass', hint: 'Ou em Abrir no navegador.' },
