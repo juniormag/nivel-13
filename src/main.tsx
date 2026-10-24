@@ -5,11 +5,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
 import { unlockAudio } from './audio/audio'
-import { go } from './app/nav'
+import { go, initHistory } from './app/nav'
 
 addEventListener('pointerdown', () => unlockAudio(), { once: true })
 addEventListener('keydown', () => unlockAudio(), { once: true })
-history.replaceState({ screen: 'title' }, '')
+initHistory('title')
 
 // Links do Chuta Aí (?c=, ?d=, ?g=) abrem direto no jogo do dia; ?go=ir abre a calculadora do IR.
 {

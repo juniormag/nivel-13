@@ -647,7 +647,7 @@ export class TutorialHand {
  */
 export function domHand(c: GameCtx, target: HTMLElement, dur = 3.2): () => void {
   const src = handTex(false).source.resource as CanvasImageSource
-  const sc = Math.max(1, Math.round(c.css))
+  const sc = Math.max(2, Math.round(c.css * 2))
   const cv = document.createElement('canvas')
   cv.width = 12 * sc
   cv.height = 15 * sc

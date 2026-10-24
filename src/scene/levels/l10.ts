@@ -152,7 +152,7 @@ const p10: Painter = (c) => {
     const cxr = vx - t * W * 0.95
     const sp = 2 + t * W * 0.16
     for (let x = Math.round(cxr - sp + 1); x < cxr + sp; x++) c.b.set(x, y, 'void')
-    if (y % 6 < 3) c.b.rect(Math.round(cxr), y, Math.max(1, Math.round(t * 3)), 1, 'stone0')
+    if (y % 6 < 3) c.b.rect(Math.round(cxr), y, Math.max(1, Math.round(t * 3)), 1, 'stone1')
   }
   for (let i = 0; i < 30; i++) {
     const t = (i / 29) ** 1.6
@@ -162,7 +162,12 @@ const p10: Painter = (c) => {
     for (const side of [-1, 1]) {
       const x = Math.round(cxr + side * spread)
       c.b.set(x, y, i % 4 === 0 ? 'sparkle' : 'blue1')
-      if (t > 0.35) c.b.set(x + 1, y, 'blue0')
+      if (t > 0.35) {
+        c.b.set(x + 1, y, 'blue1')
+        halo(c, x, y, 2 + Math.round(t * 3), 'blue0', 0.5)
+        c.b.set(x, y, i % 4 === 0 ? 'sparkle' : 'blue1')
+        c.b.set(x + 1, y, 'blue1')
+      }
     }
   }
   for (let i = 0; i < 6; i++) c.b.set(vx - 3 + i, hz + 2, i % 2 ? 'redHot' : 'sparkle')

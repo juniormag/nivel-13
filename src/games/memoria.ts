@@ -7,6 +7,7 @@
 import { Container, Graphics, Sprite } from 'pixi.js'
 import type { GameCtx, MicroGame } from '../engine/types'
 import { shuffle } from '../lib/rng'
+import { Banner, domHand, FlyToHud } from './fx-c'
 import {
   bake,
   domRect,
@@ -149,6 +150,13 @@ export default function memoria(): MicroGame {
   const coinLayer = new Container()
   const pins = new Container()
   const glow = new Graphics()
+  const pips = new Graphics()
+  let fly: FlyToHud
+  let banner: Banner
+  let killHand: (() => void) | null = null
+  let boardX = 0
+  let boardY = 0
+  let boardW = 0
   let coins: Sprite[] = []
   let cards: Card[] = []
   let trails: Trail[] = []
@@ -235,6 +243,26 @@ export default function memoria(): MicroGame {
     }
   }
 
+  /**
+   * Telegrafia do erro: 4 alfinetes na moldura mostram quantos erros faltam para perder um coração
+   * (a cada 4 erros). O último aceso pisca em vermelho quente.
+   */
+  function drawPips() {
+    const g = pips
+    g.clear()
+    const filled = misses % 4
+    const x0 = boardX + boardW - 4 - 4 * 6
+    const y = boardY - 1
+    for (let i = 0; i < 4; i++) {
+      const x = x0 + i * 6
+      const on = i < filled
+      const warn = on && filled === 3 && Math.floor(c.time * 6) % 2 === 0
+      g.rect(x - 1, y - 1, 5, 4).fill(P.void)
+      g.rect(x, y, 3, 2).fill(on ? (warn ? P.redHot : P.red) : P.blood0)
+      if (on) g.rect(x, y, 1, 1).fill(P.redGlow)
+    }
+  }
+
   function addPin(x: number, y: number) {
     const s = new Sprite(pinTex())
     s.x = Math.round(x - 2)
@@ -256,6 +284,8 @@ export default function memoria(): MicroGame {
       sparkles.spawn(Math.round(k.r.x + k.r.w + 1), Math.round(k.r.y + k.r.h + 1), 0)
       embers.blast(k.r.cx, k.r.cy, 120, 50)
     }
+    // recompensa voa até o contador de pontos
+    fly.send(Math.round((a.r.cx + b.r.cx) / 2), Math.round((a.r.cy + b.r.cy) / 2), 6)
     // trilha de moedas: 6 moedas saem de A a cada 50 ms e chegam em B
     for (let i = 0; i < 6; i++) timers.after(i * 0.05, () => launchCoin(t, i === 5))
   }
@@ -321,6 +351,16 @@ export default function memoria(): MicroGame {
             P.goldHi,
             Math.round((gx1 - gx0) * 0.7),
           )
+          banner.show(
+            [
+              { text: 'DINHEIRO', size: 8, color: P.stoneHi },
+              { text: 'RASTREADO', size: 16, color: P.goldHi },
+            ],
+            Math.round((gx0 + gx1) / 2),
+            Math.round((gy0 + gy1) / 2),
+            0.6,
+          )
+          fly.send(Math.round((gx0 + gx1) / 2), Math.round((gy0 + gy1) / 2), 12)
         })
         timers.after(1.5, () => c.finish())
       }
@@ -400,7 +440,7 @@ export default function memoria(): MicroGame {
           d.label,
           el('span', { class: 'back', 'aria-hidden': 'true' }, '13'),
         )
-        b.style.fontSize = d.year ? '' : ch < 80 ? '11px' : '13px'
+        b.style.fontSize = d.year ? (d.label.length > 5 ? '15px' : '') : ch < 80 ? '11px' : '13px'
         tactile(b)
         const card: Card = {
           pair: d.pair,
@@ -425,9 +465,15 @@ export default function memoria(): MicroGame {
       const board = new Sprite(corkTex(bw, bh))
       board.x = gx0 - m
       board.y = gy0 - m
+      boardX = board.x
+      boardY = board.y
+      boardW = bw
+      // sombra de contato pontilhada embaixo e à direita da lateral grossa
       const shadow = new Graphics()
-      shadow.rect(board.x + 2, board.y + bh + 1, bw, 2).fill({ color: P.void, alpha: 0.7 })
-      shadow.rect(board.x + bw + 1, board.y + 2, 2, bh).fill({ color: P.void, alpha: 0.7 })
+      for (let x = 0; x < bw + BOARD_D; x++)
+        for (let y = 0; y < 3; y++)
+          if ((x + y) % 2 === 0) shadow.rect(board.x + 3 + x, board.y + bh + BOARD_D + y, 1, 1)
+      shadow.fill({ color: P.void, alpha: 0.8 })
       // alfinetes de canto
       for (const [x, y] of [
         [board.x + 4, board.y + 4],
@@ -438,13 +484,34 @@ export default function memoria(): MicroGame {
       embers = new Embers(c, { x0: 0, y0: c.top, x1: c.W, y1: c.bottom }, { ambient: 16 }).listen()
       sparkles = new Sparkles(c.reduced)
       pops = new ScorePops(c)
-      root.addChild(shadow, board, strings, glow, coinLayer, pins, embers.root, sparkles.root, pops.root)
+      fly = new FlyToHud(c)
+      banner = new Banner(c)
+      root.addChild(
+        shadow,
+        board,
+        strings,
+        glow,
+        coinLayer,
+        pins,
+        pips,
+        embers.root,
+        sparkles.root,
+        pops.root,
+        fly.root,
+        banner.root,
+      )
+      // demonstração: a mão toca a primeira carta nos 3 primeiros segundos
+      const firstCard = cards[0]?.el
+      if (firstCard) killHand = domHand(c, firstCard)
     },
     update(dt) {
       timers.update(dt)
       embers.update(dt, c.time)
       sparkles.update(dt)
       pops.update(dt)
+      fly.update(dt)
+      banner.update(dt)
+      drawPips()
       drawStrings()
       glow.clear()
       // moedas correndo pelo barbante
@@ -453,6 +520,7 @@ export default function memoria(): MicroGame {
         const p = along(f.t, f.d)
         f.s.x = p.x - 2
         f.s.y = p.y - 2
+        f.s.texture = coinFrame(Math.floor(c.time * 12 + f.d * 0.05) % 4)
         if (!f.loop) energyDot(glow, p.x, p.y, P.sparkle, P.goldHi, P.gold1)
         if (f.d >= f.t.len) {
           f.s.visible = false
@@ -527,6 +595,7 @@ export default function memoria(): MicroGame {
     },
     dispose() {
       timers.clear()
+      killHand?.()
       embers?.destroy()
       grid?.remove()
       root.destroy({ children: true })

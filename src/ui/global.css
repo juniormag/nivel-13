@@ -137,3 +137,17 @@ select:focus-visible,
   inset: 0;
   background: var(--void);
 }
+
+/* ---------- celular: gestos (mobile-ux-lead) ----------
+   Sem puxar-para-atualizar nem elástico da página: um arrasto para baixo no jogo não recarrega tudo.
+   Segurar o dedo não abre o menu de "salvar imagem" nos sprites nem a lupa de seleção. */
+html,
+body {
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
+}
+img,
+canvas {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}

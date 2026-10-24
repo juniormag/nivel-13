@@ -3,7 +3,7 @@
 // plano de voto não pode virar prêmio (Código Eleitoral, art. 299).
 import '../../viral/viral.css'
 import { motion } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CONFIG } from '../../config'
 import { ShareSheet, shareText } from '../../share/ShareSheet'
 import { useSave } from '../../state/save'
@@ -48,12 +48,21 @@ export default function PlanoScreen() {
   const done = !!(p.hora && p.doc && p.com)
   const past = Date.now() > CONFIG.electionAt.getTime() + 10 * 3600000
 
+  const cardRef = useRef<HTMLElement>(null)
+
   const set = (k: keyof Plano, v: string) => {
     const next = { ...p, [k]: v }
     setP(next)
     if (next.hora && next.doc && next.com) {
       if (!save.plano) ev('plano_create')
       save.patch({ plano: next })
+      // no celular o card e os botões ficam abaixo da dobra: o terceiro toque leva até eles
+      if (!done) {
+        const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches
+        requestAnimationFrame(() =>
+          cardRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' }),
+        )
+      }
     }
   }
 
@@ -77,7 +86,12 @@ export default function PlanoScreen() {
       <Chips legend="Qual documento com foto?" options={DOCS} value={p.doc} onPick={(v) => set('doc', v)} />
       <Chips legend="Com quem?" options={COM} value={p.com} onPick={(v) => set('com', v)} />
 
-      <motion.section className="cx-plan-card pf pf--red" aria-label="Seu plano" variants={rise}>
+      <motion.section
+        ref={cardRef}
+        className="cx-plan-card pf pf--red"
+        aria-label="Seu plano"
+        variants={rise}
+      >
         <div className="eyebrow">Meu plano · domingo 25/10</div>
         <dl className="cx-plan-rows">
           <div>

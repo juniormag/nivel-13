@@ -8,6 +8,7 @@
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js'
 import { inBrazil, LAT0, LAT1, LON0, LON1 } from '../content/brazil'
 import type { GameCtx, MicroGame } from '../engine/types'
+import { FlyToHud, graniteAt, TutorialHand } from './fx-c'
 import {
   bake,
   bakeRotated,
@@ -69,6 +70,11 @@ export default function escudo(): MicroGame {
   let sparkles: Sparkles
   let scores: ScorePops
   let booms: Explosions
+  let fly: FlyToHud
+  let hand: TutorialHand
+  /** o erro ensina: onde o escudo devia estar quando a última seta passou */
+  let miss = { a: 0, t: -10 }
+  const MAP_T = 3
   /** bloqueios seguidos (bônus +2 por passo, até +20) */
   let streak = 0
   let cx = 0
@@ -89,13 +95,23 @@ export default function escudo(): MicroGame {
   const angDiff = (a: number, b: number) => Math.atan2(Math.sin(a - b), Math.cos(a - b))
 
   function mapTex() {
-    return bake(`brasil${S}`, S + 2, S + 2, (p) => {
+    return bake(`brasil3q${S}`, S + 2 + MAP_T, S + 2 + MAP_T, (p) => {
       const inside = (i: number, j: number) => {
         if (i < 0 || j < 0 || i >= S || j >= S) return false
         const lon = LON0 + ((i + 0.5) / S) * (LON1 - LON0)
         const lat = LAT0 + ((j + 0.5) / S) * (LAT1 - LAT0)
         return inBrazil(lon, lat)
       }
+      // três quartos: o mapa é uma peça grossa; a lateral (verde escuro em granito) aparece embaixo à direita
+      for (let d = MAP_T; d >= 1; d--)
+        for (let j = 0; j < S; j++)
+          for (let i = 0; i < S; i++)
+            if (inside(i, j))
+              p.dot(
+                i + 1 + d,
+                j + 1 + d,
+                d === MAP_T ? P.gold1 : graniteAt(i + d, j + d, P.vine0, P.void, P.vine1),
+              )
       const mx = S * 0.56
       const my = S * 0.4
       for (let j = 0; j < S; j++)
@@ -196,6 +212,20 @@ export default function escudo(): MicroGame {
     energyDot(gl, cx + Math.cos(ang + run) * R, cy + Math.sin(ang + run) * R, P.white, P.goldHi, P.gold1)
   }
 
+  /** arco fantasma dourado onde o escudo devia estar (0,7 s depois do dano), pontilhado e piscando */
+  function drawMiss() {
+    const t = c.time - miss.t
+    if (t > 0.7 || (Math.floor(t * 10) % 2 === 1 && t > 0.3)) return
+    const g = shieldGlow
+    const half = ARC / 2
+    for (let a = -half; a <= half; a += 2 / (R + 3)) {
+      const x = Math.round(cx + Math.cos(miss.a + a) * R)
+      const y = Math.round(cy + Math.sin(miss.a + a) * R)
+      g.rect(x, y, 1, 1)
+    }
+    g.fill({ color: P.goldHi, alpha: 0.7 })
+  }
+
   function block(s: Shot, perfect: boolean) {
     const x = Math.round(cx + Math.cos(s.a) * R)
     const y = Math.round(cy + Math.sin(s.a) * R)
@@ -230,6 +260,7 @@ export default function escudo(): MicroGame {
       c.fx.burst(x, y, P.goldHi, 14, 70)
       c.fx.ring(x, y, P.gold, 18)
       sparkles.spawn(x, y, 9)
+      fly.send(x, y, 3)
       c.sfx('perfect', { x, combo: streak })
     } else {
       streak++
@@ -258,8 +289,8 @@ export default function escudo(): MicroGame {
       Ro = Math.round(Math.min(c.W / 2 - 6, (c.bottom - c.top) / 2 - 6))
       S = Math.round(R * 1.36)
       map.texture = mapTex()
-      map.x = Math.round(cx - (S + 2) / 2)
-      map.y = Math.round(cy - (S + 2) / 2)
+      map.x = Math.round(cx - (S + 2) / 2) - 1
+      map.y = Math.round(cy - (S + 2) / 2) - 1
       santos = {
         x: map.x + 1 + Math.round(((-46.3 - LON0) / (LON1 - LON0)) * S),
         y: map.y + 1 + Math.round(((-24.0 - LAT0) / (LAT1 - LAT0)) * S),
@@ -273,6 +304,9 @@ export default function escudo(): MicroGame {
       sparkles = new Sparkles(c.reduced)
       scores = new ScorePops(c)
       booms = new Explosions(c)
+      fly = new FlyToHud(c)
+      // demonstração: a mão gira em volta do Brasil nos 3 primeiros segundos
+      hand = new TutorialHand(c, { kind: 'circle', x: cx, y: cy, r: R + 10 })
       root.addChild(
         arena,
         embers.root,
@@ -287,6 +321,8 @@ export default function escudo(): MicroGame {
         sparkles.root,
         booms.root,
         scores.root,
+        fly.root,
+        hand.root,
       )
     },
     update(dt) {
@@ -328,6 +364,7 @@ export default function escudo(): MicroGame {
           booms.spawn(x, y, 6)
           c.fx.ring(x, y, P.red, 16)
           hurt.push({ x, y, t: c.time })
+          miss = { a: s.a, t: c.time }
           c.hit(x, y)
           continue
         }
@@ -346,9 +383,10 @@ export default function escudo(): MicroGame {
         if (s.r > Ro + 4 && Math.floor(c.time * 8) % 2 === 0) {
           const x = Math.round(cx + ca * Ro)
           const y = Math.round(cy + sa * Ro)
-          warn.rect(x - 1, y - 1, 3, 3).fill(P.blood0)
-          warn.rect(x, y, 1, 1).fill(P.redHot)
-          warn.rect(Math.round(x - ca * 2), Math.round(y - sa * 2), 1, 1).fill(P.red)
+          warn.rect(x - 2, y - 2, 5, 5).fill(P.blood0)
+          warn.rect(x - 1, y - 1, 3, 3).fill(P.red)
+          warn.rect(x, y, 1, 1).fill(P.white)
+          warn.rect(Math.round(x - ca * 4), Math.round(y - sa * 4), 1, 1).fill(P.redHot)
         }
       }
       const dead = shots.filter((s) => s.sp === 0)
@@ -369,6 +407,9 @@ export default function escudo(): MicroGame {
       if (!c.reduced && c.rnd() < dt * 1.2)
         sparkles.spawn(map.x + 2 + Math.round(c.rnd() * S), map.y + 2 + Math.round(c.rnd() * S * 0.8), 0)
       drawShield()
+      drawMiss()
+      fly.update(dt)
+      hand.update(dt)
       embers.update(dt, c.time)
       sparkles.update(dt)
       scores.update(dt)
@@ -406,6 +447,7 @@ export default function escudo(): MicroGame {
       return true
     },
     dispose() {
+      hand?.destroy()
       embers?.destroy()
       root.destroy({ children: true })
       shots = []

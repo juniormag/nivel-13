@@ -9,12 +9,14 @@ import { rise, stagger } from '../../ui/motion'
 import { PixelButton } from '../../ui/PixelButton'
 import { Legal, PortraitFrame, Screen } from '../../ui/Shell'
 import { XPBar } from '../../ui/XPBar'
-import { go } from '../nav'
+import { go, useNav } from '../nav'
 
 export default function Final() {
   const save = useSave()
   const [celebrate, setCelebrate] = useState(false)
   const [share, setShare] = useState(false)
+  // "Seguir com 1 estrela" depois de perder o chefão também chega aqui: aí não dá para dizer que derrubou
+  const lost = !!useNav((s) => s.params.lost) || (save.stars[12] ?? 0) <= 1
 
   useEffect(() => {
     playMusic('title')
@@ -68,8 +70,10 @@ export default function Final() {
             </div>
           </motion.div>
           <motion.p variants={rise}>
-            Você derrubou a Grande Fake com fatos. Agora a fase mais importante é fora do jogo: levar isso
-            para quem você conhece e votar.
+            {lost
+              ? 'Você passou pelas 13 fases. A Grande Fake ainda está de pé: a revanche fica aqui embaixo.'
+              : 'Você derrubou a Grande Fake com fatos.'}{' '}
+            Agora a fase mais importante é fora do jogo: levar isso para quem você conhece e votar.
           </motion.p>
           <motion.div variants={rise}>
             <PixelButton tone="red" wide size="big" onClick={() => setShare(true)}>
@@ -88,6 +92,13 @@ export default function Final() {
               Entrar no movimento
             </PixelButton>
           </motion.div>
+          {lost && (
+            <motion.div variants={rise}>
+              <PixelButton wide onClick={() => go('play', { level: 13 })}>
+                Revanche com a Grande Fake ▶
+              </PixelButton>
+            </motion.div>
+          )}
           <motion.div variants={rise}>
             <PixelButton tone="ghost" commit="back" wide onClick={() => go('title')}>
               Início

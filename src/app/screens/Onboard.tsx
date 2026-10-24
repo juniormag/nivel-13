@@ -45,7 +45,8 @@ export default function Onboard() {
   const start = () => {
     save.patch({ avatar: pick, name: cleanName(name), uf, onboarded: true })
     void api.hello()
-    go('map')
+    // primeira vez: direto para a fase 1 (o mapa aparece depois do primeiro fato); o onboarding sai do histórico
+    go(levelsDone(save) === 0 ? 'play' : 'map', levelsDone(save) === 0 ? { level: 1 } : {}, { replace: true })
   }
 
   return (
