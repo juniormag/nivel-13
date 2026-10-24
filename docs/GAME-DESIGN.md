@@ -29,5 +29,5 @@
 ## Regras de sensação
 - Primeiro toque em até 3 s e primeira vitória em até 20 s.
 - Curva: 10 s fáceis, pico aos 70% do tempo e final generoso. Errar nunca trava ("seguir com 1 estrela").
-- Habilidades Q W E R (Checar, Lembrar, Foco, Proteger), liberadas nas fases 0, 3, 6 e 9, cada uma uma vez por fase.
+- Sem habilidades especiais: as antigas Q W E R (Checar, Lembrar, Foco, Proteger) saíram porque não se entendia o que faziam. Cada fase se joga só com o gesto dela, mostrado no card de introdução.
 - Momentos de share: 3 estrelas, economia do IR, nível 13, sequência do diário e "vou votar". Nunca no meio da jogada.

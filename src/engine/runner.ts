@@ -206,10 +206,9 @@ export class Runner {
     usePlay.setState({ phase: 'run' })
   }
 
-  hit(x?: number, y?: number) {
+  hit(x?: number, _y?: number) {
     if (!this.running) return
     const cx = x ?? this.fit.W / 2
-    const cy = y ?? this.fit.H / 2
     sfx('bad', { x: cx / this.fit.W })
     haptic('damage')
     audioHitstop(70)

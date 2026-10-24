@@ -157,13 +157,6 @@ export const STATEMENTS: Statement[] = [
     src: 'PF, imprensa',
   },
   {
-    id: 's22',
-    text: 'Flávio Bolsonaro deu uma medalha a um ex-PM que estava preso.',
-    fato: true,
-    exp: 'Em 2005, a Medalha Tiradentes ao ex-PM Adriano da Nóbrega, então preso preventivamente.',
-    src: 'Alerj, imprensa',
-  },
-  {
     id: 's23',
     text: 'O 13º salário também ficou sem IR para quem ganha até R$ 5 mil.',
     fato: true,
