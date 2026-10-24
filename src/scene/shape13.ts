@@ -119,7 +119,7 @@ export const PIECES: PieceDef[] = [
       [0, 1.7],
       [0, 0.3],
     ],
-    0.25,
+    0.1,
   ),
   piece(
     1,

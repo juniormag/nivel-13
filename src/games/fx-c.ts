@@ -639,3 +639,54 @@ export class TutorialHand {
     this.off = null
   }
 }
+
+/**
+ * Mão de demonstração em DOM, para alvos que são botões/cartas DOM (ficam por cima do canvas).
+ * Mesmo desenho pixel da `handTex`, ampliado por inteiro (`c.css`); toca o elemento a cada 1,1 s e some
+ * no primeiro toque/tecla ou depois de `dur` s. Movimento reduzido: fica parada.
+ */
+export function domHand(c: GameCtx, target: HTMLElement, dur = 3.2): () => void {
+  const src = handTex(false).source.resource as CanvasImageSource
+  const sc = Math.max(1, Math.round(c.css))
+  const cv = document.createElement('canvas')
+  cv.width = 12 * sc
+  cv.height = 15 * sc
+  const g = cv.getContext('2d')
+  if (g) {
+    g.imageSmoothingEnabled = false
+    g.drawImage(src, 0, 0, 12 * sc, 15 * sc)
+  }
+  const r = target.getBoundingClientRect()
+  const lr = c.layer.getBoundingClientRect()
+  cv.setAttribute('aria-hidden', 'true')
+  cv.style.cssText = `position:absolute;pointer-events:none;z-index:5;image-rendering:pixelated;left:${Math.round(
+    r.left - lr.left + Math.min(48, r.width * 0.3) - 3 * sc,
+  )}px;top:${Math.round(r.top - lr.top + r.height * 0.5)}px`
+  c.layer.append(cv)
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+  const anim = reduced
+    ? null
+    : cv.animate(
+        [
+          { transform: `translate(${5 * sc}px, ${8 * sc}px)` },
+          { transform: 'translate(0, 0)', offset: 0.45 },
+          { transform: `translate(0, ${sc}px)`, offset: 0.55 },
+          { transform: 'translate(0, 0)', offset: 0.62 },
+          { transform: `translate(${5 * sc}px, ${8 * sc}px)` },
+        ],
+        { duration: 1100, iterations: Number.POSITIVE_INFINITY, easing: 'steps(8, end)' },
+      )
+  let done = false
+  const kill = () => {
+    if (done) return
+    done = true
+    anim?.cancel()
+    cv.remove()
+    removeEventListener('pointerdown', kill)
+    removeEventListener('keydown', kill)
+  }
+  addEventListener('pointerdown', kill, { passive: true })
+  addEventListener('keydown', kill)
+  window.setTimeout(kill, dur * 1000)
+  return kill
+}

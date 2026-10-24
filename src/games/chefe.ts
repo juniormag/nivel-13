@@ -14,7 +14,7 @@ import { Container, Graphics, Sprite, type Texture } from 'pixi.js'
 import { stinger } from '../audio/audio'
 import type { GameCtx, MicroGame } from '../engine/types'
 import { shuffle } from '../lib/rng'
-import { Banner, BossBar, FlyToHud, graniteAt, poly, Rays, Ribbons, solidTex, warnTex } from './fx-c'
+import { Banner, BossBar, domHand, FlyToHud, graniteAt, poly, Rays, Ribbons, solidTex, warnTex } from './fx-c'
 import {
   bake,
   clamp01,
@@ -480,6 +480,7 @@ export default function chefe(): MicroGame {
   let fly: FlyToHud
   let bossBar: BossBar
   let banner: Banner
+  let killHand: (() => void) | null = null
   /** discos dos pescoços (pool fixo por cabeça) */
   let neckSpr: Sprite[][] = []
   let shellSpr: Sprite[][] = []
@@ -1044,6 +1045,9 @@ export default function chefe(): MicroGame {
         bossBar.root,
         banner.root,
       )
+      // demonstração: a mão (DOM, por cima dos botões) toca a primeira opção nos 3 primeiros segundos
+      const first = opts[0]?.b
+      if (first) killHand = domHand(c, first)
       born = c.time
       stinger('boss')
     },
@@ -1258,6 +1262,7 @@ export default function chefe(): MicroGame {
     },
     dispose() {
       timers.clear()
+      killHand?.()
       embers?.destroy()
       ui?.remove()
       root.destroy({ children: true })

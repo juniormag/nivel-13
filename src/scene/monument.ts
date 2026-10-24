@@ -698,7 +698,16 @@ export class Monument3D {
   private buildLeaves() {
     const r = mulberry32(4242)
     const front = D / 2 + 0.06
-    const add = (dig: number, piece: number, ax: number, ay: number, x: number, y: number, z: number, s: number) => {
+    const add = (
+      dig: number,
+      piece: number,
+      ax: number,
+      ay: number,
+      x: number,
+      y: number,
+      z: number,
+      s: number,
+    ) => {
       const [gx, gy, gz] = digitToGroup(dig, x, y, z)
       const m = new THREE.Matrix4().compose(
         new THREE.Vector3(gx, gy, gz),
@@ -761,7 +770,17 @@ export class Monument3D {
           // cacho: mais folhas perto da borda, afinando para baixo
           const extra = t < 0.35 ? 3 : 1
           for (let q = 0; q < extra; q++)
-            if (r() < 0.75) add(dg, pi, x0, ty + 0.05, x + (r() - 0.5) * (0.5 - t * 0.3), y - r() * 0.1, front + 0.04, s * 0.85)
+            if (r() < 0.75)
+              add(
+                dg,
+                pi,
+                x0,
+                ty + 0.05,
+                x + (r() - 0.5) * (0.5 - t * 0.3),
+                y - r() * 0.1,
+                front + 0.04,
+                s * 0.85,
+              )
         }
       }
       // trepadeira pela lateral direita (a face vermelha que a câmera vê)
@@ -770,8 +789,18 @@ export class Monument3D {
         const ty = topAt(p.pts, p.x1 - 0.02) ?? p.y1
         const len = 0.6 + r() * (ty - p.y0)
         for (let k = 0; k * 0.16 < len; k++) {
-          add(dg, pi, p.x1 - 0.05, ty + 0.05, p.x1 + 0.07, ty - k * 0.16, z0 + Math.sin(k * 0.7) * 0.2, 0.25 - (k * 0.16 * 0.1) / len)
-          if (r() < 0.5) add(dg, pi, p.x1 - 0.05, ty + 0.05, p.x1 + 0.09, ty - k * 0.16, z0 + (r() - 0.5) * 0.6, 0.18)
+          add(
+            dg,
+            pi,
+            p.x1 - 0.05,
+            ty + 0.05,
+            p.x1 + 0.07,
+            ty - k * 0.16,
+            z0 + Math.sin(k * 0.7) * 0.2,
+            0.25 - (k * 0.16 * 0.1) / len,
+          )
+          if (r() < 0.5)
+            add(dg, pi, p.x1 - 0.05, ty + 0.05, p.x1 + 0.09, ty - k * 0.16, z0 + (r() - 0.5) * 0.6, 0.18)
         }
       }
     })
@@ -970,9 +999,11 @@ export class Monument3D {
     if (topPiece) {
       const d = topPiece.def
       topPiece.mesh.updateMatrixWorld()
-      const v = new THREE.Vector3(FLAG_AT.x - (d.x0 + d.x1) / 2, FLAG_AT.y - d.y0 + 0.05, FLAG_AT.z).applyMatrix4(
-        topPiece.mesh.matrixWorld,
-      )
+      const v = new THREE.Vector3(
+        FLAG_AT.x - (d.x0 + d.x1) / 2,
+        FLAG_AT.y - d.y0 + 0.05,
+        FLAG_AT.z,
+      ).applyMatrix4(topPiece.mesh.matrixWorld)
       flag = this.project(v)
     }
     const crown = this.project(this.local(1, CROWN_AT.x, CROWN_AT.y, CROWN_AT.z))

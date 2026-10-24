@@ -96,7 +96,8 @@ export class Monument2D {
     const gh = Math.ceil(this.h / cell) + 2
     const pts: [number, number, number][] = []
     for (let j = 0; j < gh; j++)
-      for (let i = 0; i < gw; i++) pts.push([(i - 1 + 0.15 + r() * 0.7) * cell, (j - 1 + 0.15 + r() * 0.7) * cell, r()])
+      for (let i = 0; i < gw; i++)
+        pts.push([(i - 1 + 0.15 + r() * 0.7) * cell, (j - 1 + 0.15 + r() * 0.7) * cell, r()])
     const plate = (x: number, y: number) => {
       const ci = Math.floor(x / cell) + 1
       const cj = Math.floor(y / cell) + 1
@@ -118,7 +119,10 @@ export class Monument2D {
     // de trás para a frente (o 1 fica atrás do 3)
     const vis = PIECES.map((p, i) => ({ p, i }))
       .filter(({ p }) => p.rank === 0 || p.rank <= level)
-      .sort((a, c) => this.P(a.p.digit, (a.p.x0 + a.p.x1) / 2, 0, 0).z - this.P(c.p.digit, (c.p.x0 + c.p.x1) / 2, 0, 0).z)
+      .sort(
+        (a, c) =>
+          this.P(a.p.digit, (a.p.x0 + a.p.x1) / 2, 0, 0).z - this.P(c.p.digit, (c.p.x0 + c.p.x1) / 2, 0, 0).z,
+      )
     const steps = Math.ceil(D * this.ppu * 0.7)
     for (const { p: pc } of vis) {
       for (let s = 0; s <= steps; s++) {
@@ -128,7 +132,14 @@ export class Monument2D {
         if (!last) {
           const shade = s / steps
           this.fillPoly(poly, (x, y) => {
-            const k: K = shade < 0.25 ? 'blood1' : bayer(x, y) < 0.06 ? 'redGlow' : shade < 0.6 ? 'crimsonDeep' : 'crimson'
+            const k: K =
+              shade < 0.25
+                ? 'blood1'
+                : bayer(x, y) < 0.06
+                  ? 'redGlow'
+                  : shade < 0.6
+                    ? 'crimsonDeep'
+                    : 'crimson'
             b.set(x, y, k)
           })
           continue
@@ -138,7 +149,8 @@ export class Monument2D {
           const id = plate(x, y)
           const tone = pts[id]?.[2] ?? 0.5
           let k: K = tone < 0.18 ? 'stone2' : tone < 0.8 ? 'stone3' : 'stoneHi'
-          if (paint > 0 && tone < paint * 0.6 && y > this.origin.y - 2.5 * this.ppu) k = tone < 0.1 ? 'crimson' : 'red'
+          if (paint > 0 && tone < paint * 0.6 && y > this.origin.y - 2.5 * this.ppu)
+            k = tone < 0.1 ? 'crimson' : 'red'
           if (plate(x + 1, y) !== id || plate(x, y + 1) !== id) k = 'stone0'
           else if (plate(x, y - 1) !== id) k = 'stoneHi'
           b.set(x, y, k)
@@ -148,7 +160,13 @@ export class Monument2D {
           const a = poly[i] as { x: number; y: number }
           const c = poly[(i + 1) % poly.length] as { x: number; y: number }
           const top = c.x < a.x
-          b.line(Math.round(a.x), Math.round(a.y), Math.round(c.x), Math.round(c.y), top ? 'stoneHi' : 'stone1')
+          b.line(
+            Math.round(a.x),
+            Math.round(a.y),
+            Math.round(c.x),
+            Math.round(c.y),
+            top ? 'stoneHi' : 'stone1',
+          )
         }
       }
     }
@@ -207,7 +225,9 @@ export class Monument2D {
       const p = this.G(Math.cos(a) * spec.R + spec.x, spec.y, Math.sin(a) * spec.R)
       return { x: p.x, y: p.y, front: Math.sin(a) > 0, dx: -Math.sin(a), dy: 0 }
     })
-    const edges = PIECES.filter((p) => p.rank === 0 || p.rank <= level).map((p) => this.P(p.digit, p.x1, p.y1, D / 2))
+    const edges = PIECES.filter((p) => p.rank === 0 || p.rank <= level).map((p) =>
+      this.P(p.digit, p.x1, p.y1, D / 2),
+    )
     return { flag, crown, heads, edges }
   }
 
