@@ -2,7 +2,7 @@
 // MP4 (H.264) quando o navegador grava MP4 (Safari 14.3+, Chrome 126+); senão WebM.
 // Sem WebCodecs/Mediabunny por enquanto (sem dependência nova). Spec: docs/research/share.md §0.5.
 import { css, sparkle } from './kit'
-import { ember } from './monument2d'
+import { drawCrown, ember } from './monument2d'
 
 const MIME_ORDER = [
   'video/mp4;codecs=avc1.640028,mp4a.40.2',
@@ -178,7 +178,6 @@ async function worldScene(W: number, H: number): Promise<SceneSrc | null> {
 /** Fallback local: cenário com o "13" 2D e a coroa caindo com dois quiques. */
 async function flatScene(W: number, H: number): Promise<SceneSrc> {
   const { still2d } = await import('./hero')
-  const { drawCrown } = await import('./monument2d')
   const st = await still2d(W, H, { crown: false })
   const c = document.createElement('canvas')
   c.width = W

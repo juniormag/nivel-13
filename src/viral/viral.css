@@ -14,6 +14,9 @@
 .cx-scr {
   --f-text: "cx-digits", "Pixelify Sans", system-ui, sans-serif;
   font-family: var(--f-text);
+  /* a ligadura "fi" do Pixelify Sans vira um "A" ("Acou" no lugar de "ficou") */
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "clig" 0;
   --hair: 2px;
   --cx-w: 600px;
   --cx-frame: var(--stone-3);
@@ -1500,7 +1503,8 @@
   }
   .cx-step,
   .cx-opt,
-  .cx-link-card {
+  .cx-link-card,
+  .cx-next {
     transition: none;
   }
 }

@@ -86,11 +86,23 @@ export class JuiceLayer implements Juice {
 
   /** clarão de impacto: 1 quadro branco e depois a cor (regra 30) */
   impact(color: number | string = 0xff4a3d) {
-    this.flash(0xffffff, 33, 0.6)
-    window.setTimeout(() => this.flash(color, 140, 0.4), 34)
+    // conta como um único clarão no orçamento de 3 por segundo (WCAG 2.3.1)
+    if (!this.flashBudget()) return
+    this.flash(0xffffff, 33, 0.6, false)
+    window.setTimeout(() => this.flash(color, 140, 0.4, false), 34)
   }
 
-  flash(color: number | string, ms = 160, alpha = 0.45) {
+  private flashLog: number[] = []
+  private flashBudget() {
+    const now = performance.now()
+    this.flashLog = this.flashLog.filter((t) => now - t < 1000)
+    if (this.flashLog.length >= 3) return false
+    this.flashLog.push(now)
+    return true
+  }
+
+  flash(color: number | string, ms = 160, alpha = 0.45, budget = true) {
+    if (budget && !this.flashBudget()) return
     this.flashSprite.tint = color
     this.flashLife = ms / 1000
     this.flashMax = ms / 1000
