@@ -165,7 +165,7 @@ export function makeNoise(seed: number, period = 256) {
   }
   for (let i = 0; i < N; i++) perm[i + N] = perm[i] as number
   const h = (x: number, y: number, P: number) => {
-    const xi = ((x % P) + P) % P & 255
+    const xi = (((x % P) + P) % P) & 255
     return vals[perm[(perm[xi] as number) + (y & 255)] as number] as number
   }
   const sm = (t: number) => t * t * (3 - 2 * t)

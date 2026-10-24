@@ -61,9 +61,9 @@ function blisterTex() {
       for (let i = 0; i < 3; i++) {
         const x = 2 + i * 4
         const y = 2 + j * 3
-        p.rect(x, y, 3, 2, P.red)
-        p.dot(x, y, P.redGlow)
-        p.dot(x + 2, y + 1, P.crimson)
+        p.rect(x, y, 3, 2, P.emberBright)
+        p.dot(x, y, P.goldHi)
+        p.dot(x + 2, y + 1, P.ember)
       }
     p.outline(P.void)
   })
@@ -89,16 +89,22 @@ function houseTex() {
 }
 
 function fakeTex(alarm: boolean) {
-  return bake(`fake13${alarm ? 'a' : ''}`, 14, 12, (p) => {
-    p.rect(0, 0, 14, 12, P.stone3)
-    p.rect(0, 0, 14, 1, P.stoneHi)
-    p.rect(1, 1, 12, 3, alarm ? P.redHot : P.red)
-    p.rect(2, 2, 2, 1, P.white)
-    for (let j = 0; j < 3; j++) p.rect(2, 6 + j * 2, 10 - (j % 2) * 3, 1, P.stone1)
-    // canto dobrado
-    p.rect(12, 10, 2, 2, P.stone1)
-    p.dot(12, 10, P.stone2)
-    p.outline(alarm ? P.redHot : P.void)
+  // boato: balão escuro de corrente de mensagem com "!" vermelho (valor escuro, oposto dos remédios)
+  return bake(`fake14${alarm ? 'a' : ''}`, 15, 14, (p) => {
+    p.rect(1, 0, 13, 10, P.stone0)
+    p.rect(0, 1, 15, 8, P.stone0)
+    p.rect(1, 1, 12, 1, P.stone1)
+    // rabinho do balão
+    p.rect(2, 10, 3, 1, P.stone0)
+    p.rect(2, 11, 2, 1, P.stone0)
+    p.rect(2, 12, 1, 1, P.stone0)
+    // "!" e linhas de texto falso
+    p.rect(3, 2, 2, 4, alarm ? P.white : P.redHot)
+    p.rect(3, 7, 2, 1, alarm ? P.white : P.redHot)
+    p.rect(7, 3, 6, 1, P.stone2)
+    p.rect(7, 5, 4, 1, P.stone2)
+    p.rect(7, 7, 5, 1, P.stone2)
+    p.outline(alarm ? P.redHot : P.red)
   })
 }
 

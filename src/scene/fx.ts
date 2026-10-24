@@ -108,7 +108,8 @@ export class Fx {
         size: Math.random() < 0.3 ? 2 : 1,
       })
     }
-    for (let i = 0; i < 5; i++) this.sparkleAt(x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 24, i * 0.08)
+    for (let i = 0; i < 5; i++)
+      this.sparkleAt(x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 24, i * 0.08)
   }
 
   dust(x: number, y: number, n = 10) {
@@ -177,7 +178,10 @@ export class Fx {
       this.emberAcc += dt * (src.mobile ? 10 : 18)
       while (this.emberAcc > 1) {
         this.emberAcc--
-        this.ember(src.base.x + (Math.random() - 0.5) * src.base.w, src.base.y - Math.random() * src.base.w * 0.35)
+        this.ember(
+          src.base.x + (Math.random() - 0.5) * src.base.w,
+          src.base.y - Math.random() * src.base.w * 0.35,
+        )
       }
       // faíscas da cabeça das fitas que estão na frente
       this.sparkAcc += dt * (src.mobile ? 12 : 30)
@@ -191,7 +195,13 @@ export class Fx {
     // brilhos: 1 a cada 0,4–1,2 s (1 a cada 2 s com movimento reduzido)
     if (t > this.nextSparkle && src.anchors.length) {
       const a = src.anchors[Math.floor(Math.random() * src.anchors.length)]
-      if (a) this.sparkleAt(a.x + Math.round((Math.random() - 0.5) * 4), a.y + Math.round((Math.random() - 0.5) * 4), 0, t)
+      if (a)
+        this.sparkleAt(
+          a.x + Math.round((Math.random() - 0.5) * 4),
+          a.y + Math.round((Math.random() - 0.5) * 4),
+          0,
+          t,
+        )
       this.nextSparkle = t + (this.reduced ? 2 : 0.4 + Math.random() * 0.8)
     }
     this.sparkles = this.sparkles.filter((s) => t - s.t0 < 0.5)

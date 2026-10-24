@@ -2,16 +2,16 @@
 // (Mandar no grupo · Tira-teima · Card · Copiar), duelo lado a lado, placar do grupo, Papo e Plano.
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { sfx, stinger } from '../audio/audio'
 import { go } from '../app/nav'
+import { sfx, stinger } from '../audio/audio'
 import { CONFIG } from '../config'
 import { MAX_TOTAL, total as sumTotal } from '../lib/score'
 import { msToNextDay, todayBR } from '../lib/time'
 import { ShareSheet } from '../share/ShareSheet'
 import { getSave, useSave } from '../state/save'
 import { fmt, useCountUp, useNow } from '../ui/hooks'
-import { PixelButton } from '../ui/PixelButton'
 import { rise, stagger, steps } from '../ui/motion'
+import { PixelButton } from '../ui/PixelButton'
 import { toast } from '../ui/Toast'
 import { ev, viralApi } from './api'
 import { DuelCompare } from './DuelCompare'
@@ -85,10 +85,15 @@ export function ChuteResult({
   const share = async (kind: 'group' | 'duel' | 'rematch') => {
     ev('share_open', kind === 'group' ? 'text' : 'duel')
     if (kind !== 'group') {
-      if (!save.duels.made.includes(token)) save.patch({ duels: { ...save.duels, made: [...save.duels.made, token] } })
+      if (!save.duels.made.includes(token))
+        save.patch({ duels: { ...save.duels, made: [...save.duels.made, token] } })
       ev('duel_create')
     }
-    const link = chuteUrl(n, { duel: token, group, s: kind === 'group' ? (group ? 'wa_grupo' : 'wa') : 'duelo' })
+    const link = chuteUrl(n, {
+      duel: token,
+      group,
+      s: kind === 'group' ? (group ? 'wa_grupo' : 'wa') : 'duelo',
+    })
     const text =
       kind === 'group'
         ? groupText(n, s, tot, themes, link)
@@ -119,11 +124,20 @@ export function ChuteResult({
           Chuta Aí! #{n}
           {date !== todayBR() && ' · arquivo'}
         </div>
-        <h1 ref={headRef} tabIndex={-1} className="cx-res-total" aria-label={`${fmt(tot)} de ${fmt(MAX_TOTAL)} pontos`}>
+        <h1
+          ref={headRef}
+          tabIndex={-1}
+          className="cx-res-total"
+          aria-label={`${fmt(tot)} de ${fmt(MAX_TOTAL)} pontos`}
+        >
           <b aria-hidden="true">{fmt(shown)}</b>
           <small aria-hidden="true">/{fmt(MAX_TOTAL)}</small>
         </h1>
-        <div className="cx-res-grid" role="img" aria-label={s.map((v, i) => `rodada ${i + 1}: ${TIER_LABEL[tier(v)]}`).join(', ')}>
+        <div
+          className="cx-res-grid"
+          role="img"
+          aria-label={s.map((v, i) => `rodada ${i + 1}: ${TIER_LABEL[tier(v)]}`).join(', ')}
+        >
           {s.map((v, i) => (
             <motion.span
               // biome-ignore lint/suspicious/noArrayIndexKey: posição fixa da grade
@@ -206,14 +220,20 @@ export function ChuteResult({
         {showPlano && (
           <button type="button" className="cx-link-card pf pf--hud" onClick={() => go('plano')}>
             <span className="cx-lc-k">Meu plano de domingo</span>
-            <span className="cx-lc-t">{save.plano ? 'Ver o meu plano' : 'Que horas, qual documento e com quem.'}</span>
+            <span className="cx-lc-t">
+              {save.plano ? 'Ver o meu plano' : 'Que horas, qual documento e com quem.'}
+            </span>
             <span className="cx-lc-go" aria-hidden="true">
               ▶
             </span>
           </button>
         )}
         {save.groups.length > 0 && !group && (
-          <button type="button" className="cx-link-card pf pf--hud" onClick={() => go('grupo', { code: save.groups[0] })}>
+          <button
+            type="button"
+            className="cx-link-card pf pf--hud"
+            onClick={() => go('grupo', { code: save.groups[0] })}
+          >
             <span className="cx-lc-k">Placar do grupo</span>
             <span className="cx-lc-t">Veja quem já jogou hoje.</span>
             <span className="cx-lc-go" aria-hidden="true">
@@ -242,7 +262,12 @@ export function ChuteResult({
                     <b>{ans}</b> <span>· você: {mine}</span>
                   </p>
                   {src && (
-                    <a href={src.url} target="_blank" rel="noopener noreferrer" onClick={() => ev('source_open', r.id)}>
+                    <a
+                      href={src.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => ev('source_open', r.id)}
+                    >
                       {src.name} ↗<span className="sr-only"> (abre em nova aba)</span>
                     </a>
                   )}
@@ -263,12 +288,17 @@ export function ChuteResult({
           Voltar ao início
         </PixelButton>
         {getSave().stars.every((x) => x === 0) && (
-          <PixelButton onClick={() => go(getSave().onboarded ? 'map' : 'onboard')}>Jogar a jornada ▶</PixelButton>
+          <PixelButton onClick={() => go(getSave().onboarded ? 'map' : 'onboard')}>
+            Jogar a jornada ▶
+          </PixelButton>
         )}
       </motion.div>
 
       {card && (
-        <ShareSheet moment={{ kind: 'chute', n, s, total: tot, theme: hookTheme }} onClose={() => setCard(false)} />
+        <ShareSheet
+          moment={{ kind: 'chute', n, s, total: tot, theme: hookTheme }}
+          onClose={() => setCard(false)}
+        />
       )}
     </motion.div>
   )

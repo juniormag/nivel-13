@@ -16,7 +16,8 @@ export function haloAround(b: Buf, inner: K, outer: K, density = 0.5) {
         if ((x + y) & 1 || density > 0.9) b.set(x, y, inner)
         continue
       }
-      const n2 = on(x - 2, y) || on(x + 2, y) || on(x, y - 2) || on(x, y + 2) || on(x - 1, y - 1) || on(x + 1, y + 1)
+      const n2 =
+        on(x - 2, y) || on(x + 2, y) || on(x, y - 2) || on(x, y + 2) || on(x - 1, y - 1) || on(x + 1, y + 1)
       if (n2 && dith(x, y, density * 0.5)) b.set(x, y, outer)
     }
 }
@@ -90,10 +91,20 @@ export function flagFrames(w: number, h: number, n = 6) {
         else if (du + dv < 1) k = 'gold'
         else k = 'green'
         // estrelinhas
-        if (inGlobe && !band && ((x * 7 + y * 13) % 11 === 0)) k = 'stoneHi'
+        if (inGlobe && !band && (x * 7 + y * 13) % 11 === 0) k = 'stoneHi'
         // luz: dobra virada para a lua clareia, a outra escurece (hue shift)
         if (shade > 0) k = k === 'green' ? 'leafHi' : k === 'gold' ? 'goldHi' : k === 'blue0' ? 'blue1' : k
-        if (shade < 0) k = k === 'green' ? 'vine1' : k === 'gold' ? 'gold1' : k === 'blue0' ? 'night' : k === 'stoneHi' ? 'stone2' : k
+        if (shade < 0)
+          k =
+            k === 'green'
+              ? 'vine1'
+              : k === 'gold'
+                ? 'gold1'
+                : k === 'blue0'
+                  ? 'night'
+                  : k === 'stoneHi'
+                    ? 'stone2'
+                    : k
         if (y === h - 1 || x === w - 1) k = k === 'green' || k === 'leafHi' ? 'vine1' : k
         b.set(x, y + dy + amp, k)
       }
@@ -117,7 +128,8 @@ export function crown(w: number, sq = 1) {
   for (let x = 0; x < W0; x++)
     for (let y = 0; y < bandH; y++) {
       const u = x / (W0 - 1)
-      const k: K = y === 0 ? 'goldHi' : y === bandH - 1 ? 'gold1' : u < 0.3 ? 'goldHi' : u > 0.75 ? 'gold1' : 'gold'
+      const k: K =
+        y === 0 ? 'goldHi' : y === bandH - 1 ? 'gold1' : u < 0.3 ? 'goldHi' : u > 0.75 ? 'gold1' : 'gold'
       b.set(ox + x, bandY + y, k)
     }
   // pontas

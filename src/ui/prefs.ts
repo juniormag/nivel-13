@@ -11,7 +11,8 @@ export interface Prefs {
   haptics: boolean
 }
 
-const KEY = 'nivel13:prefs'
+export const PREFS_KEY = 'nivel13:prefs'
+const KEY = PREFS_KEY
 const reduced = () =>
   typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 

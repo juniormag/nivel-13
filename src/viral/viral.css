@@ -1213,6 +1213,24 @@
   right: -10px;
   top: -12px;
 }
+.cx-page-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cx-page .cx-legal {
+  margin-top: 4px;
+}
+.cx-skel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cx-skel i {
+  height: 44px;
+  background: var(--dusk);
+  animation: cx-blink 0.8s steps(1) infinite;
+}
 .cx-page p {
   margin: 0;
   font-size: 17px;

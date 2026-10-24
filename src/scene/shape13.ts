@@ -52,4 +52,3 @@ export const RINGS: RingSpec[] = [
   { y: 4.3, R: 6.0, tx: -0.1, tz: -0.2, speed: -0.3, arc: 0.66, w: 8, ph: 0.55 },
   { y: 6.7, R: 5.3, tx: 0.18, tz: 0.26, speed: 0.38, arc: 0.6, w: 7, ph: 0.3 },
 ]
-

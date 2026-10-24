@@ -108,7 +108,14 @@ export default function Chuta() {
       <Screen world={world} className="cx-scr">
         <div className="cx-wrap cx-wrap--result">
           <div className="cx-body cx-body--result">
-            <ChuteResult landing={landing} rounds={rounds} s={stored.s} guesses={stored.guesses} pct={pct} fresh={fresh} />
+            <ChuteResult
+              landing={landing}
+              rounds={rounds}
+              s={stored.s}
+              guesses={stored.guesses}
+              pct={pct}
+              fresh={fresh}
+            />
           </div>
         </div>
       </Screen>
@@ -120,7 +127,12 @@ export default function Chuta() {
     <Screen world={world} className="cx-scr">
       <div className="cx-wrap">
         <header className="cx-hud">
-          <Tap className="btn btn--ghost cx-close" aria-label="Sair do Chuta Aí" sound="back" onClick={() => go('title')}>
+          <Tap
+            className="btn btn--ghost cx-close"
+            aria-label="Sair do Chuta Aí"
+            sound="back"
+            onClick={() => go('title')}
+          >
             ✕
           </Tap>
           <div className="cx-hud-l">

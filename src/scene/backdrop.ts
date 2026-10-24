@@ -38,7 +38,16 @@ interface Bird {
   ph: number
 }
 
-const CLOUD_RAMP: K[] = ['emberBright', 'redGlow', 'redHot', 'red', 'crimson', 'crimsonDeep', 'blood1', 'blood0']
+const CLOUD_RAMP: K[] = [
+  'emberBright',
+  'redGlow',
+  'redHot',
+  'red',
+  'crimson',
+  'crimsonDeep',
+  'blood1',
+  'blood0',
+]
 
 export interface Puff {
   x: number
@@ -64,7 +73,15 @@ export function bank(rnd: () => number, x0: number, x1: number, yb: number, hb: 
 }
 
 /** Nuvem cúmulo: cada sopro tem sua borda iluminada sobre o corpo do sopro de trás. */
-export function cloudLayer(w: number, h: number, puffs: Puff[], lit: 'top' | 'bottom', dim: number, seed: number, stretch = 1.35) {
+export function cloudLayer(
+  w: number,
+  h: number,
+  puffs: Puff[],
+  lit: 'top' | 'bottom',
+  dim: number,
+  seed: number,
+  stretch = 1.35,
+) {
   const b = new Buf(w, h)
   const nz = makeNoise(seed)
   const order = puffs.slice().sort((a, c) => (lit === 'top' ? a.y - c.y : c.y - a.y))
@@ -243,7 +260,15 @@ export class Backdrop {
         const x0 = (i / 4) * CW + r2() * CW * 0.08
         far.push(...bank(r2, x0, x0 + CW * (0.18 + r2() * 0.1), base - r2() * H * 0.04, H * 0.05, 7))
       }
-      this.cloudsFar = cloudLayer(CW, LH, far.map((f) => ({ ...f, flat: 0.75 })), 'bottom', 2.6, 11, 3.2).canvas()
+      this.cloudsFar = cloudLayer(
+        CW,
+        LH,
+        far.map((f) => ({ ...f, flat: 0.75 })),
+        'bottom',
+        2.6,
+        11,
+        3.2,
+      ).canvas()
 
       const near: Puff[] = []
       if (L.portrait) {
@@ -280,7 +305,8 @@ export class Backdrop {
       const farTop = (x: number) => {
         const fx = (x - PAD) / W
         let hgt = H * 0.018 + nz.fbm(x / 26, 0.5, 3) * H * 0.05
-        for (const [px, ph] of peaks) hgt = Math.max(hgt, (ph ?? 0) * H * Math.max(0, 1 - Math.abs(fx - (px ?? 0)) / 0.07) ** 1.25)
+        for (const [px, ph] of peaks)
+          hgt = Math.max(hgt, (ph ?? 0) * H * Math.max(0, 1 - Math.abs(fx - (px ?? 0)) / 0.07) ** 1.25)
         return Math.round(hz - hgt)
       }
       for (let x = 0; x < LW; x++) {
@@ -306,7 +332,8 @@ export class Backdrop {
         const ux = (x - (sx + sw * 1.75)) / (sw * 0.95)
         if (ux > -1 && ux < 1) hgt = Math.max(hgt, sh * 0.42 * Math.max(0, 1 - ux * ux) ** 0.7)
         const ub = (x - (sx - sw * 1.9)) / (sw * 1.3)
-        if (ub > -1 && ub < 1) hgt = Math.max(hgt, sh * 0.28 * Math.max(0, 1 - ub * ub) ** 0.9 * (0.8 + nz.n2(x / 5, 3) * 0.4))
+        if (ub > -1 && ub < 1)
+          hgt = Math.max(hgt, sh * 0.28 * Math.max(0, 1 - ub * ub) ** 0.9 * (0.8 + nz.n2(x / 5, 3) * 0.4))
         return hgt > 0.5 ? Math.round(hz - hgt) : hz + 1
       }
       for (let x = 0; x < LW; x++) {
@@ -325,7 +352,12 @@ export class Backdrop {
           b.set(x, y, k)
         }
       }
-      this.cable = { x0: sx + sw * 1.75, y0: sugarTop(Math.round(sx + sw * 1.75)), x1: sx + 1, y1: sugarTop(Math.round(sx)) }
+      this.cable = {
+        x0: sx + sw * 1.75,
+        y0: sugarTop(Math.round(sx + sw * 1.75)),
+        x1: sx + 1,
+        y1: sugarTop(Math.round(sx)),
+      }
       for (let i = 0; i <= 40; i++) {
         const t = i / 40
         const x = this.cable.x0 + (this.cable.x1 - this.cable.x0) * t
@@ -367,7 +399,16 @@ export class Backdrop {
           const litF = clamp01((cx - x) / (half * 0.6) + 0.35)
           let v = 0.22 + litF * 0.3 + (n - 0.5) * 0.6 - (dy / mh) * 0.4
           if (gully) v -= 0.25
-          let k: K = v > 0.62 ? (dith(x, y, 0.5) ? 'emberDark' : 'blood1') : v > 0.4 ? 'blood1' : v > 0.18 ? 'blood0' : 'night'
+          let k: K =
+            v > 0.62
+              ? dith(x, y, 0.5)
+                ? 'emberDark'
+                : 'blood1'
+              : v > 0.4
+                ? 'blood1'
+                : v > 0.18
+                  ? 'blood0'
+                  : 'night'
           if (dy === 0) k = left ? 'crimsonDeep' : 'blood1'
           // mata no pé e no topo
           const veg = y > peak + mh * 0.5 && nz.n2(x / 4, y / 4) > 0.7
@@ -451,11 +492,18 @@ export class Backdrop {
       for (let x = 0; x < LW; x++) {
         if (rnd() < 0.5) {
           const v = rnd()
-          const k: K = v > 0.9 ? 'sparkle' : v > 0.7 ? 'goldHi' : v > 0.4 ? 'gold' : v > 0.15 ? 'ember' : 'emberDark'
+          const k: K =
+            v > 0.9 ? 'sparkle' : v > 0.7 ? 'goldHi' : v > 0.4 ? 'gold' : v > 0.15 ? 'ember' : 'emberDark'
           const y = hz - Math.floor(rnd() * 3)
           b.set(x, y, k)
           if (v > 0.55 && x % 5 === 0 && x < waterRight(hz + 2)) {
-            this.streaks.push({ x: x - PAD, y: hz + 1 - PY, len: 5 + Math.floor(rnd() * 14), ph: rnd() * 6.28, k })
+            this.streaks.push({
+              x: x - PAD,
+              y: hz + 1 - PY,
+              len: 5 + Math.floor(rnd() * 14),
+              ph: rnd() * 6.28,
+              k,
+            })
           }
           if (v > 0.82 && rnd() < 0.35)
             this.lamps.push({ x: x - PAD, y: y - PY, k, ph: rnd() * 6.28, d: DEPTH.bay, sp: 1.5 + rnd() * 2 })
@@ -463,9 +511,19 @@ export class Backdrop {
       }
       // reflexo vermelho da lua na água
       const mx = X(L.moon.x)
-      if (mx < waterRight(hz + 4)) this.streaks.push({ x: mx - PAD, y: hz + 3 - PY, len: Math.round((wb - hz) * 0.7), ph: 0, k: 'crimson' })
+      if (mx < waterRight(hz + 4))
+        this.streaks.push({
+          x: mx - PAD,
+          y: hz + 3 - PY,
+          len: Math.round((wb - hz) * 0.7),
+          ph: 0,
+          k: 'crimson',
+        })
       // praia curva + calçadão aceso
-      const shore = (x: number) => Math.round(wb - 1 - (L.portrait ? 0.03 : 0.06) * H * (1 - Math.min(1, x / (waterRight(wb) + 1))) ** 1.6)
+      const shore = (x: number) =>
+        Math.round(
+          wb - 1 - (L.portrait ? 0.03 : 0.06) * H * (1 - Math.min(1, x / (waterRight(wb) + 1))) ** 1.6,
+        )
       for (let x = 0; x < LW; x++) {
         if (x > waterRight(wb)) break
         const sy = shore(x)
@@ -479,7 +537,14 @@ export class Backdrop {
         }
       }
       // prédios: cidade baixa à esquerda (paisagem) e bairros sob o Corcovado
-      const city = (x0: number, x1: number, yBase: (x: number) => number, hMin: number, hMax: number, back: boolean) => {
+      const city = (
+        x0: number,
+        x1: number,
+        yBase: (x: number) => number,
+        hMin: number,
+        hMax: number,
+        back: boolean,
+      ) => {
         let x = x0
         while (x < x1) {
           const w = 3 + Math.floor(rnd() * 6)
@@ -497,7 +562,19 @@ export class Backdrop {
             for (let wx = x + 1; wx < Math.min(x1, x + w) - 1; wx += 2) {
               if (rnd() < (back ? 0.3 : 0.38)) {
                 const v = rnd()
-                b.set(wx, wy, v > 0.92 ? 'sparkle' : v > 0.7 ? 'goldHi' : v > 0.4 ? 'gold' : v > 0.15 ? 'ember' : 'emberDark')
+                b.set(
+                  wx,
+                  wy,
+                  v > 0.92
+                    ? 'sparkle'
+                    : v > 0.7
+                      ? 'goldHi'
+                      : v > 0.4
+                        ? 'gold'
+                        : v > 0.15
+                          ? 'ember'
+                          : 'emberDark',
+                )
                 if (v > 0.9) this.cityAnchors.push({ x: wx - PAD, y: wy - PY })
               } else b.set(wx, wy, back ? 'night' : 'void')
             }
@@ -506,7 +583,14 @@ export class Backdrop {
       }
       const right0 = Math.floor(waterRight(hz + 2))
       city(right0 - 6, LW, (x) => hz + 3 + Math.round((x - right0) * 0.08), 3, H * 0.05, true)
-      city(Math.floor(waterRight(wb)) - 4, LW, (x) => wb + Math.round((x - waterRight(wb)) * 0.12), H * 0.04, H * 0.11, false)
+      city(
+        Math.floor(waterRight(wb)) - 4,
+        LW,
+        (x) => wb + Math.round((x - waterRight(wb)) * 0.12),
+        H * 0.04,
+        H * 0.11,
+        false,
+      )
       if (!L.portrait) {
         city(0, Math.round(W * 0.3), () => LH, H * 0.06, H * 0.2, false)
       } else {
@@ -527,7 +611,9 @@ export class Backdrop {
       const slope = L.portrait ? 0.42 : 0.62
       const top = (x: number) => {
         const d = Math.abs(x - bx)
-        return Math.round(by - u * 0.3 + Math.max(0, d - plateau) * slope + (nz.fbm(x / 7, 40, 3) - 0.5) * u * 0.5)
+        return Math.round(
+          by - u * 0.3 + Math.max(0, d - plateau) * slope + (nz.fbm(x / 7, 40, 3) - 0.5) * u * 0.5,
+        )
       }
       const glow = { x: bx, y: by - u * 1.6, r: u * 7 }
       for (let x = 0; x < LW; x++) {
@@ -540,14 +626,30 @@ export class Backdrop {
           hill.set(x, y, k)
         }
       }
-      const rocks: { x: number; y: number; rx: number; ry: number; fade: number; seed: number; lip: boolean }[] = []
+      const rocks: {
+        x: number
+        y: number
+        rx: number
+        ry: number
+        fade: number
+        seed: number
+        lip: boolean
+      }[] = []
       let x = -u
       while (x < LW + u) {
         const rx = u * (0.55 + rnd() * 0.7) * (L.portrait ? 0.9 : 1)
         const ry = rx * (0.6 + rnd() * 0.25)
         const d = Math.abs(x - bx)
         const isLip = d < plateau * 0.95 && rnd() < 0.35
-        rocks.push({ x, y: top(x) + ry * 0.45, rx, ry, fade: 0, seed: Math.floor(rnd() * 1e6), lip: isLip && d > u * 0.6 })
+        rocks.push({
+          x,
+          y: top(x) + ry * 0.45,
+          rx,
+          ry,
+          fade: 0,
+          seed: Math.floor(rnd() * 1e6),
+          lip: isLip && d > u * 0.6,
+        })
         x += rx * (1.1 + rnd() * 0.5)
       }
       const rows = L.portrait ? 6 : 3
@@ -557,7 +659,16 @@ export class Backdrop {
           const rx = u * (0.6 + rnd() * 0.9)
           const ry = rx * 0.65
           const yy = top(xx) + row * u * 1.05 + rnd() * u * 0.4
-          if (yy < LH + ry) rocks.push({ x: xx, y: yy, rx, ry, fade: Math.min(0.82, 0.25 + row * 0.12), seed: Math.floor(rnd() * 1e6), lip: false })
+          if (yy < LH + ry)
+            rocks.push({
+              x: xx,
+              y: yy,
+              rx,
+              ry,
+              fade: Math.min(0.82, 0.25 + row * 0.12),
+              seed: Math.floor(rnd() * 1e6),
+              lip: false,
+            })
           xx += rx * (1.5 + rnd() * 1.2)
         }
       }
@@ -569,17 +680,37 @@ export class Backdrop {
       for (const r of rocks) {
         if (r.lip) continue
         drawRock(hill, r.x, r.y, r.rx, r.ry, r.seed, r.fade, glow)
-        if (rnd() < 0.55) drawBush(hill, r.x + (rnd() - 0.5) * r.rx * 1.6, r.y - r.ry * 0.5, u * (0.35 + rnd() * 0.45), Math.floor(rnd() * 1e6), r.fade, glow)
+        if (rnd() < 0.55)
+          drawBush(
+            hill,
+            r.x + (rnd() - 0.5) * r.rx * 1.6,
+            r.y - r.ry * 0.5,
+            u * (0.35 + rnd() * 0.45),
+            Math.floor(rnd() * 1e6),
+            r.fade,
+            glow,
+          )
       }
       // borda da frente: pedras e moitas que tocam a base do monumento
       const lipSpots = [-4.6, -2.9, -0.4, 1.6, 3.6, 5.1]
       for (const s of lipSpots) {
         const lx = bx + s * u + (rnd() - 0.5) * u * 0.6
         const ly = by + u * (0.35 + rnd() * 0.25)
-        if (rnd() < 0.5) drawRock(lip, lx, ly + u * 0.2, u * (0.45 + rnd() * 0.3), u * 0.35, Math.floor(rnd() * 1e6), 0, glow)
+        if (rnd() < 0.5)
+          drawRock(
+            lip,
+            lx,
+            ly + u * 0.2,
+            u * (0.45 + rnd() * 0.3),
+            u * 0.35,
+            Math.floor(rnd() * 1e6),
+            0,
+            glow,
+          )
         drawBush(lip, lx + u * 0.4, ly, u * (0.35 + rnd() * 0.35), Math.floor(rnd() * 1e6), 0, glow)
       }
-      for (const r of rocks) if (r.lip) drawRock(lip, r.x, r.y + u * 0.3, r.rx * 0.8, r.ry * 0.8, r.seed, 0, glow)
+      for (const r of rocks)
+        if (r.lip) drawRock(lip, r.x, r.y + u * 0.3, r.rx * 0.8, r.ry * 0.8, r.seed, 0, glow)
 
       // primeiro plano: silhuetas escuras nos cantos com borda de folhas
       const corner = (cx0: number, dir: number, hgt: number) => {
@@ -643,9 +774,15 @@ export class Backdrop {
     const f8 = Math.floor(t * 8)
     for (const b of this.birds) {
       const span = L.W + 20
-      const bx = (((b.x + t * b.v) % span) + span) % span - 10
+      const bx = ((((b.x + t * b.v) % span) + span) % span) - 10
       const by = b.y + Math.round(Math.sin(t * 0.7 + b.ph) * 2)
-      drawBird(g, Math.round(bx - cam.x * 0.08), Math.round(by), (f8 + Math.floor(b.ph)) % 3, b.v < 0 ? 'stone2' : 'stone3')
+      drawBird(
+        g,
+        Math.round(bx - cam.x * 0.08),
+        Math.round(by),
+        (f8 + Math.floor(b.ph)) % 3,
+        b.v < 0 ? 'stone2' : 'stone3',
+      )
     }
     this.wrap(g, this.cloudsNear, DEPTH.cloudsNear, cam, t * 0.45)
     this.lay(g, this.skyline, DEPTH.skyline, cam)
@@ -692,7 +829,12 @@ export class Backdrop {
                   ? 'emberDark'
                   : 'blood1'
         g.fillStyle = HEX[kk]
-        g.fillRect(Math.round(s.x + ox + jit), Math.round(s.y + oy + k), s.k === 'crimson' && fall < 0.5 ? 2 : 1, 1)
+        g.fillRect(
+          Math.round(s.x + ox + jit),
+          Math.round(s.y + oy + k),
+          s.k === 'crimson' && fall < 0.5 ? 2 : 1,
+          1,
+        )
       }
     }
     // luzes piscando (estrada do Corcovado, orla)
@@ -722,7 +864,16 @@ export class Backdrop {
 type Glow = { x: number; y: number; r: number } | null
 
 /** Pedra facetada: luz de cima-esquerda (lua), borda vermelha do lado dos anéis, contorno seletivo. */
-export function drawRock(b: Buf, cx: number, cy: number, rx: number, ry: number, seed: number, fade: number, glow: Glow) {
+export function drawRock(
+  b: Buf,
+  cx: number,
+  cy: number,
+  rx: number,
+  ry: number,
+  seed: number,
+  fade: number,
+  glow: Glow,
+) {
   const r = mulberry32(seed)
   const a1 = r() * 6.28
   const a2 = r() * 6.28
@@ -794,14 +945,26 @@ export function drawRock(b: Buf, cx: number, cy: number, rx: number, ry: number,
 }
 
 /** Moita de folhas: sopros pequenos, topo claro (leafHi), sombra azulada embaixo (vine0). */
-export function drawBush(b: Buf, cx: number, cy: number, rad: number, seed: number, fade: number, glow: Glow) {
+export function drawBush(
+  b: Buf,
+  cx: number,
+  cy: number,
+  rad: number,
+  seed: number,
+  fade: number,
+  glow: Glow,
+) {
   const r = mulberry32(seed)
   const n = Math.max(6, Math.round(rad * rad * 0.55))
   const leaves: { x: number; y: number; s: number }[] = []
   for (let i = 0; i < n; i++) {
     const a = Math.PI + r() * Math.PI
     const d = Math.sqrt(r())
-    leaves.push({ x: cx + Math.cos(a) * rad * 1.25 * d, y: cy + Math.sin(a) * rad * d * 0.9 + rad * 0.25, s: 1.4 + r() * 1.5 })
+    leaves.push({
+      x: cx + Math.cos(a) * rad * 1.25 * d,
+      y: cy + Math.sin(a) * rad * d * 0.9 + rad * 0.25,
+      s: 1.4 + r() * 1.5,
+    })
   }
   leaves.sort((a, c) => c.y - a.y)
   const ramp: K[] = ['void', 'vine0', 'vine1', 'green', 'leafHi']

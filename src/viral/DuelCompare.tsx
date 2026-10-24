@@ -3,15 +3,23 @@ import { motion } from 'motion/react'
 import { useEffect } from 'react'
 import { sfx, stinger } from '../audio/audio'
 import { total as sumTotal } from '../lib/score'
-import { PixelButton } from '../ui/PixelButton'
 import { rise, stagger, steps } from '../ui/motion'
+import { PixelButton } from '../ui/PixelButton'
 import { ev } from './api'
 import { fmtInt } from './format'
 import { ScoreTile, TIER_LABEL, tier } from './Reveal'
 
 export function Crown({ className }: { className?: string }) {
   // 11×7 pixels, dourado com brilho (conquista)
-  const rows = ['k....k....k', 'kk..kkk..kk', 'kkkkkkkkkkk', 'kgkkkgkkkgk', 'kkkkkkkkkkk', '.kkkkkkkkk.', '.hhhhhhhhh.']
+  const rows = [
+    'k....k....k',
+    'kk..kkk..kk',
+    'kkkkkkkkkkk',
+    'kgkkkgkkkgk',
+    'kkkkkkkkkkk',
+    '.kkkkkkkkk.',
+    '.hhhhhhhhh.',
+  ]
   return (
     <svg className={className} viewBox="0 0 11 7" shapeRendering="crispEdges" aria-hidden="true">
       {rows.flatMap((r, y) =>
@@ -51,7 +59,7 @@ export function DuelCompare({
 
   useEffect(() => {
     ev('duel_complete', win)
-    const t = window.setTimeout(() => win === 'me' ? stinger('win') : sfx('flip'), 380)
+    const t = window.setTimeout(() => (win === 'me' ? stinger('win') : sfx('flip')), 380)
     return () => clearTimeout(t)
   }, [win])
 
@@ -82,7 +90,11 @@ export function DuelCompare({
         Tira-teima
       </motion.h2>
       <motion.p className="cx-duel-verdict" variants={rise} role="status">
-        {win === 'me' ? 'Você venceu!' : win === 'them' ? `${theirName} venceu desta vez.` : 'Empate. Ninguém cede.'}
+        {win === 'me'
+          ? 'Você venceu!'
+          : win === 'them'
+            ? `${theirName} venceu desta vez.`
+            : 'Empate. Ninguém cede.'}
       </motion.p>
       <div className="cx-duel-cols">
         {col('me', 'Você', me.s, a)}

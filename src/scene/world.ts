@@ -88,9 +88,30 @@ export class World {
     const bx = L.base.x
     const by = L.base.y
     this.fx.beams = [
-      { x: bx - Math.round(u * 5.4), y: by - Math.round(u * 4.3), up: Math.round(u * 2.2), down: Math.round(u * 2.6), ph: 0, period: 3.1 },
-      { x: bx + Math.round(u * 5.6), y: by - Math.round(u * 6.6), up: Math.round(u * 1.8), down: Math.round(u * 3.4), ph: 1.3, period: 2.6 },
-      { x: bx + Math.round(u * 4.6), y: by - Math.round(u * 2.2), up: Math.round(u * 1.2), down: Math.round(u * 1.6), ph: 2.1, period: 3.7 },
+      {
+        x: bx - Math.round(u * 5.4),
+        y: by - Math.round(u * 4.3),
+        up: Math.round(u * 2.2),
+        down: Math.round(u * 2.6),
+        ph: 0,
+        period: 3.1,
+      },
+      {
+        x: bx + Math.round(u * 5.6),
+        y: by - Math.round(u * 6.6),
+        up: Math.round(u * 1.8),
+        down: Math.round(u * 3.4),
+        ph: 1.3,
+        period: 2.6,
+      },
+      {
+        x: bx + Math.round(u * 4.6),
+        y: by - Math.round(u * 2.2),
+        up: Math.round(u * 1.2),
+        down: Math.round(u * 1.6),
+        ph: 2.1,
+        period: 3.7,
+      },
     ].map((b) => ({ ...b, x: Math.max(3, Math.min(W - 4, b.x)) }))
     if (this.mon) {
       this.mon.dispose()
@@ -222,7 +243,9 @@ export class World {
       // fitas acendem quando o dedo chega perto do monumento
       const pt = this.fx.pointer
       const near =
-        pt.on && Math.hypot((pt.x - L.base.x) / 1.4, pt.y - (L.base.y - u * 4)) < u * 5.5 && !this.reduced ? 1 : 0
+        pt.on && Math.hypot((pt.x - L.base.x) / 1.4, pt.y - (L.base.y - u * 4)) < u * 5.5 && !this.reduced
+          ? 1
+          : 0
       this.flare += (near - this.flare) * Math.min(1, dt * 5)
       mon.setFlare(this.flare)
       mon.render(t)
@@ -238,7 +261,8 @@ export class World {
     const oy = -Math.round(this.cam.y)
     const sparkAnchors: { x: number; y: number }[] = []
     if (anchors) {
-      for (const e of anchors.edges) sparkAnchors.push({ x: e.x + mp.x + this.cam.x, y: e.y + mp.y + this.cam.y })
+      for (const e of anchors.edges)
+        sparkAnchors.push({ x: e.x + mp.x + this.cam.x, y: e.y + mp.y + this.cam.y })
       if (this.crownOn && this.crownLanded) {
         const c = { x: anchors.crown.x + mp.x + this.cam.x, y: anchors.crown.y + mp.y + this.cam.y }
         for (let i = 0; i < 4; i++) sparkAnchors.push({ x: c.x + (i - 1.5) * u * 0.7, y: c.y - u * 0.5 })

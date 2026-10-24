@@ -5,8 +5,8 @@ import { useEffect, useState } from 'react'
 import { go } from '../app/nav'
 import { cleanName } from '../app/screens/Onboard'
 import { useSave } from '../state/save'
-import { PixelButton } from '../ui/PixelButton'
 import { rise } from '../ui/motion'
+import { PixelButton } from '../ui/PixelButton'
 import { ev, GROUP_ERROR, type GroupBoard, viralApi } from './api'
 import { fmtInt } from './format'
 
@@ -38,7 +38,11 @@ export function GroupJoin({ code, date }: { code: string; date: string }) {
     const r = await viralApi.entrar(code)
     setBusy(false)
     if (!r || 'error' in r) {
-      setErr(r ? (GROUP_ERROR[r.error ?? ''] ?? 'Não deu para entrar agora.') : 'Sem conexão agora. Tente de novo.')
+      setErr(
+        r
+          ? (GROUP_ERROR[r.error ?? ''] ?? 'Não deu para entrar agora.')
+          : 'Sem conexão agora. Tente de novo.',
+      )
       return
     }
     setErr('')

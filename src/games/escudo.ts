@@ -12,7 +12,6 @@ import {
   Explosions,
   energyDot,
   joy,
-  label,
   P,
   ramp,
   ScorePops,
@@ -270,10 +269,6 @@ export default function escudo(): MicroGame {
       sparkles = new Sparkles(c.reduced)
       scores = new ScorePops(c)
       booms = new Explosions(c)
-      const tag = label('SANTOS', P.stone3)
-      tag.x = Math.min(c.W - 20, santos.x + 16)
-      tag.y = santos.y + 8
-      tag.alpha = 0.8
       root.addChild(
         arena,
         embers.root,
@@ -285,7 +280,6 @@ export default function escudo(): MicroGame {
         shieldGlow,
         shieldG,
         debris.root,
-        tag,
         sparkles.root,
         booms.root,
         scores.root,

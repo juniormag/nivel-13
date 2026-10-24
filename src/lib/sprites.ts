@@ -1,28 +1,29 @@
 // Sprites em texto: cada letra é uma cor da paleta, '.' é transparente.
 // Desenhados à mão em grade pequena e ampliados sem suavização.
 
+// Cada letra aponta para uma cor da paleta mestra de 32 (src/lib/palette.ts): nenhum pixel fora dela.
 export const PAL: Record<string, string> = {
-  k: '#0a0a0f',
-  w: '#f4efe6',
-  g: '#b9b1a6',
-  G: '#6b6560',
-  D: '#1d1418',
-  r: '#e3242b',
-  R: '#8e1218',
-  p: '#f29aa6',
-  y: '#f5c04a',
-  Y: '#a8741a',
-  o: '#ff7a3d',
-  b: '#8a5a3a',
-  B: '#4e3122',
-  e: '#4fae3f',
-  E: '#23561f',
-  u: '#2f5fd0',
-  U: '#1b347a',
-  c: '#8fe3ff',
-  s: '#e0a77f',
-  S: '#a8714f',
-  x: '#9fe6ff',
+  k: '#0e0a14', // night
+  w: '#ece6de', // stoneHi
+  g: '#bdb4b6', // stone3
+  G: '#857c8c', // stone2
+  D: '#181122', // dusk
+  r: '#e3242b', // red
+  R: '#7a1224', // crimsonDeep
+  p: '#ff7a5c', // redGlow
+  y: '#e8b23a', // gold
+  Y: '#a8701c', // gold1
+  o: '#ff6a1f', // ember
+  b: '#9c2a10', // emberDark
+  B: '#4a2e0c', // gold0
+  e: '#2f9a3e', // green
+  E: '#1c5230', // vine1
+  u: '#3a64c8', // blue1
+  U: '#14204f', // blue0
+  c: '#3a64c8', // blue1
+  s: '#ffa040', // emberBright
+  S: '#9c2a10', // emberDark
+  x: '#fff6d6', // sparkle
 }
 
 export const SPR: Record<string, string[]> = {
@@ -336,6 +337,16 @@ export const SPR: Record<string, string[]> = {
     '..kuuuuuuk..',
     '..kkkkkkkk..',
   ],
+}
+
+// Idle de 2 quadros dos avatares (`coelho_1` etc.): o corpo agacha 1 px mantendo os pés no chão
+// (squash de respiração), lido a 4 fps no mapa e no HUD.
+for (const a of ['coelho', 'onca', 'arara', 'capivara']) {
+  const rows = SPR[a]
+  if (!rows || SPR[`${a}_1`]) continue
+  const w = rows[0]?.length ?? 16
+  const feet = rows.length - 3
+  SPR[`${a}_1`] = ['.'.repeat(w), ...rows.slice(0, feet - 1), ...rows.slice(feet)]
 }
 
 const cache = new Map<string, HTMLCanvasElement>()

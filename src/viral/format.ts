@@ -50,7 +50,8 @@ export function unitCaption(r: NumberRound) {
   }
 }
 
-export const valueText = (r: NumberRound, v: number) => [fmtValue(r, v), unitCaption(r)].filter(Boolean).join(' ')
+export const valueText = (r: NumberRound, v: number) =>
+  [fmtValue(r, v), unitCaption(r)].filter(Boolean).join(' ')
 
 // ---------------------------------------------------------------- escala
 
@@ -97,7 +98,9 @@ export function stepValue(r: NumberRound, v: number, dir: 1 | -1, big = false) {
   }
   const s = big ? Math.max(r.step, (r.max - r.min) / 10) : r.step
   const next = v + dir * s
-  return Number(Math.min(r.max, Math.max(r.min, Math.round(next / r.step) * r.step)).toFixed(decimals(r.step)))
+  return Number(
+    Math.min(r.max, Math.max(r.min, Math.round(next / r.step) * r.step)).toFixed(decimals(r.step)),
+  )
 }
 
 /** Começa no meio da régua, nunca perto da resposta (anti-ancoragem). */

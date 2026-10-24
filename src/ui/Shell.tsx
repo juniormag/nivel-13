@@ -1,6 +1,6 @@
 // Estrutura comum das telas: mundo ao fundo, folha emoldurada com título, rodapé legal.
 import { MotionConfig, motion } from 'motion/react'
-import { Component, type ReactNode, useEffect } from 'react'
+import { Component, lazy, type ReactNode, Suspense, useEffect } from 'react'
 import { go } from '../app/nav'
 import { sfx } from '../audio/audio'
 import { CONFIG, responsavelText } from '../config'
@@ -11,7 +11,6 @@ import { Tap } from './PixelButton'
 import type { FrameTone } from './PixelFrame'
 import { PixelIcon } from './PixelIcon'
 import { PixelWipe } from './PixelWipe'
-import { WorldStage } from './WorldStage'
 
 export const AVATAR_NAMES: Record<Avatar, string> = {
   coelho: 'Coelho',
@@ -19,6 +18,9 @@ export const AVATAR_NAMES: Record<Avatar, string> = {
   arara: 'Arara',
   capivara: 'Capivara',
 }
+
+// Mundo carregado à parte: se o módulo dele quebrar, só o fundo some e a interface segue.
+const WorldStage = lazy(() => import('./WorldStage').then((m) => ({ default: m.WorldStage })))
 
 /** Se o mundo 3D falhar (GPU, WebGL), a interface continua de pé sobre o fundo escuro. */
 class WorldBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
@@ -53,7 +55,9 @@ export function Screen({
     <MotionConfig reducedMotion="user">
       {world !== undefined && (
         <WorldBoundary>
-          <WorldStage progress={world} celebrate={celebrate} />
+          <Suspense fallback={<div className="world-fallback" aria-hidden="true" />}>
+            <WorldStage progress={world} celebrate={celebrate} />
+          </Suspense>
         </WorldBoundary>
       )}
       {world !== undefined && dim && <div className="world-dim" aria-hidden="true" />}

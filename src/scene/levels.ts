@@ -3,7 +3,7 @@
 // (valor ≤ 30%) para o jogo por cima; o detalhe vai para o horizonte e as bordas.
 import { mulberry32 } from '../lib/rng'
 import { bank, cloudLayer, drawBush, drawRock, moonBuf, type Puff } from './backdrop'
-import { Buf, bayer, clamp01, DARKER, dith, KEYS, type K, makeNoise, RGB, U32, vgrad } from './pal'
+import { Buf, bayer, clamp01, DARKER, dith, type K, KEYS, makeNoise, RGB, U32, vgrad } from './pal'
 
 type Ctx = {
   b: Buf
@@ -49,11 +49,20 @@ function moon(c: Ctx, x: number, y: number, r: number) {
   c.b.blit(m, Math.round(x - m.w / 2), Math.round(y - m.h / 2))
 }
 
-function clouds(c: Ctx, y: number, h: number, lit: 'top' | 'bottom', dim: number, seed: number, xs: [number, number][]) {
+function clouds(
+  c: Ctx,
+  y: number,
+  h: number,
+  lit: 'top' | 'bottom',
+  dim: number,
+  seed: number,
+  xs: [number, number][],
+) {
   const r = mulberry32(seed)
   const W = Math.ceil(c.W / 24) * 24
   const puffs: Puff[] = []
-  for (const [a, z] of xs) puffs.push(...bank(r, a * c.W, z * c.W, y, h, Math.max(5, Math.round(((z - a) * c.W) / (h * 0.7)))))
+  for (const [a, z] of xs)
+    puffs.push(...bank(r, a * c.W, z * c.W, y, h, Math.max(5, Math.round(((z - a) * c.W) / (h * 0.7)))))
   const layer = cloudLayer(W, c.H, puffs, lit, dim, seed)
   c.b.blit(layer, 0, 0)
 }
@@ -67,7 +76,12 @@ function ridge(c: Ctx, top: (x: number) => number, body: K, rim: K, fog: K | nul
     const rising = top(x + 1) < t
     for (let y = t; y <= bottom; y++) {
       let k: K = y === t || (rising && y - t < 2) ? rim : body
-      if (fog && y > bottom - (bottom - t) * 0.35 && dith(x, y, ((y - (bottom - (bottom - t) * 0.35)) / ((bottom - t) * 0.35 + 1)) * 0.5)) k = fog
+      if (
+        fog &&
+        y > bottom - (bottom - t) * 0.35 &&
+        dith(x, y, ((y - (bottom - (bottom - t) * 0.35)) / ((bottom - t) * 0.35 + 1)) * 0.5)
+      )
+        k = fog
       b.set(x, y, k)
     }
   }
@@ -78,7 +92,11 @@ function windows(c: Ctx, x: number, y: number, w: number, h: number, rate: numbe
     for (let wx = x + 1; wx < x + w - 1; wx += step) {
       if (c.rnd() < rate) {
         const v = c.rnd()
-        c.b.set(wx, wy, v > 0.9 ? 'sparkle' : v > 0.65 ? 'goldHi' : v > 0.35 ? 'gold' : v > 0.12 ? 'ember' : 'emberDark')
+        c.b.set(
+          wx,
+          wy,
+          v > 0.9 ? 'sparkle' : v > 0.65 ? 'goldHi' : v > 0.35 ? 'gold' : v > 0.12 ? 'ember' : 'emberDark',
+        )
       } else c.b.set(wx, wy, 'void')
     }
 }
@@ -162,7 +180,9 @@ function cactus(c: Ctx, x: number, base: number, h: number) {
   col(x, base - h, base)
   const arm = (dir: number, at: number, len: number) => {
     const ay = base - Math.round(h * at)
-    for (let i = 0; i < len; i++) for (let j = 0; j < w; j++) b.set(x + dir * (i + w) + (dir < 0 ? 0 : 0), ay - j, j === 0 ? 'vine0' : 'vine1')
+    for (let i = 0; i < len; i++)
+      for (let j = 0; j < w; j++)
+        b.set(x + dir * (i + w) + (dir < 0 ? 0 : 0), ay - j, j === 0 ? 'vine0' : 'vine1')
     col(x + dir * (len + w) + (dir < 0 ? 0 : 0), ay - Math.round(h * 0.35), ay)
   }
   arm(1, 0.45, Math.round(h * 0.18))
@@ -171,8 +191,7 @@ function cactus(c: Ctx, x: number, base: number, h: number) {
 
 function ground(c: Ctx, y0: number, a: K, b2: K) {
   const { b, W, H, nz } = c
-  for (let y = y0; y < H; y++)
-    for (let x = 0; x < W; x++) b.set(x, y, nz.n2(x / 4, y / 2) > 0.76 ? b2 : a)
+  for (let y = y0; y < H; y++) for (let x = 0; x < W; x++) b.set(x, y, nz.n2(x / 4, y / 2) > 0.76 ? b2 : a)
 }
 
 /** primeiro plano escuro emoldurando os cantos de baixo */
@@ -183,7 +202,8 @@ function frame(c: Ctx, seed: number, glow = false) {
     for (let i = 0; i < 6; i++) {
       const x = side ? c.W - r() * c.W * 0.18 : r() * c.W * 0.18
       const y = c.H - r() * c.H * 0.08
-      if (r() < 0.5) drawRock(c.b, x, y, c.s * (6 + r() * 6), c.s * (4 + r() * 3), Math.floor(r() * 1e6), 0.7, g)
+      if (r() < 0.5)
+        drawRock(c.b, x, y, c.s * (6 + r() * 6), c.s * (4 + r() * 3), Math.floor(r() * 1e6), 0.7, g)
       else drawBush(c.b, x, y, c.s * (5 + r() * 5), Math.floor(r() * 1e6), 0.75, null)
     }
   }
@@ -220,9 +240,19 @@ const SCENES: Record<number, Painter> = {
   1(c) {
     const { W, H, hz, s } = c
     sky(c, 'emberDark')
-    moon(c, W * 0.78, H * 0.18, s * 9)
-    clouds(c, hz - H * 0.08, H * 0.05, 'bottom', 2.4, 3, [[0, 0.4], [0.55, 1]])
-    ridge(c, (x) => hz - H * 0.05 - c.nz.fbm(x / 30, 1, 3) * H * 0.07 - (Math.abs(x / W - 0.25) < 0.08 ? H * 0.04 : 0), 'hazeDark', 'haze', 'blood1')
+    moon(c, W * 0.78, H * 0.18, s * 5.4)
+    clouds(c, hz - H * 0.08, H * 0.05, 'bottom', 2.4, 3, [
+      [0, 0.4],
+      [0.55, 1],
+    ])
+    ridge(
+      c,
+      (x) =>
+        hz - H * 0.05 - c.nz.fbm(x / 30, 1, 3) * H * 0.07 - (Math.abs(x / W - 0.25) < 0.08 ? H * 0.04 : 0),
+      'hazeDark',
+      'haze',
+      'blood1',
+    )
     ground(c, hz, 'blood0', 'blood1')
     // rachaduras do chão
     for (let i = 0; i < 40; i++) {
@@ -239,7 +269,8 @@ const SCENES: Record<number, Painter> = {
     const hb = Math.round(hz + H * 0.03)
     c.b.rect(hx, hb - s * 9, s * 16, s * 9, 'blood1')
     c.b.rect(hx, hb - s * 9, 1, s * 9, 'emberDark')
-    for (let i = 0; i < s * 10; i++) c.b.rect(hx - s + i * 0.9, hb - s * 9 - i * 0.45, s * 18 - i * 1.8, 1, i === 0 ? 'emberDark' : 'blood0')
+    for (let i = 0; i < s * 10; i++)
+      c.b.rect(hx - s + i * 0.9, hb - s * 9 - i * 0.45, s * 18 - i * 1.8, 1, i === 0 ? 'emberDark' : 'blood0')
     c.b.rect(hx + s * 3, hb - s * 6, s * 3, s * 3, 'goldHi')
     c.b.set(hx + s * 3, hb - s * 6, 'sparkle')
     c.b.rect(hx + s * 9, hb - s * 6, s * 3, s * 6, 'void')
@@ -252,14 +283,15 @@ const SCENES: Record<number, Painter> = {
   2(c) {
     const { W, H, hz, s } = c
     sky(c)
-    moon(c, W * 0.2, H * 0.16, s * 8)
+    moon(c, W * 0.2, H * 0.16, s * 4.8)
     clouds(c, hz - H * 0.12, H * 0.08, 'top', 0.8, 5, [[0.45, 0.95]])
     const lights: { x: number; k: K }[] = []
     skyline(c, Math.round(W * 0.62), W, hz, s * 4, s * 16, true)
     for (let x = Math.round(W * 0.6); x < W; x += 3) lights.push({ x, k: x % 2 ? 'gold' : 'ember' })
     water(c, hz, Math.round(H * 0.86), lights, 'crimsonDeep')
     // ondas com espuma
-    for (let y = hz + 4; y < H * 0.86; y += Math.round(s * 4)) for (let x = (y * 7) % 9; x < W; x += 9) c.b.rect(x, y, 3, 1, y > H * 0.7 ? 'stone2' : 'haze')
+    for (let y = hz + 4; y < H * 0.86; y += Math.round(s * 4))
+      for (let x = (y * 7) % 9; x < W; x += 9) c.b.rect(x, y, 3, 1, y > H * 0.7 ? 'stone2' : 'haze')
     // areia
     ground(c, Math.round(H * 0.86), 'blood0', 'blood1')
     // jangadas
@@ -283,7 +315,9 @@ const SCENES: Record<number, Painter> = {
     c.b.rect(fx - s * 2, hz - s * 22, s * 4, s * 22, 'stone1')
     c.b.rect(fx - s * 2, hz - s * 22, 1, s * 22, 'stone3')
     c.b.rect(fx - s * 3, hz - s * 24, s * 6, s * 2, 'goldHi')
-    for (let i = 0; i < W * 0.35; i++) if (dith(fx - i, hz - s * 23, 0.6 - i / (W * 0.7))) c.b.set(fx - i, hz - s * 23 + Math.round(i * 0.08), 'gold1')
+    for (let i = 0; i < W * 0.35; i++)
+      if (dith(fx - i, hz - s * 23, 0.6 - i / (W * 0.7)))
+        c.b.set(fx - i, hz - s * 23 + Math.round(i * 0.08), 'gold1')
     palm(c, Math.round(W * 0.04), H, Math.round(s * 40), true)
     palm(c, Math.round(W * 0.97), H, Math.round(s * 34), true)
   },
@@ -292,7 +326,7 @@ const SCENES: Record<number, Painter> = {
     const { W, H, hz, s } = c
     sky(c)
     clouds(c, hz - H * 0.22, H * 0.07, 'top', 1, 7, [[0, 0.5]])
-    moon(c, W * 0.82, H * 0.14, s * 7)
+    moon(c, W * 0.82, H * 0.14, s * 4.2)
     let x = 0
     const base = Math.round(H * 0.82)
     while (x < W) {
@@ -302,7 +336,14 @@ const SCENES: Record<number, Painter> = {
       const tile = c.rnd() < 0.5
       for (let yy = top; yy < base; yy++)
         for (let xx = x; xx < x + w; xx++) {
-          let k: K = tile && (xx + yy) % 4 === 0 ? 'blue1' : tile && (xx + yy) % 2 === 0 ? 'blue0' : c.rnd() < 0.5 ? 'dusk' : 'hazeDark'
+          let k: K =
+            tile && (xx + yy) % 4 === 0
+              ? 'blue1'
+              : tile && (xx + yy) % 2 === 0
+                ? 'blue0'
+                : c.rnd() < 0.5
+                  ? 'dusk'
+                  : 'hazeDark'
           if (yy === top || yy === top + 1) k = 'emberDark'
           if (xx === x) k = 'haze'
           c.b.set(xx, yy, k)
@@ -320,7 +361,9 @@ const SCENES: Record<number, Painter> = {
       x += w + 1
     }
     // rua de pedra
-    for (let y = base; y < H; y++) for (let xx = 0; xx < W; xx++) c.b.set(xx, y, (xx + (y % 2) * 2) % 4 === 0 ? 'stone0' : y % 3 === 0 ? 'night' : 'void')
+    for (let y = base; y < H; y++)
+      for (let xx = 0; xx < W; xx++)
+        c.b.set(xx, y, (xx + (y % 2) * 2) % 4 === 0 ? 'stone0' : y % 3 === 0 ? 'night' : 'void')
     calm(c)
     frame(c, 13)
   },
@@ -330,19 +373,30 @@ const SCENES: Record<number, Painter> = {
     sky(c, 'emberDark')
     clouds(c, hz - H * 0.04, H * 0.06, 'bottom', 1.6, 9, [[0, 1]])
     const canopy = (y0: number, amp: number, body: K, rim: K, seed: number) =>
-      ridge(c, (x) => y0 - amp * (nz.fbm(x / (6 * s) + seed, seed, 3) + Math.max(0, Math.sin(x / (5 * s) + seed)) * 0.4), body, rim, null, c.H)
+      ridge(
+        c,
+        (x) =>
+          y0 - amp * (nz.fbm(x / (6 * s) + seed, seed, 3) + Math.max(0, Math.sin(x / (5 * s) + seed)) * 0.4),
+        body,
+        rim,
+        null,
+        c.H,
+      )
     canopy(hz - s * 2, s * 18, 'hazeDark', 'haze', 1)
     canopy(hz + s * 6, s * 16, 'vine0', 'vine1', 4)
     water(c, Math.round(H * 0.72), Math.round(H * 0.84), [{ x: Math.round(W * 0.7), k: 'ember' }], 'blood1')
     canopy(H * 0.98, s * 30, 'void', 'vine0', 9)
     // vaga-lumes
-    for (let i = 0; i < 26; i++) c.b.set(c.rnd() * W, hz + c.rnd() * (H - hz), c.rnd() < 0.5 ? 'leafHi' : 'goldHi')
+    for (let i = 0; i < 26; i++)
+      c.b.set(c.rnd() * W, hz + c.rnd() * (H - hz), c.rnd() < 0.5 ? 'leafHi' : 'goldHi')
     // fumaça vermelha subindo do horizonte
     for (let i = 0; i < 3; i++) {
       const fx = W * (0.15 + i * 0.35)
       for (let y = hz - s * 30; y < hz; y++) {
         const w = (hz - y) * 0.25 + 2
-        for (let xx = -w; xx < w; xx++) if (dith(Math.round(fx + xx), y, 0.25 * (1 - Math.abs(xx) / w))) c.b.set(fx + xx + Math.sin(y / 6) * 4, y, 'blood1')
+        for (let xx = -w; xx < w; xx++)
+          if (dith(Math.round(fx + xx), y, 0.25 * (1 - Math.abs(xx) / w)))
+            c.b.set(fx + xx + Math.sin(y / 6) * 4, y, 'blood1')
       }
     }
     calm(c)
@@ -351,7 +405,7 @@ const SCENES: Record<number, Painter> = {
   5(c) {
     const { W, H, hz, s } = c
     sky(c)
-    moon(c, W * 0.16, H * 0.15, s * 8)
+    moon(c, W * 0.16, H * 0.15, s * 4.8)
     clouds(c, hz - H * 0.18, H * 0.07, 'top', 1, 15, [[0.5, 1]])
     skyline(c, 0, W, hz, s * 3, s * 12, true)
     const tx = Math.round(W * 0.74)
@@ -359,7 +413,8 @@ const SCENES: Record<number, Painter> = {
     const bw = Math.round(s * 34)
     c.b.rect(tx - bw / 2, base - s * 14, bw, s * 14, 'stone1')
     c.b.rect(tx - bw / 2, base - s * 14, bw, 1, 'stone3')
-    for (let i = 0; i < 7; i++) c.b.rect(tx - bw / 2 + s * 2 + i * s * 4.6, base - s * 12, Math.max(1, s), s * 12, 'stone3')
+    for (let i = 0; i < 7; i++)
+      c.b.rect(tx - bw / 2 + s * 2 + i * s * 4.6, base - s * 12, Math.max(1, s), s * 12, 'stone3')
     // cúpula de escamas
     const R = Math.round(s * 10)
     const cy = base - s * 14
@@ -371,7 +426,16 @@ const SCENES: Record<number, Painter> = {
         c.b.set(tx + x, cy + y, x > R * 0.4 ? DARKER[k] : k)
       }
     c.b.rect(tx, cy - R - s * 3, 1, s * 3, 'goldHi')
-    water(c, Math.round(H * 0.74), Math.round(H * 0.9), [{ x: tx, k: 'gold' }, { x: Math.round(W * 0.3), k: 'ember' }], 'blood1')
+    water(
+      c,
+      Math.round(H * 0.74),
+      Math.round(H * 0.9),
+      [
+        { x: tx, k: 'gold' },
+        { x: Math.round(W * 0.3), k: 'ember' },
+      ],
+      'blood1',
+    )
     ground(c, Math.round(H * 0.9), 'void', 'night')
     calm(c)
     frame(c, 17)
@@ -380,14 +444,15 @@ const SCENES: Record<number, Painter> = {
   6(c) {
     const { W, H, hz, s } = c
     sky(c)
-    moon(c, W * 0.84, H * 0.14, s * 7)
+    moon(c, W * 0.84, H * 0.14, s * 4.2)
     clouds(c, hz - H * 0.2, H * 0.06, 'top', 1, 19, [[0, 0.45]])
     ridge(c, (x) => hz - s * 6 - c.nz.fbm(x / 40, 3, 3) * s * 10, 'vine0', 'vine1', null)
     const base = Math.round(H * 0.8)
     const sx = Math.round(W * 0.08)
     const sw = Math.round(W * 0.84)
     c.b.rect(sx, base - s * 18, sw, s * 18, 'dusk')
-    for (let i = 0; i < s * 6; i++) c.b.rect(sx - s * 2 + i, base - s * 18 - i, sw + s * 4 - i * 2, 1, i === 0 ? 'crimson' : 'blood1')
+    for (let i = 0; i < s * 6; i++)
+      c.b.rect(sx - s * 2 + i, base - s * 18 - i, sw + s * 4 - i * 2, 1, i === 0 ? 'crimson' : 'blood1')
     for (let wx = sx + s * 4; wx < sx + sw - s * 6; wx += s * 9) {
       const lit = c.rnd() < 0.6
       c.b.rect(wx, base - s * 14, s * 6, s * 6, lit ? 'goldHi' : 'night')
@@ -398,7 +463,8 @@ const SCENES: Record<number, Painter> = {
     const mx = Math.round(W * 0.9)
     c.b.rect(mx, base - s * 34, 1, s * 34, 'stone2')
     c.b.rect(mx + 1, base - s * 34, s * 10, s * 7, 'green')
-    for (let i = 0; i < s * 3; i++) c.b.rect(mx + 1 + s * 5 - i * 1.5, base - s * 34 + s * 2 + i * 0.5, i * 3, 1, 'gold')
+    for (let i = 0; i < s * 3; i++)
+      c.b.rect(mx + 1 + s * 5 - i * 1.5, base - s * 34 + s * 2 + i * 0.5, i * 3, 1, 'gold')
     ground(c, base, 'night', 'stone0')
     for (let x = 0; x < W; x += 6) c.b.rect(x, base + s * 8, 3, 1, 'stone1')
     calm(c)
@@ -406,14 +472,14 @@ const SCENES: Record<number, Painter> = {
   },
   // 7 · Praça dos Três Poderes: as duas torres do Congresso, a cúpula e a cuia, e o espelho d'água
   7(c) {
-    congresso(c, 0.5, 0.62, 'emberDark')
+    congresso(c, 0.5, 0.85, 'emberDark')
     frame(c, 23)
   },
   // 8 · STF: colunas curvas de Niemeyer e a estátua da Justiça na praça
   8(c) {
     const { W, H, hz, s } = c
     sky(c)
-    moon(c, W * 0.18, H * 0.15, s * 8)
+    moon(c, W * 0.18, H * 0.15, s * 4.8)
     clouds(c, hz - H * 0.15, H * 0.07, 'top', 1, 29, [[0.45, 1]])
     const base = Math.round(hz + s * 4)
     c.b.rect(0, base - s * 3, W, s * 3, 'stone2')
@@ -444,13 +510,21 @@ const SCENES: Record<number, Painter> = {
   9(c) {
     const { W, H, hz, s } = c
     sky(c)
-    moon(c, W * 0.82, H * 0.13, s * 8)
+    moon(c, W * 0.82, H * 0.13, s * 4.8)
     clouds(c, hz - H * 0.12, H * 0.08, 'top', 0.8, 31, [[0, 0.5]])
     const sxp = W * 0.15
-    ridge(c, (x) => {
-      const u = (x - sxp) / (s * 10)
-      return Math.abs(u) < 1 ? hz - s * 22 * (1 - u * u) ** 0.5 : hz - s * 3 - c.nz.fbm(x / 20, 7, 2) * s * 6
-    }, 'night', 'hazeDark', 'hazeDark')
+    ridge(
+      c,
+      (x) => {
+        const u = (x - sxp) / (s * 10)
+        return Math.abs(u) < 1
+          ? hz - s * 22 * (1 - u * u) ** 0.5
+          : hz - s * 3 - c.nz.fbm(x / 20, 7, 2) * s * 6
+      },
+      'night',
+      'hazeDark',
+      'hazeDark',
+    )
     const tx = Math.round(W * 0.66)
     const base = Math.round(H * 0.8)
     const bw = Math.round(W * 0.5)
@@ -461,7 +535,8 @@ const SCENES: Record<number, Painter> = {
       c.b.rect(cx, base - s * 18, Math.max(1, s), s * 16, 'stoneHi')
       c.b.rect(cx + Math.max(1, s), base - s * 18, 1, s * 16, 'stone2')
     }
-    for (let i = 0; i < s * 8; i++) c.b.rect(tx - s * 16 + i * 2, base - s * 20 - i, s * 32 - i * 4, 1, i % 2 ? 'stone2' : 'stone3')
+    for (let i = 0; i < s * 8; i++)
+      c.b.rect(tx - s * 16 + i * 2, base - s * 20 - i, s * 32 - i * 4, 1, i % 2 ? 'stone2' : 'stone3')
     c.b.rect(tx - s, base - s * 32, s * 2, s * 5, 'gold1')
     windows(c, tx - bw / 2 + s, base - s * 17, bw - s * 2, s * 14, 0.2, 4)
     ground(c, base, 'night', 'stone0')
@@ -514,7 +589,7 @@ const SCENES: Record<number, Painter> = {
   11(c) {
     const { W, H, hz, s } = c
     sky(c)
-    moon(c, W * 0.5, H * 0.12, s * 7)
+    moon(c, W * 0.5, H * 0.12, s * 4.2)
     clouds(c, hz - H * 0.1, H * 0.06, 'bottom', 2, 41, [[0, 1]])
     // guindastes
     for (const gx of [0.12, 0.35, 0.82]) {
@@ -540,7 +615,16 @@ const SCENES: Record<number, Painter> = {
     }
     stack(0, Math.round(W * 0.3), hz, 3)
     stack(Math.round(W * 0.7), W, hz, 4)
-    water(c, hz, Math.round(H * 0.88), [{ x: Math.round(W * 0.12), k: 'redHot' }, { x: Math.round(W * 0.82), k: 'redHot' }], 'blood1')
+    water(
+      c,
+      hz,
+      Math.round(H * 0.88),
+      [
+        { x: Math.round(W * 0.12), k: 'redHot' },
+        { x: Math.round(W * 0.82), k: 'redHot' },
+      ],
+      'blood1',
+    )
     // navio
     const sy = Math.round(H * 0.78)
     c.b.rect(Math.round(W * 0.05), sy - s * 6, Math.round(W * 0.4), s * 6, 'blood0')
@@ -553,10 +637,23 @@ const SCENES: Record<number, Painter> = {
   12(c) {
     const { W, H, hz, s } = c
     sky(c, 'crimsonDeep', 0.6)
-    moon(c, W * 0.5, hz - s * 8, s * 12)
-    clouds(c, hz - H * 0.14, H * 0.07, 'bottom', 1.2, 43, [[0, 0.4], [0.6, 1]])
+    moon(c, W * 0.5, hz - s * 8, s * 7.2)
+    clouds(c, hz - H * 0.14, H * 0.07, 'bottom', 1.2, 43, [
+      [0, 0.4],
+      [0.6, 1],
+    ])
     ridge(c, (x) => hz - s * 3 - c.nz.fbm(x / 25, 2, 3) * s * 5, 'hazeDark', 'haze', null)
-    water(c, hz, Math.round(H * 0.86), [{ x: Math.round(W * 0.5), k: 'redGlow' }, { x: Math.round(W * 0.5) + 2, k: 'redHot' }, { x: Math.round(W * 0.2), k: 'gold' }], 'crimsonDeep')
+    water(
+      c,
+      hz,
+      Math.round(H * 0.86),
+      [
+        { x: Math.round(W * 0.5), k: 'redGlow' },
+        { x: Math.round(W * 0.5) + 2, k: 'redHot' },
+        { x: Math.round(W * 0.2), k: 'gold' },
+      ],
+      'crimsonDeep',
+    )
     // Gasômetro
     const gx = Math.round(W * 0.12)
     c.b.rect(gx, hz - s * 34, s * 4, s * 34, 'blood1')
@@ -573,7 +670,7 @@ const SCENES: Record<number, Painter> = {
   },
   // 13 · Esplanada dos Ministérios sob céu vermelho: blocos em fila até o Congresso
   13(c) {
-    congresso(c, 0.5, 0.5, 'crimson', true)
+    congresso(c, 0.5, 0.72, 'crimson', true)
     frame(c, 47, true)
   },
 }
@@ -582,8 +679,11 @@ const SCENES: Record<number, Painter> = {
 function congresso(c: Ctx, cxF: number, scale: number, glow: K, esplanada = false) {
   const { W, H, hz, s } = c
   sky(c, glow)
-  moon(c, W * 0.18, H * 0.14, s * 9)
-  clouds(c, hz - H * 0.14, H * 0.09, 'top', esplanada ? 0 : 0.8, 53, [[0, 0.45], [0.55, 1]])
+  moon(c, W * 0.18, H * 0.14, s * 5.4)
+  clouds(c, hz - H * 0.14, H * 0.09, 'top', esplanada ? 0 : 0.8, 53, [
+    [0, 0.45],
+    [0.55, 1],
+  ])
   if (esplanada) clouds(c, hz - H * 0.3, H * 0.06, 'top', 0.4, 59, [[0.3, 0.8]])
   const cx = Math.round(W * cxF)
   const k = s * scale
@@ -616,14 +716,30 @@ function congresso(c: Ctx, cxF: number, scale: number, glow: K, esplanada = fals
     for (let y = 0; y <= r * 0.55; y++)
       for (let xx = -r; xx <= r; xx++) {
         const yy = up ? -y : y
-        const inside = up ? xx * xx + (y / 0.55) ** 2 <= r * r : Math.abs(xx) <= r * (0.45 + (y / (r * 0.55)) * 0.55)
-        if (inside) c.b.set(x + xx, hz - k * 4 + (up ? yy : -r * 0.55 + yy), xx < -r * 0.3 ? 'stoneHi' : xx < r * 0.4 ? 'stone3' : 'stone2')
+        const inside = up
+          ? xx * xx + (y / 0.55) ** 2 <= r * r
+          : Math.abs(xx) <= r * (0.45 + (y / (r * 0.55)) * 0.55)
+        if (inside)
+          c.b.set(
+            x + xx,
+            hz - k * 4 + (up ? yy : -r * 0.55 + yy),
+            xx < -r * 0.3 ? 'stoneHi' : xx < r * 0.4 ? 'stone3' : 'stone2',
+          )
       }
   }
   dome(cx - k * 15, Math.round(k * 7), true)
   dome(cx + k * 15, Math.round(k * 9), false)
   // espelho d'água
-  water(c, hz, Math.round(H * 0.86), [{ x: cx - Math.round(k * 2), k: 'stoneHi' }, { x: cx + Math.round(k * 2), k: 'stoneHi' }], glow === 'crimson' ? 'crimsonDeep' : 'blood1')
+  water(
+    c,
+    hz,
+    Math.round(H * 0.86),
+    [
+      { x: cx - Math.round(k * 2), k: 'stoneHi' },
+      { x: cx + Math.round(k * 2), k: 'stoneHi' },
+    ],
+    glow === 'crimson' ? 'crimsonDeep' : 'blood1',
+  )
   ground(c, Math.round(H * 0.86), 'void', 'night')
   calm(c)
 }

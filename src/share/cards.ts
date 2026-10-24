@@ -8,7 +8,7 @@ import { mulberry32 } from '../lib/rng'
 import { MAX_TOTAL } from '../lib/score'
 import { skillIcon, sprite } from '../lib/sprites'
 import { getSave, shareLink, stats, XP_MAX, xpTotal } from '../state/save'
-import { heroStill, sceneLayout } from './hero'
+import { heroStill, sceneLayout, still2d } from './hero'
 import {
   type Align,
   CAP,
@@ -346,11 +346,9 @@ async function scene(
     const base = lay.base + c.drop
     return { base, top: base - Math.round(lay.ppu * 8.6), peak: base - Math.round(lay.ppu * 11) }
   }
-  const still = await heroStill(c.W, hs, {
-    progress: o.progress ?? 1,
-    crown: o.crown ?? false,
-    monument: o.monument,
-  })
+  const opts = { progress: o.progress ?? 1, crown: o.crown ?? false, monument: o.monument }
+  // sem monumento: só o cenário (o still do diretor de arte sempre traz o 13)
+  const still = o.monument === false ? await still2d(c.W, hs, opts) : await heroStill(c.W, hs, opts)
   c.heroKind = still.kind
   const drop = Math.round((o.base ?? still.base) - still.base)
   c.drop = drop
@@ -426,7 +424,7 @@ function wrapParts(s: string, maxW: number) {
 // ---------------------------------------------------------------- momentos
 
 /** Pé do monumento no card do nível 13 (o clipe usa o mesmo enquadramento). */
-const N13_BASE = { story: 192, feed: 134, square: 120 } as const
+const N13_BASE = { story: 192, feed: 156, square: 140 } as const
 
 async function cardNivel13(c: Card, clipBase = false) {
   const st = c.story
@@ -446,7 +444,7 @@ async function cardNivel13(c: Card, clipBase = false) {
 
 async function cardStars3(c: Card, m: Extract<Moment, { kind: 'stars3' }>) {
   const st = c.story
-  const sc = await scene(c, { crown: false, progress: Math.min(1, m.level / 13), base: st ? 186 : 132 })
+  const sc = await scene(c, { crown: false, progress: Math.min(1, m.level / 13), base: st ? 228 : 214 })
   vignette(c, st ? 130 : 80, sc.base - 2, 0.85)
   foreground(c)
   let y = c.y0 + 2
@@ -468,7 +466,7 @@ async function cardStars3(c: Card, m: Extract<Moment, { kind: 'stars3' }>) {
   sparkle(c.g, c.cx + 7, sy - R - 7, 2)
   // placar com dígitos em caixas (o contador parado no total)
   const digits = fmtInt(m.score)
-  const by = Math.max(sc.base + 3, sy + R + 10)
+  const by = sy + R + 9
   const boxW = 11
   const totalW = [...digits].reduce((a, ch) => a + (ch === '.' ? 4 : boxW + 1), 0) - 1
   const lbl = 'PONTOS'
@@ -488,7 +486,7 @@ async function cardStars3(c: Card, m: Extract<Moment, { kind: 'stars3' }>) {
     text(c.g, ch, x + 1 + Math.floor((boxW - 2 - silkWidth(ch)) / 2), by + 4, small(GOLD))
     x += boxW + 1
   }
-  footer(c, { cta: 'VOCÊ FAZ MELHOR? JOGUE:', min: by + 17 })
+  footer(c, { cta: 'VOCÊ FAZ MELHOR? JOGUE:' })
 }
 
 function irContent() {
@@ -499,7 +497,7 @@ function irContent() {
 
 async function cardIR(c: Card, m: Extract<Moment, { kind: 'ir' }>) {
   const st = c.story
-  const sc = await scene(c, { crown: false, progress: 1, base: st ? 190 : 134 })
+  const sc = await scene(c, { crown: false, progress: 1, base: st ? 228 : 210 })
   vignette(c, st ? 150 : 90, sc.base - 2, 0.9)
   foreground(c)
   let y = c.y0 + (st ? 2 : 0)
@@ -533,7 +531,6 @@ async function cardIR(c: Card, m: Extract<Moment, { kind: 'ir' }>) {
   footer(c, {
     note: { lines: [...wrap(title.toUpperCase(), w), ...wrap(law.toUpperCase(), w)], first: 'goldHi' },
     cta: 'FAÇA A SUA CONTA:',
-    min: sc.base + 2,
   })
 }
 
@@ -542,7 +539,7 @@ const CROSS = ['XX...XX', '.XX.XX.', '..XXX..', '.XX.XX.', 'XX...XX']
 
 async function cardDaily(c: Card, m: Extract<Moment, { kind: 'daily' }>) {
   const st = c.story
-  const sc = await scene(c, { crown: false, progress: 1, base: st ? 194 : 136 })
+  const sc = await scene(c, { crown: false, progress: 1, base: st ? 228 : 212 })
   vignette(c, st ? 130 : 90, sc.base - 2, 0.85)
   foreground(c)
   const n = Math.max(1, m.grid.length)
@@ -590,12 +587,12 @@ async function cardDaily(c: Card, m: Extract<Moment, { kind: 'daily' }>) {
     text(c.g, s, x + fire.width + 3, y, small(['emberBright', 'ember']))
   }
   sprinkle(c, 3, { x0: c.x0, x1: c.x1, y0: py + ph + 4, y1: sc.base - 20 }, 2)
-  footer(c, { cta: 'E VOCÊ, ACERTA? JOGUE:', min: sc.base + 2 })
+  footer(c, { cta: 'E VOCÊ, ACERTA? JOGUE:' })
 }
 
 async function cardMovimento(c: Card, m: Extract<Moment, { kind: 'movimento' }>) {
   const st = c.story
-  const sc = await scene(c, { crown: false, progress: 1, base: st ? 182 : 128 })
+  const sc = await scene(c, { crown: false, progress: 1, base: st ? 228 : 214 })
   vignette(c, st ? 120 : 70, sc.base - 2, 0.85)
   foreground(c)
   let y = c.y0 + (st ? 4 : 0)
@@ -606,8 +603,7 @@ async function cardMovimento(c: Card, m: Extract<Moment, { kind: 'movimento' }>)
     y = head(c, 'EU VOU', y, WHITE, st ? 3 : 2)
     y = head2(c, 'VOTAR', '13', y + 1, WHITE, RED, 3)
   }
-  sprinkle(c, st ? 5 : 3, { x0: c.x0, x1: c.x1, y0: Math.max(y, sc.top - 8), y1: sc.base - 12 })
-  y = Math.max(y + 3, sc.base + 2)
+  y += 2
   const lines = wrapParts(CONFIG.electionLabel.toLocaleUpperCase('pt-BR'), c.x1 - c.x0 - 10)
   const ph = lines.length * (CAP + 3) + 5
   panel(c, c.x0 + 2, y, c.x1 - c.x0 - 4, ph, 'gold')
@@ -615,20 +611,19 @@ async function cardMovimento(c: Card, m: Extract<Moment, { kind: 'movimento' }>)
     text(c.g, l, c.cx, y + 3, small(GOLD), { align: 'center' })
     y += CAP + 3
   }
-  footer(c, { cta: 'CONFIRA OS FATOS NO JOGO:', min: y + 7 })
+  sprinkle(c, st ? 5 : 3, { x0: c.x0, x1: c.x1, y0: y + 8, y1: sc.base - 30 })
+  footer(c, { cta: 'CONFIRA OS FATOS NO JOGO:' })
 }
 
 async function cardConvite(c: Card) {
   const st = c.story
-  const sc = await scene(c, { crown: false, progress: 1, base: st ? 186 : 130 })
+  const sc = await scene(c, { crown: false, progress: 1, base: st ? 228 : 214 })
   vignette(c, st ? 110 : 70, sc.base - 2, 0.85)
   foreground(c)
   let y = c.y0 + (st ? 2 : 0)
   y = head(c, 'VOCÊ CHEGA AO', y, WHITE, st ? 2 : 1)
-  head2(c, 'NÍVEL', '13?', y, WHITE, RED, 3)
-  sprinkle(c, st ? 5 : 3, { x0: c.x0, x1: c.x1, y0: sc.top - 4, y1: sc.base - 14 })
+  y = head2(c, 'NÍVEL', '13?', y, WHITE, RED, 3) + 2
   // o que é o jogo, num painel de HUD
-  y = sc.base + 2
   const items = st ? ['13 FASES · FATOS COM FONTE', 'UM DESAFIO POR DIA'] : ['13 FASES · FATOS COM FONTE']
   const ph = items.length * (CAP + 3) + 5
   panel(c, c.x0 + 2, y, c.x1 - c.x0 - 4, ph, 'red')
@@ -636,7 +631,8 @@ async function cardConvite(c: Card) {
     text(c.g, l, c.cx, y + 3, small('stoneHi'), { align: 'center' })
     y += CAP + 3
   }
-  footer(c, { cta: 'JOGUE NO CELULAR:', min: y + 7 })
+  sprinkle(c, st ? 5 : 3, { x0: c.x0, x1: c.x1, y0: y + 8, y1: sc.base - 30 })
+  footer(c, { cta: 'JOGUE NO CELULAR:' })
 }
 
 const TARGET = [
@@ -684,7 +680,7 @@ function chuteSquare(c: Card, x: number, y: number, size: number, v: number) {
 
 async function cardChute(c: Card, m: Extract<Moment, { kind: 'chute' }>) {
   const st = c.story
-  const sc = await scene(c, { crown: false, progress: 1, base: st ? 194 : 136 })
+  const sc = await scene(c, { crown: false, progress: 1, base: st ? 236 : 216 })
   vignette(c, st ? 140 : 95, sc.base - 2, 0.88)
   foreground(c)
   let y = c.y0 + (st ? 2 : 0)
@@ -694,7 +690,7 @@ async function cardChute(c: Card, m: Extract<Moment, { kind: 'chute' }>) {
   const den = `/${fmtInt(MAX_TOTAL)}`
   const kd = 2
   const wd = silkWidth(den, kd)
-  let k = st ? 5 : 4
+  let k = 4
   while (k > 2 && silkWidth(tot, k) + 3 + wd > c.x1 - c.x0) k--
   const wt = silkWidth(tot, k)
   const x = Math.round(c.cx - (wt + 3 + wd) / 2)
@@ -703,7 +699,7 @@ async function cardChute(c: Card, m: Extract<Moment, { kind: 'chute' }>) {
   text(c.g, den, x + wt + 3, ty + CAP * (k - kd), big(WHITE, kd), { k: kd })
   y = ty + CAP * k + k + 5
   // as 5 notas
-  const size = st ? 24 : 20
+  const size = st ? 22 : 18
   const gap = st ? 5 : 4
   const n = Math.max(1, m.s.length)
   const gx = Math.round(c.cx - (n * size + (n - 1) * gap) / 2)
@@ -722,7 +718,7 @@ async function cardChute(c: Card, m: Extract<Moment, { kind: 'chute' }>) {
     c.g.drawImage(fire, fx, y - 2)
     text(c.g, s, fx + fire.width + 3, y + 1, small(['emberBright', 'ember']))
   }
-  footer(c, { cta: 'QUANTO VOCÊ CHUTA? JOGUE:', link: chuteLink(m.n, false), min: sc.base + 2 })
+  footer(c, { cta: 'QUANTO VOCÊ CHUTA? JOGUE:', link: chuteLink(m.n, false) })
 }
 
 const ICONS: Record<'hora' | 'doc' | 'com', string[]> = {

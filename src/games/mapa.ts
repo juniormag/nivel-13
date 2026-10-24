@@ -1,7 +1,7 @@
 // Fase 1 · Mapa da Fome: pinte o Brasil de verde levando comida a cada canto.
 // Implementação de referência do contrato MicroGame em PixiJS (modo retido + juice).
 import { Container, Graphics, Sprite, Text } from 'pixi.js'
-import { LAT0, LAT1, LON0, LON1, inBrazil } from '../content/brazil'
+import { inBrazil, LAT0, LAT1, LON0, LON1 } from '../content/brazil'
 import { px } from '../engine/textures'
 import type { GameCtx, MicroGame } from '../engine/types'
 
@@ -98,7 +98,11 @@ export default function mapa(): MicroGame {
         if (!grid.has(`${t.i + 1},${t.j}`)) edges.rect(x + ts - 1, y, 1, ts).fill(0x6b6560)
       }
       root.addChild(edges, bar)
-      label = new Text({ text: '', style: { fontFamily: 'Silkscreen', fontSize: 8, fill: 0xefe8dc, stroke: { color: 0, width: 2 } }, resolution: 1 })
+      label = new Text({
+        text: '',
+        style: { fontFamily: 'Silkscreen', fontSize: 8, fill: 0xefe8dc, stroke: { color: 0, width: 2 } },
+        resolution: 1,
+      })
       label.anchor.set(0.5)
       label.x = Math.round(c.W / 2)
       root.addChild(label)
@@ -121,7 +125,12 @@ export default function mapa(): MicroGame {
       for (const t of tiles) {
         if (t.green) {
           const grow = (now - t.t) / 0.22
-          t.s.tint = grow < 0 ? (RED[(t.i + t.j) % 2] ?? 0x8e1218) : grow < 1 ? 0xf5c04a : (GREEN[(t.i + t.j) % 2] ?? 0x4fae3f)
+          t.s.tint =
+            grow < 0
+              ? (RED[(t.i + t.j) % 2] ?? 0x8e1218)
+              : grow < 1
+                ? 0xf5c04a
+                : (GREEN[(t.i + t.j) % 2] ?? 0x4fae3f)
         } else {
           const flick = Math.sin(now * 3 + t.i * 0.7 + t.j * 1.3) > 0.9
           t.s.tint = flick ? 0xe3242b : (RED[(t.i + t.j) % 2] ?? 0x8e1218)

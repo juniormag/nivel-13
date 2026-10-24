@@ -38,7 +38,10 @@ export class Monument2D {
     const sx = Math.sin(YAW)
     const xr = (x - CENTER_X) * cx + z * sx
     const zr = -(x - CENTER_X) * sx + z * cx
-    return { x: this.origin.x + xr * u, y: this.origin.y - y * u * Math.cos(PITCH) - zr * u * Math.sin(PITCH) * -1 }
+    return {
+      x: this.origin.x + xr * u,
+      y: this.origin.y - y * u * Math.cos(PITCH) - zr * u * Math.sin(PITCH) * -1,
+    }
   }
 
   setFlare(k: number) {
@@ -66,7 +69,14 @@ export class Monument2D {
         const top = s === steps
         for (let y = Math.round(a.y); y < Math.round(c.y); y++)
           for (let x = Math.round(a.x); x < Math.round(c.x); x++) {
-            const k: K = y === Math.round(a.y) && !top ? 'stone3' : x === Math.round(c.x) - 1 ? (r() < 0.2 ? 'redHot' : 'red') : 'crimson'
+            const k: K =
+              y === Math.round(a.y) && !top
+                ? 'stone3'
+                : x === Math.round(c.x) - 1
+                  ? r() < 0.2
+                    ? 'redHot'
+                    : 'red'
+                  : 'crimson'
             b.set(x, y, k)
           }
       }
@@ -99,7 +109,7 @@ export class Monument2D {
     const N = 240
     for (let k = 0; k < N; k++) {
       const tt = k / N
-      const s = (((head - tt) % 1) + 1) % 1 / spec.arc
+      const s = ((((head - tt) % 1) + 1) % 1) / spec.arc
       if (s > 1) continue
       const a = tt * Math.PI * 2
       const z = Math.sin(a) * spec.R
@@ -110,7 +120,8 @@ export class Monument2D {
       const w = Math.max(1, Math.round(spec.w * (1 - s) ** 0.6))
       for (let j = 0; j < w; j++) {
         const v = Math.abs(j - (w - 1) / 2) / Math.max(1, w / 2)
-        const kk: K = s < 0.5 && v < 0.3 ? 'white' : s < 0.6 && v < 0.6 ? 'redGlow' : s < 0.8 ? 'redHot' : 'red'
+        const kk: K =
+          s < 0.5 && v < 0.3 ? 'white' : s < 0.6 && v < 0.6 ? 'redGlow' : s < 0.8 ? 'redHot' : 'red'
         if (s > 0.8 && bayer(Math.round(p.x), Math.round(p.y) + j) < (s - 0.8) * 5) continue
         g.fillStyle = HEX[kk]
         g.fillRect(Math.round(p.x), Math.round(p.y - (w - 1) / 2 + j), 1, 1)

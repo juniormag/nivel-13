@@ -92,7 +92,8 @@ export const useLanding = create<LandingState>((set, get) => ({
         const info: DuelInfo = { n: r.n, s: r.s, name: r.name ?? '', raw: raw.d ?? '', code: raw.d ?? '' }
         set({ landing: build(raw, info) })
         const s = getSave()
-        if (!s.duels.got.includes(info.raw)) s.patch({ duels: { ...s.duels, got: [...s.duels.got, info.raw] } })
+        if (!s.duels.got.includes(info.raw))
+          s.patch({ duels: { ...s.duels, got: [...s.duels.got, info.raw] } })
       })
     }
     return landing

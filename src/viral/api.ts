@@ -87,12 +87,20 @@ export const viralApi = {
 
   async criarGrupo() {
     const r = await grupo.create()
-    return r && 'code' in r ? { code: r.code, nome: `Grupo ${r.nome}` } : r && 'error' in r ? { error: r.error } : null
+    return r && 'code' in r
+      ? { code: r.code, nome: `Grupo ${r.nome}` }
+      : r && 'error' in r
+        ? { error: r.error }
+        : null
   },
 
   async entrar(code: string) {
     const r = await grupo.join(code)
-    return r && r.ok ? { ok: true as const, nome: `Grupo ${r.nome}` } : r && 'error' in r ? { error: r.error } : null
+    return r && r.ok
+      ? { ok: true as const, nome: `Grupo ${r.nome}` }
+      : r && 'error' in r
+        ? { error: r.error }
+        : null
   },
 
   async sair(code: string) {

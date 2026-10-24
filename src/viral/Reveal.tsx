@@ -18,7 +18,15 @@ export const TIER_LABEL: Record<string, string> = {
   low: 'Longe',
 }
 
-export function ScoreTile({ s, size = 'md', label }: { s: number; size?: 'sm' | 'md' | 'lg'; label?: string }) {
+export function ScoreTile({
+  s,
+  size = 'md',
+  label,
+}: {
+  s: number
+  size?: 'sm' | 'md' | 'lg'
+  label?: string
+}) {
   const t = tier(s)
   return (
     <span
@@ -71,7 +79,10 @@ export function Reveal({
           ? `Você chutou ${fmtValue(round, guess)}: ${d}.`
           : `Você chutou ${fmtValue(round, guess)}. Na mosca!`
   } else {
-    line = guess === round.correct ? `Você marcou ${round.options[guess] ?? ''}. Certo!` : `Você marcou ${round.options[guess ?? -1] ?? '...'}.`
+    line =
+      guess === round.correct
+        ? `Você marcou ${round.options[guess] ?? ''}. Certo!`
+        : `Você marcou ${round.options[guess ?? -1] ?? '...'}.`
   }
 
   const src = round.sources[0]

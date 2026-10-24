@@ -6,10 +6,10 @@ import { type CSSProperties, useCallback, useEffect, useId, useRef, useState } f
 import { hitstop, sfx } from '../audio/audio'
 import { roundScore, WEIGHTS } from '../lib/score'
 import { sprite } from '../lib/sprites'
+import { prefersReduced, rise, stagger } from '../ui/motion'
 import { PixelButton } from '../ui/PixelButton'
 import { PixelIcon } from '../ui/PixelIcon'
 import { getPrefs, haptic } from '../ui/prefs'
-import { prefersReduced, rise, stagger } from '../ui/motion'
 import { ev } from './api'
 import { ChoiceButtons } from './ChoiceButtons'
 import { Chute } from './Chute'
@@ -113,7 +113,9 @@ export function RoundView({
     const start = performance.now()
     let lastTick = 0
     const lerpV = (k: number) =>
-      r.scale === 'log' ? Math.exp(Math.log(guess) + (Math.log(r.answer) - Math.log(guess)) * k) : guess + (r.answer - guess) * k
+      r.scale === 'log'
+        ? Math.exp(Math.log(guess) + (Math.log(r.answer) - Math.log(guess)) * k)
+        : guess + (r.answer - guess) * k
     const step = (now: number) => {
       const k = Math.min(1, (now - start) / SWEEP_MS)
       const e = easeInOut(k)
@@ -160,72 +162,86 @@ export function RoundView({
   return (
     <>
       <div className="cx-body">
-      <motion.section
-        className={`cx-card pf pf--hud pf--bracket${fx === 'miss' ? ' is-shake' : ''}`}
-        aria-labelledby={qid}
-        variants={stagger(0.04, 0)}
-        initial="hidden"
-        animate="show"
-        onAnimationEnd={() => setFx((f) => (f === 'miss' ? null : f))}
-      >
-        <span className={`cx-soft${locked ? ' is-paused' : ''}`} aria-hidden="true">
-          <i />
-        </span>
-        <motion.header className="cx-card-head" variants={rise}>
-          <PixelIcon src={sprite(round.icon)} className="cx-ico" />
-          <span className="cx-theme">{round.theme}</span>
-          <span className="cx-weight" title={`vale ${w} vezes`}>
-            ×{w}
+        <motion.section
+          className={`cx-card pf pf--hud pf--bracket${fx === 'miss' ? ' is-shake' : ''}`}
+          aria-labelledby={qid}
+          variants={stagger(0.04, 0)}
+          initial="hidden"
+          animate="show"
+          onAnimationEnd={() => setFx((f) => (f === 'miss' ? null : f))}
+        >
+          <span className={`cx-soft${locked ? ' is-paused' : ''}`} aria-hidden="true">
+            <i />
           </span>
-        </motion.header>
-        <motion.h2 id={qid} className="cx-q" variants={rise}>
-          {round.q}
-        </motion.h2>
+          <motion.header className="cx-card-head" variants={rise}>
+            <PixelIcon src={sprite(round.icon)} className="cx-ico" />
+            <span className="cx-theme">{round.theme}</span>
+            <span className="cx-weight" title={`vale ${w} vezes`}>
+              ×{w}
+            </span>
+          </motion.header>
+          <motion.h2 id={qid} className="cx-q" variants={rise}>
+            {round.q}
+          </motion.h2>
 
-        {round.kind === 'number' ? (
-          <>
-            <motion.div className={`cx-big${revealed ? ' is-answer' : ''}${revealed && score === 100 ? ' is-bull' : ''}`} variants={rise}>
-              <span className="cx-big-k">{revealed ? 'Resposta' : phase === 'sweep' ? 'E a resposta é' : 'Seu chute'}</span>
-              <output className="cx-big-v" aria-live={revealed ? 'polite' : 'off'}>
-                {fmtValue(round, revealed ? round.answer : (shown ?? value))}
-              </output>
-              {unitCaption(round) && <span className="cx-big-u">{unitCaption(round)}</span>}
-              {fx === 'bull' && <Sparks />}
-            </motion.div>
-            <motion.div variants={rise}>
-              <Chute
+          {round.kind === 'number' ? (
+            <>
+              <motion.div
+                className={`cx-big${revealed ? ' is-answer' : ''}${revealed && score === 100 ? ' is-bull' : ''}`}
+                variants={rise}
+              >
+                <span className="cx-big-k">
+                  {revealed ? 'Resposta' : phase === 'sweep' ? 'E a resposta é' : 'Seu chute'}
+                </span>
+                <output className="cx-big-v" aria-live={revealed ? 'polite' : 'off'}>
+                  {fmtValue(round, revealed ? round.answer : (shown ?? value))}
+                </output>
+                {unitCaption(round) && <span className="cx-big-u">{unitCaption(round)}</span>}
+                {fx === 'bull' && <Sparks />}
+              </motion.div>
+              <motion.div variants={rise}>
+                <Chute
+                  round={round}
+                  value={value}
+                  onChange={setValue}
+                  onSubmit={lockNumber}
+                  locked={locked}
+                  needle={needle}
+                  revealed={revealed}
+                  labelledBy={qid}
+                  autoFocus
+                />
+              </motion.div>
+            </>
+          ) : (
+            <motion.div
+              variants={rise}
+              className={revealed && score === 100 ? 'cx-choice-wrap is-bull' : 'cx-choice-wrap'}
+            >
+              <ChoiceButtons
                 round={round}
-                value={value}
-                onChange={setValue}
-                onSubmit={lockNumber}
+                picked={picked}
+                onPick={pick}
                 locked={locked}
-                needle={needle}
                 revealed={revealed}
                 labelledBy={qid}
                 autoFocus
               />
+              {fx === 'bull' && <Sparks />}
             </motion.div>
-          </>
-        ) : (
-          <motion.div variants={rise} className={revealed && score === 100 ? 'cx-choice-wrap is-bull' : 'cx-choice-wrap'}>
-            <ChoiceButtons
-              round={round}
-              picked={picked}
-              onPick={pick}
-              locked={locked}
-              revealed={revealed}
-              labelledBy={qid}
-              autoFocus
-            />
-            {fx === 'bull' && <Sparks />}
-          </motion.div>
-        )}
+          )}
 
-        {revealed && (
-          <Reveal round={round} index={index} guess={round.kind === 'number' ? value : picked} score={score} hist={hist} />
-        )}
-        {fx === 'bull' && <span className="cx-flash" aria-hidden="true" />}
-      </motion.section>
+          {revealed && (
+            <Reveal
+              round={round}
+              index={index}
+              guess={round.kind === 'number' ? value : picked}
+              score={score}
+              hist={hist}
+            />
+          )}
+          {fx === 'bull' && <span className="cx-flash" aria-hidden="true" />}
+        </motion.section>
       </div>
 
       <div className="cx-cta">

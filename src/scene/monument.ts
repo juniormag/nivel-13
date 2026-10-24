@@ -10,14 +10,11 @@
 import * as THREE from 'three'
 import { PALETTE } from '../lib/palette'
 import { mulberry32 } from '../lib/rng'
-import { DARKER, KEYS, type K } from './pal'
-import { CENTER_X, D, MAX_RANK, PITCH, type PieceDef, PIECES, RINGS, type RingSpec, YAW } from './shape13'
-
+import { DARKER, type K, KEYS } from './pal'
+import { CENTER_X, D, MAX_RANK, PIECES, PITCH, type PieceDef, RINGS, type RingSpec, YAW } from './shape13'
 
 const BEVEL = 0.12
 const INSET = 0.025
-
-
 
 // ---------- GLSL: paleta como constantes ----------
 const v3 = (k: K) => {
@@ -595,7 +592,15 @@ export class Monument3D {
         const z0 = -D / 2 + 0.3 + r() * (D - 0.6)
         const len = 0.6 + r() * (p.y1 - p.y0)
         for (let k = 0; k * 0.18 < len; k++)
-          add(pi, p.x1, p.y1 + 0.05, p.x1 + 0.08, p.y1 - k * 0.18, z0 + Math.sin(k) * 0.15, 0.24 - (k * 0.18 * 0.1) / len)
+          add(
+            pi,
+            p.x1,
+            p.y1 + 0.05,
+            p.x1 + 0.08,
+            p.y1 - k * 0.18,
+            z0 + Math.sin(k) * 0.15,
+            0.24 - (k * 0.18 * 0.1) / len,
+          )
       }
     })
     // moitas na base e dentro da curva de baixo do 3
@@ -603,7 +608,15 @@ export class Monument3D {
       for (let i = 0; i < n; i++) {
         const a = r() * Math.PI
         const d = Math.sqrt(r())
-        add(-1, -99, -99, cx + Math.cos(a) * rad * 1.4 * d, cy + Math.sin(a) * rad * d, cz + (r() - 0.3) * rad, 0.26 + r() * 0.2)
+        add(
+          -1,
+          -99,
+          -99,
+          cx + Math.cos(a) * rad * 1.4 * d,
+          cy + Math.sin(a) * rad * d,
+          cz + (r() - 0.3) * rad,
+          0.26 + r() * 0.2,
+        )
       }
     }
     bush(7.2, 1.5, front - 0.4, 0.7, 26)
@@ -775,7 +788,9 @@ export class Monument3D {
       const R = rb.spec.R
       const da = 0.05 * Math.sign(rb.spec.speed)
       const p = new THREE.Vector3(Math.cos(a) * R, 0, Math.sin(a) * R).applyMatrix4(rb.holder.matrixWorld)
-      const p2 = new THREE.Vector3(Math.cos(a + da) * R, 0, Math.sin(a + da) * R).applyMatrix4(rb.holder.matrixWorld)
+      const p2 = new THREE.Vector3(Math.cos(a + da) * R, 0, Math.sin(a + da) * R).applyMatrix4(
+        rb.holder.matrixWorld,
+      )
       const s = this.project(p)
       const s2 = this.project(p2)
       return { x: s.x, y: s.y, front: p.z > 0.3, dx: s2.x - s.x, dy: s2.y - s.y }

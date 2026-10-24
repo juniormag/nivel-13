@@ -117,8 +117,14 @@ export function Chute({
   return (
     <div className={`cx-chute${locked ? ' is-locked' : ''}`}>
       <div className="cx-slide-row">
-        <Stepper dir={-1} round={round} value={value} onStep={set} disabled={locked} onUse={() => setTouched(true)} />
-        {/* biome-ignore lint/a11y/noStaticElementInteractions: a área de toque estende o slider (alvo de 48 px) */}
+        <Stepper
+          dir={-1}
+          round={round}
+          value={value}
+          onStep={set}
+          disabled={locked}
+          onUse={() => setTouched(true)}
+        />
         <div
           className="cx-rail-hit"
           onPointerDown={onDown}
@@ -160,13 +166,24 @@ export function Chute({
               aria-hidden="true"
             />
             {needle !== null && (
-              <span className={`cx-needle${revealed ? ' is-done' : ''}`} style={{ left: `${needle * 100}%` }} aria-hidden="true">
+              <span
+                className={`cx-needle${revealed ? ' is-done' : ''}`}
+                style={{ left: `${needle * 100}%` }}
+                aria-hidden="true"
+              >
                 <em>REAL</em>
               </span>
             )}
           </div>
         </div>
-        <Stepper dir={1} round={round} value={value} onStep={set} disabled={locked} onUse={() => setTouched(true)} />
+        <Stepper
+          dir={1}
+          round={round}
+          value={value}
+          onStep={set}
+          disabled={locked}
+          onUse={() => setTouched(true)}
+        />
       </div>
       <div className="cx-scale" aria-hidden="true">
         <span>{fmtValue(round, round.min)}</span>

@@ -1,12 +1,15 @@
 // Sobre: ajustes (som, tremor, clarões, vibração), quem responde pela peça, aviso de IA, privacidade e todas as fontes.
 import { motion } from 'motion/react'
+import { useState } from 'react'
 import { setMuted } from '../../audio/audio'
 import { CONFIG, responsavelText } from '../../config'
 import { FACTS } from '../../content/facts'
-import { levelsDone, useSave } from '../../state/save'
+import { apagar } from '../../lib/api'
+import { getSave, levelsDone, useSave } from '../../state/save'
+import { Dialog } from '../../ui/Dialog'
 import { rise } from '../../ui/motion'
 import { PixelButton, Tap } from '../../ui/PixelButton'
-import { canVibrate, haptic, setPrefs, usePrefs } from '../../ui/prefs'
+import { canVibrate, haptic, PREFS_KEY, setPrefs, usePrefs } from '../../ui/prefs'
 import { Page, Screen } from '../../ui/Shell'
 import { toast } from '../../ui/Toast'
 
@@ -49,6 +52,24 @@ export default function Sobre() {
   const on = !save.muted
   const prefs = usePrefs()
   const vibra = canVibrate()
+  const [confirm, setConfirm] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  const apagarTudo = async () => {
+    setBusy(true)
+    const ok = await apagar()
+    getSave().reset()
+    try {
+      localStorage.removeItem(PREFS_KEY)
+    } catch {
+      /* sem armazenamento */
+    }
+    toast(
+      ok ? 'Seus dados foram apagados' : 'Apagamos deste aparelho. O servidor não respondeu agora.',
+      ok ? 'gold' : 'red',
+    )
+    setTimeout(() => location.reload(), 900)
+  }
 
   return (
     <Screen world={levelsDone(save) / 13} className="scr--page">
@@ -87,19 +108,12 @@ export default function Sobre() {
           estado se você informar, seus pontos e, se você declarar, sua escolha no movimento, que entra só na
           contagem agregada por estado. Nada é vendido nem cruzado com outros dados.
         </motion.p>
+        <motion.p variants={rise}>
+          Todos os dados do jogo guardados no servidor serão apagados para sempre em <b>30/11/2026</b>.
+        </motion.p>
         <motion.div className="actions" variants={rise}>
-          <PixelButton
-            onClick={() => {
-              try {
-                localStorage.clear()
-              } catch {
-                /* sem armazenamento */
-              }
-              toast('Dados deste aparelho apagados')
-              setTimeout(() => location.reload(), 700)
-            }}
-          >
-            Apagar meus dados deste aparelho
+          <PixelButton commit="error" onClick={() => setConfirm(true)}>
+            Apagar meus dados
           </PixelButton>
         </motion.div>
         <motion.h2 variants={rise}>Todas as fontes</motion.h2>
@@ -126,6 +140,28 @@ export default function Sobre() {
           (OFL).
         </motion.p>
       </Page>
+      <Dialog open={confirm} onClose={() => !busy && setConfirm(false)} title="Apagar meus dados?" tone="red">
+        <div className="stack">
+          <p className="dlg-text">
+            Isso apaga seu progresso, cartas, apelido e ajustes deste aparelho e pede ao servidor que apague
+            tudo o que está ligado ao seu código. Não dá para desfazer.
+          </p>
+          <div className="actions">
+            <PixelButton
+              tone="ghost"
+              commit="back"
+              disabled={busy}
+              onClick={() => setConfirm(false)}
+              data-autofocus
+            >
+              Cancelar
+            </PixelButton>
+            <PixelButton tone="red" commit="error" disabled={busy} onClick={() => void apagarTudo()}>
+              {busy ? 'Apagando…' : 'Apagar tudo'}
+            </PixelButton>
+          </div>
+        </div>
+      </Dialog>
     </Screen>
   )
 }
