@@ -1,0 +1,23 @@
+{
+  "name": "@projects/nivel-13",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 4213 --host",
+    "dev:api": "node server/dev-api.mjs",
+    "build": "vite build",
+    "preview": "vite preview --port 4213",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/pixelify-sans": "^5.2.5",
+    "@fontsource/silkscreen": "^5.2.5",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "typescript": "^5",
+    "vite": "^8.3.4"
+  }
+}

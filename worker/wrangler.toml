@@ -1,0 +1,13 @@
+# Deploy: npx wrangler d1 create nivel13 → cole o database_id abaixo →
+# npx wrangler d1 execute nivel13 --remote --file=worker/schema.sql → npx wrangler secret put SALT → npx wrangler deploy
+name = "nivel13-api"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+[vars]
+ALLOWED_ORIGIN = "*"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "nivel13"
+database_id = "COLE-AQUI-O-ID-DO-D1"

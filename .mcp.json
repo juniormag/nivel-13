@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "taste": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["../../packages/taste/mcp/server.ts"],
+      "env": {}
+    }
+  }
+}
