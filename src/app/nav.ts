@@ -18,6 +18,8 @@ export type Screen =
   | 'duelo'
   | 'grupo'
   | 'plano'
+  | 'tio'
+  | 'onde'
 
 export interface NavState {
   screen: Screen
