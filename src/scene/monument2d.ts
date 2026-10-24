@@ -1,9 +1,27 @@
-// Fallback sem WebGL: o mesmo "13" desenhado em 2D com projeção oblíqua (frente de pedra rachada,
-// laterais vermelhas, topo claro) e fitas de energia como elipses em pixel, metade de trás atrás da pedra.
+// Fallback sem WebGL: o mesmo "13" (lajes poligonais, dígitos em três quartos) desenhado em 2D com
+// projeção ortográfica girada: extrusão vermelha atrás, frente de pedra com rede de rachaduras,
+// fitas de energia como elipses em pixel, metade de trás atrás da pedra.
 import { mulberry32 } from '../lib/rng'
 import type { Anchors } from './monument'
-import { Buf, bayer, dith, HEX, type K } from './pal'
-import { CENTER_X, D, MAX_RANK, PIECES, PITCH, RINGS, YAW } from './shape13'
+import { Buf, bayer, HEX, type K } from './pal'
+import {
+  CANVAS_U,
+  CROWN_AT,
+  D,
+  digitToGroup,
+  FLAG_AT,
+  FLAG_PIECE,
+  inside,
+  MAX_RANK,
+  PIECES,
+  type Pt,
+  RINGS,
+  TARGET_Y,
+  YAW,
+} from './shape13'
+
+/** quanto o fundo das lajes desce na tela (câmera baixa vendo a face de baixo) */
+const UNDER = 0.1
 
 export class Monument2D {
   readonly canvas: HTMLCanvasElement
@@ -20,28 +38,30 @@ export class Monument2D {
 
   constructor(ppu: number) {
     this.ppu = ppu
-    this.w = Math.ceil(14.8 * ppu)
-    this.h = Math.ceil(11.4 * ppu)
+    this.w = Math.ceil(CANVAS_U.w * ppu)
+    this.h = Math.ceil(CANVAS_U.h * ppu)
     this.canvas = document.createElement('canvas')
     this.canvas.width = this.w
     this.canvas.height = this.h
     const g = this.canvas.getContext('2d')
     if (!g) throw new Error('canvas 2d indisponível')
     this.g = g
-    this.origin = { x: Math.round(this.w / 2), y: Math.round(this.h / 2 + 3.95 * ppu * Math.cos(PITCH)) }
+    this.origin = { x: Math.round(this.w / 2), y: Math.round(this.h / 2 + TARGET_Y * ppu) }
   }
 
-  /** mundo (unidades do 13) → pixel, projeção oblíqua parecida com a câmera 3D */
-  private P(x: number, y: number, z: number) {
+  /** ponto do grupo (já fora do dígito) → pixel e profundidade (maior = mais perto) */
+  private G(x: number, y: number, z: number) {
     const u = this.ppu
-    const cx = Math.cos(YAW)
-    const sx = Math.sin(YAW)
-    const xr = (x - CENTER_X) * cx + z * sx
-    const zr = -(x - CENTER_X) * sx + z * cx
-    return {
-      x: this.origin.x + xr * u,
-      y: this.origin.y - y * u * Math.cos(PITCH) - zr * u * Math.sin(PITCH) * -1,
-    }
+    const c = Math.cos(YAW)
+    const s = Math.sin(YAW)
+    const xr = x * c + z * s
+    const zr = -x * s + z * c
+    return { x: this.origin.x + xr * u, y: this.origin.y - y * u - zr * u * UNDER, z: zr }
+  }
+
+  private P(dig: number, x: number, y: number, z: number) {
+    const [gx, gy, gz] = digitToGroup(dig, x, y, z)
+    return this.G(gx, gy, gz)
   }
 
   setFlare(k: number) {
@@ -54,51 +74,89 @@ export class Monument2D {
     this.bake()
   }
 
+  private fillPoly(pts: { x: number; y: number }[], paint: (x: number, y: number) => void) {
+    const poly: Pt[] = pts.map((p) => [p.x, p.y])
+    const xs = poly.map((p) => p[0])
+    const ys = poly.map((p) => p[1])
+    const x0 = Math.floor(Math.min(...xs))
+    const x1 = Math.ceil(Math.max(...xs))
+    const y0 = Math.floor(Math.min(...ys))
+    const y1 = Math.ceil(Math.max(...ys))
+    for (let y = y0; y <= y1; y++)
+      for (let x = x0; x <= x1; x++) if (inside(poly, x + 0.5, y + 0.5)) paint(x, y)
+  }
+
   private bake() {
     const b = new Buf(this.w, this.h)
     const level = this.progress * MAX_RANK + 1e-6
     const r = mulberry32(9)
-    // de trás para a frente: desenha a extrusão (vermelha) e depois a frente (pedra)
-    const vis = PIECES.filter((p) => p.rank === 0 || p.rank <= level)
-    const steps = Math.ceil(D * this.ppu * 0.6)
-    for (const pc of vis) {
-      for (let s = steps; s >= 0; s--) {
-        const z = -D / 2 + (D * (steps - s)) / steps
-        const a = this.P(pc.x0, pc.y1, z)
-        const c = this.P(pc.x1, pc.y0, z)
-        const top = s === steps
-        for (let y = Math.round(a.y); y < Math.round(c.y); y++)
-          for (let x = Math.round(a.x); x < Math.round(c.x); x++) {
-            const k: K =
-              y === Math.round(a.y) && !top
-                ? 'stone3'
-                : x === Math.round(c.x) - 1
-                  ? r() < 0.2
-                    ? 'redHot'
-                    : 'red'
-                  : 'crimson'
-            b.set(x, y, k)
+    // pontos de Voronoi para as placas da frente (~1,3 unidade)
+    const cell = Math.max(6, Math.round(this.ppu * 1.3))
+    const gw = Math.ceil(this.w / cell) + 2
+    const gh = Math.ceil(this.h / cell) + 2
+    const pts: [number, number, number][] = []
+    for (let j = 0; j < gh; j++)
+      for (let i = 0; i < gw; i++) pts.push([(i - 1 + 0.15 + r() * 0.7) * cell, (j - 1 + 0.15 + r() * 0.7) * cell, r()])
+    const plate = (x: number, y: number) => {
+      const ci = Math.floor(x / cell) + 1
+      const cj = Math.floor(y / cell) + 1
+      let best = 1e9
+      let bi = 0
+      for (let dj = -1; dj <= 1; dj++)
+        for (let di = -1; di <= 1; di++) {
+          const k = (cj + dj) * gw + ci + di
+          const p = pts[k]
+          if (!p) continue
+          const dd = (x - p[0]) ** 2 + ((y - p[1]) * 1.2) ** 2
+          if (dd < best) {
+            best = dd
+            bi = k
           }
-      }
-      const a = this.P(pc.x0, pc.y1, D / 2)
-      const c = this.P(pc.x1, pc.y0, D / 2)
-      const x0 = Math.round(a.x)
-      const y0 = Math.round(a.y)
-      const x1 = Math.round(c.x)
-      const y1 = Math.round(c.y)
-      for (let y = y0; y < y1; y++)
-        for (let x = x0; x < x1; x++) {
-          const cellX = Math.floor((x + Math.floor(y / 11) * 5) / 13)
-          const cellY = Math.floor(y / 11)
-          const tone = ((cellX * 73 + cellY * 151) % 17) / 17
-          let k: K = tone < 0.2 ? 'stone2' : tone < 0.7 ? 'stone3' : 'stoneHi'
-          if ((pc.paint ?? 0) > 0.5 && tone < 0.6) k = 'red'
-          if ((x + Math.floor(y / 11) * 5) % 13 === 0 || y % 11 === 0) k = 'stone0'
-          if (y === y0 || x === x0) k = 'stoneHi'
-          if (y === y1 - 1) k = 'stone1'
-          b.set(x, y, k)
         }
+      return bi
     }
+    // de trás para a frente (o 1 fica atrás do 3)
+    const vis = PIECES.map((p, i) => ({ p, i }))
+      .filter(({ p }) => p.rank === 0 || p.rank <= level)
+      .sort((a, c) => this.P(a.p.digit, (a.p.x0 + a.p.x1) / 2, 0, 0).z - this.P(c.p.digit, (c.p.x0 + c.p.x1) / 2, 0, 0).z)
+    const steps = Math.ceil(D * this.ppu * 0.7)
+    for (const { p: pc } of vis) {
+      for (let s = 0; s <= steps; s++) {
+        const z = -D / 2 + (D * s) / steps
+        const last = s === steps
+        const poly = pc.pts.map(([x, y]) => this.P(pc.digit, x, y, z))
+        if (!last) {
+          const shade = s / steps
+          this.fillPoly(poly, (x, y) => {
+            const k: K = shade < 0.25 ? 'blood1' : bayer(x, y) < 0.06 ? 'redGlow' : shade < 0.6 ? 'crimsonDeep' : 'crimson'
+            b.set(x, y, k)
+          })
+          continue
+        }
+        const paint = pc.paint ?? 0
+        this.fillPoly(poly, (x, y) => {
+          const id = plate(x, y)
+          const tone = pts[id]?.[2] ?? 0.5
+          let k: K = tone < 0.18 ? 'stone2' : tone < 0.8 ? 'stone3' : 'stoneHi'
+          if (paint > 0 && tone < paint * 0.6 && y > this.origin.y - 2.5 * this.ppu) k = tone < 0.1 ? 'crimson' : 'red'
+          if (plate(x + 1, y) !== id || plate(x, y + 1) !== id) k = 'stone0'
+          else if (plate(x, y - 1) !== id) k = 'stoneHi'
+          b.set(x, y, k)
+        })
+        // bordas da laje: lábio claro em cima, escuro embaixo
+        for (let i = 0; i < poly.length; i++) {
+          const a = poly[i] as { x: number; y: number }
+          const c = poly[(i + 1) % poly.length] as { x: number; y: number }
+          const top = c.x < a.x
+          b.line(Math.round(a.x), Math.round(a.y), Math.round(c.x), Math.round(c.y), top ? 'stoneHi' : 'stone1')
+        }
+      }
+    }
+    // rim red-hot do lado direito da silhueta
+    const src = b.d.slice()
+    for (let y = 0; y < b.h; y++)
+      for (let x = 0; x < b.w - 1; x++)
+        if (src[y * b.w + x] && !src[y * b.w + x + 1]) b.set(x, y, r() < 0.3 ? 'redGlow' : 'redHot')
     this.stone = b.canvas()
   }
 
@@ -114,9 +172,9 @@ export class Monument2D {
       const a = tt * Math.PI * 2
       const z = Math.sin(a) * spec.R
       if (z > 0 !== front) continue
-      const x = Math.cos(a) * spec.R + CENTER_X
-      const y = spec.y + Math.cos(a) * spec.tz * spec.R * 0.5
-      const p = this.P(x, y, z)
+      const x = Math.cos(a) * spec.R + spec.x
+      const y = spec.y + Math.cos(a) * spec.tz * spec.R - Math.sin(a) * spec.tx * spec.R * 0.5
+      const p = this.G(x, y, z)
       const w = Math.max(1, Math.round(spec.w * (1 - s) ** 0.6))
       for (let j = 0; j < w; j++) {
         const v = Math.abs(j - (w - 1) / 2) / Math.max(1, w / 2)
@@ -137,24 +195,19 @@ export class Monument2D {
     for (let i = 0; i < RINGS.length; i++) this.ring(g, i, false)
     if (this.stone) g.drawImage(this.stone, 0, 0)
     for (let i = 0; i < RINGS.length; i++) this.ring(g, i, true)
-    void dith
   }
 
   anchors(): Anchors {
     const level = this.progress * MAX_RANK + 1e-6
-    let top = -1
-    for (let i = 1; i <= 3; i++) {
-      const pc = PIECES[i]
-      if (pc && (pc.rank === 0 || pc.rank <= level) && pc.y1 > top) top = pc.y1
-    }
-    const flag = top > 0 ? this.P(1.75, top, 0) : null
-    const crown = this.P(7.1, 9.55, 0)
+    const fp = PIECES[FLAG_PIECE]
+    const flag = fp && (fp.rank === 0 || fp.rank <= level) ? this.P(0, FLAG_AT.x, FLAG_AT.y, FLAG_AT.z) : null
+    const crown = this.P(1, CROWN_AT.x, CROWN_AT.y, CROWN_AT.z)
     const heads = RINGS.map((spec, i) => {
       const a = (this.head[i] ?? 0) * Math.PI * 2
-      const p = this.P(Math.cos(a) * spec.R + CENTER_X, spec.y, Math.sin(a) * spec.R)
+      const p = this.G(Math.cos(a) * spec.R + spec.x, spec.y, Math.sin(a) * spec.R)
       return { x: p.x, y: p.y, front: Math.sin(a) > 0, dx: -Math.sin(a), dy: 0 }
     })
-    const edges = PIECES.filter((p) => p.rank === 0 || p.rank <= level).map((p) => this.P(p.x1, p.y1, D / 2))
+    const edges = PIECES.filter((p) => p.rank === 0 || p.rank <= level).map((p) => this.P(p.digit, p.x1, p.y1, D / 2))
     return { flag, crown, heads, edges }
   }
 

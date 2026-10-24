@@ -1,6 +1,6 @@
 // Tela de fase: hospeda o Runner (PixiJS) e desenha o HUD, as habilidades e os overlays em React.
 import { useEffect, useRef, useState } from 'react'
-import { playMusic, sfx } from '../../audio/audio'
+import { playMusic, sfx, stinger } from '../../audio/audio'
 import { LEVELS, type GameKind, type Level } from '../../content/levels'
 import { Runner } from '../../engine/runner'
 import type { MicroGame } from '../../engine/types'
@@ -9,7 +9,9 @@ import { getSave, levelsDone, useSave } from '../../state/save'
 import { type SkillKind, usePlay } from '../../state/play'
 import { CountUp } from '../../ui/CountUp'
 import { Hearts } from '../../ui/Hearts'
-import { Tap } from '../../ui/PixelButton'
+import { fmt, useCountUp } from '../../ui/hooks'
+import { Banner, Corners, IconTile, LevelCard, SegBar, StarRow, tipIcon, useBeats } from '../../ui/LevelCard'
+import { PixelButton, Tap } from '../../ui/PixelButton'
 import { SkillBar } from '../../ui/SkillBar'
 import { go, useNav } from '../nav'
 
@@ -45,7 +47,8 @@ export default function Play() {
   const runnerRef = useRef<Runner | null>(null)
   const gameRef = useRef<MicroGame | null>(null)
   const [count, setCount] = useState<number | null>(null)
-  const [end, setEnd] = useState<{ success: boolean; score: number; stars: number; firstTime: boolean } | null>(null)
+  const [goFlash, setGoFlash] = useState(0)
+  const [end, setEnd] = useState<EndInfo | null>(null)
   const [runKey, setRunKey] = useState(0)
   const phase = usePlay((s) => s.phase)
   const hearts = usePlay((s) => s.hearts)
@@ -97,7 +100,8 @@ export default function Play() {
             go('final')
             return
           }
-          setEnd({ success, score: sc, stars, firstTime })
+          const { timeLeft: left, duration: dur } = usePlay.getState()
+          setEnd({ success, score: sc, stars, firstTime, timeLeft: left, duration: dur, goal: game.goal })
         },
       })
       await r.init()
@@ -172,11 +176,13 @@ export default function Play() {
     const tick = () => {
       if (n === 0) {
         setCount(null)
+        setGoFlash((g) => g + 1)
         sfx('go')
         void runnerRef.current?.start()
         return
       }
-      sfx('countdown')
+      // escada: 3, 2, 1 sobem dois semitons cada
+      sfx('countdown', { pitch: (3 - n) * 2 })
       setCount(n)
       n--
       window.setTimeout(tick, 420)
@@ -231,101 +237,189 @@ export default function Play() {
       </div>
 
       {phase === 'intro' && (
-        <div className="overlay-center">
-          <div className="intro px-frame px-frame--red" role="dialog" aria-labelledby="intro-t">
-            <div className="lvl">{custom ? custom.sub : `Fase ${level?.n} de 13`}</div>
-            <h2 id="intro-t">{title}</h2>
-            {level && <div className="where">{level.where}</div>}
-            <p>{custom?.intro ?? level?.intro}</p>
-            <div className="howto">
-              {(custom?.how ?? level?.how ?? []).map((h) => (
-                <span key={h}>▸ {h}</span>
-              ))}
-            </div>
-            {/* biome-ignore lint/a11y/noAutofocus: o botão de começar é a única ação */}
-            <button type="button" className="btn btn--red btn--big" autoFocus onClick={startCountdown}>
-              Começar ▶
-            </button>
-            <div style={{ marginTop: 10 }}>
-              <button type="button" className="btn btn--ghost" onClick={() => go(custom ? 'title' : 'map')}>
-                Voltar
-              </button>
-            </div>
+        <LevelCard
+          n={level?.n}
+          kicker={custom ? custom.sub : `Fase ${level?.n} de 13`}
+          title={title}
+          where={level?.where}
+          intro={custom?.intro ?? level?.intro ?? ''}
+          how={custom?.how ?? level?.how ?? []}
+          best={level ? (getSave().stars[level.n - 1] ?? 0) : 0}
+          onStart={startCountdown}
+          onBack={() => go(custom ? 'title' : 'map')}
+        />
+      )}
+      {count !== null && (
+        <div className="overlay-center mt-count-ov" aria-live="assertive">
+          <div className={`mt-count mt-count--${count}`} key={count}>
+            <i className="mt-count-ring" aria-hidden="true" />
+            <span className="count">{count}</span>
           </div>
         </div>
       )}
-      {count !== null && (
-        <div className="overlay-center" style={{ background: 'transparent' }}>
-          <div className="count" aria-live="assertive" key={count}>
-            {count}
-          </div>
+      {goFlash > 0 && count === null && phase !== 'intro' && (
+        <div className="mt-go" key={goFlash} aria-hidden="true" onAnimationEnd={() => setGoFlash(0)}>
+          <span>Vai!</span>
         </div>
       )}
       {phase === 'pause' && (
-        <div className="overlay-center">
-          <div className="intro px-frame" role="dialog" aria-label="Pausa">
-            <h2>Pausa</h2>
-            <div className="stack" style={{ marginTop: 14 }}>
-              <button type="button" className="btn btn--red btn--wide" onClick={() => runnerRef.current?.resume()}>
-                Continuar
-              </button>
+        <div className="overlay-center mt-ov">
+          <div className="mt-card mt-card--pause" role="dialog" aria-labelledby="pause-t">
+            <Corners />
+            <div className="mt-kicker mt-kicker--stone">{custom ? custom.sub : `Fase ${level?.n} · ${title}`}</div>
+            <h2 id="pause-t" className="mt-title mt-title--icon">
+              <IconTile name="pause" />
+              Pausa
+            </h2>
+            <ul className="mt-tips mt-tips--still">
+              {(custom?.how ?? level?.how ?? []).slice(0, 2).map((h, i) => (
+                <li key={h}>
+                  <IconTile name={tipIcon(h, i)} tone={i === 0 ? 'red' : 'gold'} />
+                  <span>{h}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-actions">
+              {/* biome-ignore lint/a11y/noAutofocus: continuar é a ação esperada */}
+              <PixelButton tone="red" size="big" wide autoFocus onClick={() => runnerRef.current?.resume()}>
+                Continuar ▶
+              </PixelButton>
               {!custom && (
-                <button type="button" className="btn btn--wide" onClick={() => setRunKey((k) => k + 1)}>
+                <PixelButton wide onClick={() => setRunKey((k) => k + 1)}>
                   Recomeçar
-                </button>
+                </PixelButton>
               )}
-              <button type="button" className="btn btn--ghost btn--wide" onClick={() => go(custom ? 'title' : 'map')}>
+              <PixelButton tone="ghost" commit="back" onClick={() => go(custom ? 'title' : 'map')}>
                 {custom ? 'Sair' : 'Voltar ao mapa'}
-              </button>
+              </PixelButton>
             </div>
           </div>
         </div>
       )}
-      {end && level && (
-        <div className="overlay-center">
-          {end.success ? (
-            <div className="intro px-frame px-frame--gold" role="dialog" aria-labelledby="end-t">
-              <div className="lvl">Fase {level.n} concluída</div>
-              <h2 id="end-t">{level.title}</h2>
-              <div className="stars" role="img" aria-label={`${end.stars} de 3 estrelas`}>
-                {[0, 1, 2].map((k) => (
-                  <span key={k} className={k < end.stars ? '' : 'off'}>
-                    ★
-                  </span>
-                ))}
-              </div>
-              <p>
-                {end.score.toLocaleString('pt-BR')} pontos{end.firstTime ? ` · +${500 + end.stars * 166} XP` : ''}
-              </p>
-              {/* biome-ignore lint/a11y/noAutofocus: próxima ação óbvia */}
-              <button type="button" className="btn btn--red btn--big" autoFocus onClick={() => go('result', { level: level.n })}>
-                Ver o fato ▶
-              </button>
-            </div>
-          ) : (
-            <div className="intro px-frame px-frame--red" role="dialog" aria-labelledby="end-t">
-              <div className="lvl">Fase {level.n}</div>
-              <h2 id="end-t">Quase!</h2>
-              <p>As vidas acabaram. Tente de novo ou siga com uma estrela.</p>
-              <div className="stack">
-                <button type="button" className="btn btn--red btn--wide" onClick={() => setRunKey((k) => k + 1)}>
-                  Tentar de novo
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--wide"
-                  onClick={() => {
-                    const { firstTime } = getSave().completeLevel(level.n, 1, end.score, level.facts)
-                    go(level.n === 13 && firstTime ? 'final' : 'result', { level: level.n })
-                  }}
-                >
-                  Seguir com 1 estrela
-                </button>
-              </div>
+      {end && level &&
+        (end.success ? (
+          <WinCard level={level} end={end} />
+        ) : (
+          <LoseCard level={level} end={end} retry={() => setRunKey((k) => k + 1)} />
+        ))}
+    </div>
+  )
+}
+
+interface EndInfo {
+  success: boolean
+  score: number
+  stars: number
+  firstTime: boolean
+  timeLeft: number
+  duration: number
+  goal: number
+}
+
+const xpFor = (stars: number) => 500 + stars * 166
+
+/** Vitória como evento: faixa bate, estrelas batem uma a uma, pontos sobem, XP aparece. */
+function WinCard({ level, end }: { level: Level; end: EndInfo }) {
+  // faixa, estrela 1, 2, 3, pontos, fim
+  const beats = useBeats([60, 420, 800, 1180, 1500, 2050])
+  const { stage, skipped } = beats
+  const pts = useCountUp(stage >= 5 ? end.score : 0, { from: 0, ms: 520, tick: skipped ? null : 'score', done: skipped ? null : 'total' })
+  const xp = end.firstTime ? xpFor(end.stars) : 0
+  useEffect(() => {
+    if (stage === 1 && !skipped) sfx('stamp')
+  }, [stage, skipped])
+  return (
+    <div
+      className={`overlay-center mt-ov mt-ov--win${skipped ? ' is-skip' : ''}`}
+      onPointerDownCapture={beats.onPointerDownCapture}
+    >
+      <i className="mt-rays" aria-hidden="true" />
+      <div className="mt-card mt-card--win" role="dialog" aria-labelledby="end-t">
+        <Corners />
+        <div className={`mt-win-banner${stage >= 1 ? ' is-in' : ''}`}>
+          <Banner>Fase concluída</Banner>
+        </div>
+        <div className="mt-kicker mt-kicker--stone">Fase {level.n} de 13</div>
+        <h2 id="end-t" className="mt-title">
+          {level.title}
+        </h2>
+        <StarRow n={end.stars} landed={Math.max(0, stage - 1)} instant={skipped} />
+        <div className={`mt-tally${stage >= 5 ? ' is-in' : ''}`}>
+          <div className="mt-pts" role="status" aria-label={`${fmt(end.score)} pontos`}>
+            <b aria-hidden="true">{fmt(pts)}</b>
+            <span aria-hidden="true">pontos</span>
+          </div>
+          {xp > 0 && <div className="mt-xpchip">+{fmt(xp)} XP</div>}
+        </div>
+        <div className="mt-actions">
+          {/* biome-ignore lint/a11y/noAutofocus: próxima ação óbvia */}
+          <PixelButton
+            tone="red"
+            size="big"
+            wide
+            autoFocus
+            className={beats.done ? 'is-ready' : ''}
+            onClick={() => go('result', { level: level.n, xp, seen: 1 })}
+          >
+            Ver o fato ▶
+          </PixelButton>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/** Derrota gentil: "Quase!", o que faltou e uma dica, sem clarão vermelho. */
+function LoseCard({ level, end, retry }: { level: Level; end: EndInfo; retry: () => void }) {
+  useEffect(() => {
+    stinger('lose')
+  }, [])
+  const timed = end.duration > 0
+  const left = Math.ceil(end.timeLeft)
+  const reached = timed ? 1 - end.timeLeft / end.duration : end.goal > 0 ? end.score / end.goal : 0
+  const tip = level.how[0]
+  return (
+    <div className="overlay-center mt-ov mt-ov--lose">
+      <div className="mt-card mt-card--lose" role="dialog" aria-labelledby="end-t">
+        <Corners />
+        <div className="mt-kicker">Fase {level.n} · {level.title}</div>
+        <h2 id="end-t" className="mt-title mt-title--big">
+          Quase!
+        </h2>
+        <p className="mt-lead">As vidas acabaram. Tente de novo ou siga com uma estrela.</p>
+        <div className="mt-miss">
+          <div className="mt-miss-row">
+            <Hearts n={0} max={3} label="Sem vidas" />
+            <span className="mt-miss-note">
+              {timed && left > 0 ? `Faltaram ${left} s` : `${fmt(end.score)} pontos`}
+            </span>
+          </div>
+          <SegBar label="Você chegou a" value={reached} text={`${Math.round(Math.min(1, reached) * 100)}%`} />
+          {tip && (
+            <div className="mt-hint">
+              <IconTile name={tipIcon(tip, 0)} tone="gold" />
+              <span>
+                <b>Dica</b> {tip}
+              </span>
             </div>
           )}
         </div>
-      )}
+        <div className="mt-actions">
+          {/* biome-ignore lint/a11y/noAutofocus: tentar de novo é a ação esperada */}
+          <PixelButton tone="red" size="big" wide autoFocus onClick={retry}>
+            Tentar de novo
+          </PixelButton>
+          <PixelButton
+            wide
+            onClick={() => {
+              const { firstTime } = getSave().completeLevel(level.n, 1, end.score, level.facts)
+              go(level.n === 13 && firstTime ? 'final' : 'result', { level: level.n, xp: firstTime ? xpFor(1) : 0 })
+            }}
+          >
+            Seguir com 1 estrela
+          </PixelButton>
+        </div>
+      </div>
     </div>
   )
 }

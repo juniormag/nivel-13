@@ -11,7 +11,27 @@ import * as THREE from 'three'
 import { PALETTE } from '../lib/palette'
 import { mulberry32 } from '../lib/rng'
 import { DARKER, type K, KEYS } from './pal'
-import { CENTER_X, D, MAX_RANK, PIECES, PITCH, type PieceDef, RINGS, type RingSpec, YAW } from './shape13'
+import {
+  CANVAS_U,
+  CROWN_AT,
+  D,
+  DIGITS,
+  digitToGroup,
+  EYE_Y,
+  FLAG_AT,
+  FLAG_PIECE,
+  FOV,
+  inside,
+  MAX_RANK,
+  PIECES,
+  type PieceDef,
+  type Pt,
+  RINGS,
+  type RingSpec,
+  TARGET_Y,
+  topAt,
+  YAW,
+} from './shape13'
 
 const BEVEL = 0.12
 const INSET = 0.025
@@ -71,7 +91,6 @@ uniform float uPaint;
 uniform float uYBase;
 uniform float uWear;
 uniform vec3 uKey;
-uniform mat3 uObjRot;
 uniform float uRubble;
 varying vec3 vObj;
 varying vec3 vWorld;
@@ -85,8 +104,8 @@ vec3 rampLitRed(int b){ return b <= 1 ? C_red : b == 2 ? C_redHot : b == 3 ? C_r
 void main(){
   vec3 nV = normalize(cross(dFdx(vView), dFdy(vView)));
   vec3 nW = normalize(cross(dFdx(vWorld), dFdy(vWorld)));
-  if (nV.z < 0.0) { nW = -nW; }
-  vec3 nO = uObjRot * nW;
+  vec3 nO = normalize(cross(dFdx(vObj), dFdy(vObj)));
+  if (nV.z < 0.0) { nW = -nW; nO = -nO; }
   vec4 tx = texelFetch(uTex, ivec2(mod(gl_FragCoord.xy + uOff, 256.0)), 0);
   float crack = tx.r;
   // desgaste: com o monumento gasto aparecem todas as rachaduras; reformado, só as maiores
@@ -266,9 +285,14 @@ uniform int uRedHot;
 uniform int uOutline;
 uniform int uBlood1;
 uniform float uEps;
+uniform float uNear;
+uniform float uFar;
 uniform ivec2 uSize;
 vec4 C(ivec2 p){ return texelFetch(tC, clamp(p, ivec2(0), uSize - 1), 0); }
-float Dp(ivec2 p){ return texelFetch(tD, clamp(p, ivec2(0), uSize - 1), 0).r; }
+float Dp(ivec2 p){
+  float d = texelFetch(tD, clamp(p, ivec2(0), uSize - 1), 0).r;
+  return uNear * uFar / (uFar - d * (uFar - uNear));
+}
 bool isRing(vec4 c){ return c.a > 0.3 && c.a < 0.7; }
 bool isSolid(vec4 c){ return c.a > 0.9; }
 int nearest(vec3 c){
@@ -412,21 +436,45 @@ function stoneTexture(ppu: number) {
   return tex
 }
 
+/** contorno deslocado para dentro em `d` (anti-horário, junta em quina) */
+function insetPoly(pts: Pt[], d: number): Pt[] {
+  const n = pts.length
+  let area = 0
+  for (let i = 0; i < n; i++) {
+    const a = pts[i] as Pt
+    const b = pts[(i + 1) % n] as Pt
+    area += a[0] * b[1] - b[0] * a[1]
+  }
+  const sg = area >= 0 ? 1 : -1
+  const out: Pt[] = []
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n] as Pt
+    const p1 = pts[i] as Pt
+    const p2 = pts[(i + 1) % n] as Pt
+    const e1 = norm(p1[0] - p0[0], p1[1] - p0[1])
+    const e2 = norm(p2[0] - p1[0], p2[1] - p1[1])
+    // normal para dentro de cada aresta
+    const n1: Pt = [-e1[1] * sg, e1[0] * sg]
+    const n2: Pt = [-e2[1] * sg, e2[0] * sg]
+    // quina: p + (n1 + n2) · d / (1 + n1·n2)
+    const k = d / Math.max(0.3, 1 + n1[0] * n2[0] + n1[1] * n2[1])
+    out.push([p1[0] + (n1[0] + n2[0]) * k, p1[1] + (n1[1] + n2[1]) * k])
+  }
+  return out
+}
+function norm(x: number, y: number): Pt {
+  const l = Math.hypot(x, y) || 1
+  return [x / l, y / l]
+}
+
 function pieceShape(p: PieceDef) {
-  const [bl, br, tr, tl] = p.ch ?? [0, 0, 0, 0]
-  const x0 = p.x0 + INSET + BEVEL
-  const y0 = p.y0 + INSET + BEVEL
-  const x1 = p.x1 - INSET - BEVEL
-  const y1 = p.y1 - INSET - BEVEL
+  const pts = insetPoly(p.pts, INSET + BEVEL)
   const s = new THREE.Shape()
-  s.moveTo(x0 + bl, y0)
-  s.lineTo(x1 - br, y0)
-  if (br) s.lineTo(x1, y0 + br)
-  s.lineTo(x1, y1 - tr)
-  if (tr) s.lineTo(x1 - tr, y1)
-  s.lineTo(x0 + tl, y1)
-  if (tl) s.lineTo(x0, y1 - tl)
-  s.lineTo(x0, y0 + bl)
+  pts.forEach((q, i) => {
+    if (i === 0) s.moveTo(q[0], q[1])
+    else s.lineTo(q[0], q[1])
+  })
+  s.closePath()
   return s
 }
 
@@ -434,6 +482,7 @@ interface Leaf {
   /** limiar de aparecimento: a mata cresce com o progresso */
   g: number
   piece: number
+  dig: number
   ax: number
   ay: number
   m: THREE.Matrix4
@@ -455,8 +504,9 @@ export class Monument3D {
   onLand?: (x: number, y: number) => void
   private renderer: THREE.WebGLRenderer
   private scene = new THREE.Scene()
-  private camera: THREE.OrthographicCamera
+  private camera: THREE.PerspectiveCamera
   private group = new THREE.Group()
+  private digits: THREE.Group[] = []
   private rt: THREE.WebGLRenderTarget
   private postScene = new THREE.Scene()
   private postCam = new THREE.Camera()
@@ -488,8 +538,8 @@ export class Monument3D {
 
   constructor(ppu: number) {
     this.ppu = ppu
-    this.w = Math.ceil(14.8 * ppu)
-    this.h = Math.ceil(11.4 * ppu)
+    this.w = Math.ceil(CANVAS_U.w * ppu)
+    this.h = Math.ceil(CANVAS_U.h * ppu)
     const canvas = document.createElement('canvas')
     this.canvas = canvas
     this.renderer = new THREE.WebGLRenderer({
@@ -516,16 +566,26 @@ export class Monument3D {
       colorSpace: THREE.NoColorSpace,
     })
 
-    const hw = this.w / 2 / ppu
-    const hh = this.h / 2 / ppu
-    this.camera = new THREE.OrthographicCamera(-hw, hw, hh, -hh, 1, 80)
-    const target = new THREE.Vector3(0, 3.95, 0)
-    this.camera.position.set(0, target.y + Math.sin(PITCH) * 40, Math.cos(PITCH) * 40)
+    // câmera em perspectiva, baixa, olhando para cima (monumento heroico): no plano do alvo, 1 unidade = ppu
+    const half = (FOV * Math.PI) / 360
+    const L = this.h / ppu / 2 / Math.tan(half)
+    this.camera = new THREE.PerspectiveCamera(FOV, this.w / this.h, 2, L + 30)
+    const target = new THREE.Vector3(0, TARGET_Y, 0)
+    const dy = EYE_Y - TARGET_Y
+    this.camera.position.set(0, EYE_Y, Math.sqrt(L * L - dy * dy))
     this.camera.lookAt(target)
     this.camera.updateMatrixWorld()
+    this.camera.updateProjectionMatrix()
     this.scene.add(this.group)
     this.group.rotation.y = YAW
-    this.group.updateMatrixWorld()
+    for (const d of DIGITS) {
+      const g = new THREE.Group()
+      g.position.set(d.x + d.cx, 0, d.z)
+      g.rotation.y = d.yaw
+      this.group.add(g)
+      this.digits.push(g)
+    }
+    this.group.updateMatrixWorld(true)
 
     this.buildPieces()
     this.buildLeaves()
@@ -536,7 +596,6 @@ export class Monument3D {
 
   private buildPieces() {
     const tex = stoneTexture(this.ppu)
-    const objRot = new THREE.Matrix3().setFromMatrix4(new THREE.Matrix4().makeRotationY(-YAW))
     const r = mulberry32(77)
     const mats: THREE.ShaderMaterial[] = []
     for (const def of PIECES) {
@@ -560,15 +619,15 @@ export class Monument3D {
           uYBase: { value: def.y0 },
           uWear: this.wear,
           uKey: { value: this.key },
-          uObjRot: { value: objRot },
           uRubble: { value: 0 },
           ...this.ringUniforms,
         },
       })
       mats.push(mat)
       const mesh = new THREE.Mesh(geo, mat)
-      mesh.position.set(cx - CENTER_X, def.y0, 0)
-      this.group.add(mesh)
+      const dg = DIGITS[def.digit] as (typeof DIGITS)[number]
+      mesh.position.set(cx - dg.cx, def.y0, 0)
+      ;(this.digits[def.digit] as THREE.Group).add(mesh)
       // lajes de cima "escorregadas" no monumento gasto; cada fase conserta uma
       const sgn = def.rank % 2 ? 1 : -1
       const rz = def.rank ? sgn * (0.035 + def.rank * 0.006) : 0
@@ -579,7 +638,7 @@ export class Monument3D {
         fixed: def.rank === 0,
         t0: -1,
         slip: { rz, dx: rz * 0.9, dy: -Math.abs(rz) * 0.6 },
-        home: { x: cx - CENTER_X, y: def.y0 },
+        home: { x: cx - dg.cx, y: def.y0 },
       })
     }
     // entulho caído no morro (some conforme o monumento se reconstrói)
@@ -612,95 +671,103 @@ export class Monument3D {
   private buildLeaves() {
     const r = mulberry32(4242)
     const front = D / 2 + 0.06
-    const add = (piece: number, ax: number, ay: number, x: number, y: number, z: number, s: number) => {
+    const add = (dig: number, piece: number, ax: number, ay: number, x: number, y: number, z: number, s: number) => {
+      const [gx, gy, gz] = digitToGroup(dig, x, y, z)
       const m = new THREE.Matrix4().compose(
-        new THREE.Vector3(x - CENTER_X, y, z),
+        new THREE.Vector3(gx, gy, gz),
         new THREE.Quaternion().setFromEuler(new THREE.Euler(r() * 3, r() * 3, r() * 3)),
         new THREE.Vector3(s * 0.62, s * (0.5 + r() * 0.3), s * 0.62),
       )
-      this.leafData.push({ g: r(), piece, ax, ay, m })
+      this.leafData.push({ g: r(), piece, dig, ax, ay, m })
     }
     PIECES.forEach((p, pi) => {
+      const dg = p.digit
       const w = p.x1 - p.x0
-      // musgo no topo
-      const nTop = Math.round(w * (6 + r() * 12))
-      for (let i = 0; i < nTop; i++) {
-        const x = p.x0 + 0.15 + r() * (w - 0.3)
-        const z = -D / 2 + r() ** 0.6 * D
-        add(pi, x, p.y1 + 0.05, x, p.y1 + 0.02, z, 0.24 + r() * 0.22)
+      // musgo no topo, em manchas (não confete): só onde a borda de cima é topo de verdade
+      const patches = Math.max(1, Math.round(w * (0.5 + r() * 0.8)))
+      for (let k = 0; k < patches; k++) {
+        const cx = p.x0 + 0.2 + r() * (w - 0.4)
+        const n = 5 + Math.floor(r() * 9)
+        for (let i = 0; i < n; i++) {
+          const x = cx + (r() - 0.5) * 0.7
+          const ty = topAt(p.pts, x)
+          if (ty === null || ty < p.y1 - 1.2) continue
+          const z = -D / 2 + r() ** 0.5 * D
+          add(dg, pi, x, ty + 0.05, x, ty + 0.02, z, 0.2 + r() * 0.2)
+        }
       }
-      // touceiras derramando pela beira da frente (como na referência)
-      for (let x = p.x0 + 0.2; x < p.x1 - 0.1; x += 0.35 + r() * 0.5) {
-        if (r() > 0.55) continue
-        const n = 6 + Math.floor(r() * 10)
+      // touceiras derramando pela beira da frente
+      for (let x = p.x0 + 0.2; x < p.x1 - 0.1; x += 0.4 + r() * 0.6) {
+        if (r() > 0.4) continue
+        const ty = topAt(p.pts, x)
+        if (ty === null) continue
+        const n = 5 + Math.floor(r() * 8)
         for (let q = 0; q < n; q++) {
           const a2 = r() * Math.PI * 2
-          const d2 = Math.sqrt(r()) * 0.32
+          const d2 = Math.sqrt(r()) * 0.3
           add(
+            dg,
             pi,
             x,
-            p.y1 + 0.05,
+            ty + 0.05,
             x + Math.cos(a2) * d2,
-            p.y1 + Math.sin(a2) * d2 * 0.7 - 0.05,
+            ty + Math.sin(a2) * d2 * 0.7 - 0.05,
             front - 0.1 + r() * 0.25,
-            0.22 + r() * 0.16,
+            0.2 + r() * 0.15,
           )
         }
       }
       // tufos que escorrem pela frente
-      const drapes = r() < 0.75 ? 1 + Math.floor(r() * (w > 2 ? 3 : 2)) : 0
+      const drapes = r() < 0.6 ? 1 + Math.floor(r() * (w > 2 ? 2 : 1)) : 0
       for (let d = 0; d < drapes; d++) {
         const x0 = p.x0 + 0.25 + r() * (w - 0.5)
-        const len = 0.5 + r() * Math.min(3.2, p.y1 - p.y0 + 1.2)
+        const ty = topAt(p.pts, x0)
+        if (ty === null) continue
+        const len = 0.4 + r() * Math.min(2.4, ty - p.y0 + 0.8)
         const ph = r() * 6
         for (let k = 0; k * 0.17 < len; k++) {
-          const y = p.y1 - k * 0.17
+          const y = ty - k * 0.17
           const t = (k * 0.17) / len
-          const x = x0 + Math.sin(k * 0.8 + ph) * 0.12
-          const s = (0.3 - t * 0.17) * (0.8 + r() * 0.4)
-          add(pi, x0, p.y1 + 0.05, x, y, front + r() * 0.08, s)
-          for (let q = 0; q < 2; q++)
-            if (r() < 0.7)
-              add(pi, x0, p.y1 + 0.05, x + (r() - 0.5) * 0.4, y - r() * 0.1, front + 0.04, s * 0.8)
+          const x = x0 + Math.sin(k * 0.8 + ph) * 0.1
+          const s = (0.27 - t * 0.15) * (0.8 + r() * 0.4)
+          add(dg, pi, x0, ty + 0.05, x, y, front + r() * 0.08, s)
+          if (r() < 0.6) add(dg, pi, x0, ty + 0.05, x + (r() - 0.5) * 0.35, y - r() * 0.1, front + 0.04, s * 0.8)
         }
       }
-      // trepadeira pela lateral direita
-      if (r() < 0.55) {
+      // trepadeira pela lateral direita (a face vermelha que a câmera vê)
+      if (r() < 0.6) {
         const z0 = -D / 2 + 0.3 + r() * (D - 0.6)
-        const len = 0.6 + r() * (p.y1 - p.y0)
-        for (let k = 0; k * 0.18 < len; k++)
-          add(
-            pi,
-            p.x1,
-            p.y1 + 0.05,
-            p.x1 + 0.08,
-            p.y1 - k * 0.18,
-            z0 + Math.sin(k) * 0.15,
-            0.24 - (k * 0.18 * 0.1) / len,
-          )
+        const ty = topAt(p.pts, p.x1 - 0.02) ?? p.y1
+        const len = 0.6 + r() * (ty - p.y0)
+        for (let k = 0; k * 0.16 < len; k++) {
+          add(dg, pi, p.x1 - 0.05, ty + 0.05, p.x1 + 0.07, ty - k * 0.16, z0 + Math.sin(k * 0.7) * 0.2, 0.25 - (k * 0.16 * 0.1) / len)
+          if (r() < 0.5) add(dg, pi, p.x1 - 0.05, ty + 0.05, p.x1 + 0.09, ty - k * 0.16, z0 + (r() - 0.5) * 0.6, 0.18)
+        }
       }
     })
     // moitas na base e dentro da curva de baixo do 3
-    const bush = (cx: number, cy: number, cz: number, rad: number, n: number) => {
+    const bush = (dig: number, cx: number, cy: number, cz: number, rad: number, n: number) => {
       for (let i = 0; i < n; i++) {
         const a = r() * Math.PI
         const d = Math.sqrt(r())
         add(
+          dig,
           -1,
           -99,
           -99,
           cx + Math.cos(a) * rad * 1.4 * d,
           cy + Math.sin(a) * rad * d,
           cz + (r() - 0.3) * rad,
-          0.26 + r() * 0.2,
+          0.24 + r() * 0.2,
         )
       }
     }
-    bush(7.2, 1.5, front - 0.4, 0.7, 70)
-    bush(5.4, 1.55, 0.2, 0.55, 40)
-    bush(0.6, 0.95, front - 0.3, 0.5, 36)
-    bush(3.6, 0.95, front - 0.2, 0.45, 30)
-    bush(9.6, 1.5, front - 0.6, 0.5, 30)
+    bush(1, 2.4, 1.45, front - 0.5, 0.75, 70)
+    bush(1, 1.4, 1.45, 0.1, 0.5, 30)
+    bush(0, 0.3, 1.3, front - 0.4, 0.45, 30)
+    bush(0, 2.9, 0.05, front - 0.2, 0.55, 34)
+    bush(0, -0.1, 0.05, front - 0.1, 0.5, 26)
+    bush(1, 5.7, 0.05, front - 0.6, 0.5, 26)
 
     const geo = new THREE.IcosahedronGeometry(0.5, 0)
     const mat = new THREE.ShaderMaterial({
@@ -759,7 +826,7 @@ export class Monument3D {
         blending: THREE.NoBlending,
       })
       const holder = new THREE.Object3D()
-      holder.position.set(0, spec.y, 0)
+      holder.position.set(spec.x * Math.cos(YAW), spec.y, -spec.x * Math.sin(YAW))
       holder.rotation.set(spec.tx, 0, spec.tz)
       const mesh = new THREE.Mesh(geo, mat)
       mesh.frustumCulled = false
@@ -789,7 +856,9 @@ export class Monument3D {
         uRedHot: { value: KEYS.indexOf('redHot') },
         uOutline: { value: KEYS.indexOf('blood0') },
         uBlood1: { value: KEYS.indexOf('blood1') },
-        uEps: { value: 0.18 / 79 },
+        uEps: { value: 0.18 },
+        uNear: { value: this.camera.near },
+        uFar: { value: this.camera.far },
         uSize: { value: [this.w, this.h] },
       },
       depthTest: false,
@@ -807,8 +876,10 @@ export class Monument3D {
     return { x: ((p.x + 1) / 2) * this.w, y: ((1 - p.y) / 2) * this.h }
   }
 
-  private local(x: number, y: number, z: number) {
-    return new THREE.Vector3(x - CENTER_X, y, z).applyMatrix4(this.group.matrixWorld)
+  /** ponto local de um dígito → mundo */
+  private local(dig: number, x: number, y: number, z: number) {
+    const [gx, gy, gz] = digitToGroup(dig, x, y, z)
+    return new THREE.Vector3(gx, gy, gz).applyMatrix4(this.group.matrixWorld)
   }
 
   setFlare(k: number) {
@@ -841,11 +912,10 @@ export class Monument3D {
     if (animate) this.animUntil = this.now + 1.4 + k * 0.25
   }
 
-  private covered(x: number, y: number, self: number) {
+  private covered(dig: number, x: number, y: number, self: number) {
     return this.pieces.some((pc, i) => {
-      if (i === self || !pc.vis) return false
-      const d = pc.def
-      return x > d.x0 && x < d.x1 && y > d.y0 - 0.02 && y < d.y1
+      if (i === self || !pc.vis || pc.def.digit !== dig) return false
+      return inside(pc.def.pts, x, y)
     })
   }
 
@@ -854,7 +924,7 @@ export class Monument3D {
     this.leafData.forEach((l, i) => {
       const pc = l.piece >= 0 ? this.pieces[l.piece] : null
       const grow = 0.3 + 0.7 * Math.max(0, this.progress)
-      const vis = l.g < grow && (!pc || pc.vis) && !this.covered(l.ax, l.ay, l.piece)
+      const vis = l.g < grow && (!pc || pc.vis) && !this.covered(l.dig, l.ax, l.ay, l.piece)
       this.leaves.setMatrixAt(i, vis ? l.m : zero)
     })
     this.leaves.instanceMatrix.needsUpdate = true
@@ -862,16 +932,16 @@ export class Monument3D {
 
   anchors(): Anchors {
     let flag: { x: number; y: number } | null = null
-    const topPiece = this.pieces[3]
+    const topPiece = this.pieces[FLAG_PIECE]
     if (topPiece) {
       const d = topPiece.def
       topPiece.mesh.updateMatrixWorld()
-      const v = new THREE.Vector3(1.75 - (d.x0 + d.x1) / 2, d.y1 - d.y0 + 0.05, -0.2).applyMatrix4(
+      const v = new THREE.Vector3(FLAG_AT.x - (d.x0 + d.x1) / 2, FLAG_AT.y - d.y0 + 0.05, FLAG_AT.z).applyMatrix4(
         topPiece.mesh.matrixWorld,
       )
       flag = this.project(v)
     }
-    const crown = this.project(this.local(7.1, 9.55, 0))
+    const crown = this.project(this.local(1, CROWN_AT.x, CROWN_AT.y, CROWN_AT.z))
     const heads = this.ribbons.map((rb) => {
       const a = (rb.mat.uniforms.uHead?.value as number) * Math.PI * 2
       const R = rb.spec.R
@@ -888,8 +958,10 @@ export class Monument3D {
     for (const pc of this.pieces) {
       if (!pc.vis) continue
       const d = pc.def
-      edges.push(this.project(this.local(d.x0 + 0.1, d.y1 - 0.05, D / 2)))
-      edges.push(this.project(this.local(d.x1 - 0.05, d.y1 - 0.05, D / 2)))
+      const tl = topAt(d.pts, d.x0 + 0.1) ?? d.y1
+      const tr = topAt(d.pts, d.x1 - 0.05) ?? d.y1
+      edges.push(this.project(this.local(d.digit, d.x0 + 0.1, tl - 0.05, D / 2)))
+      edges.push(this.project(this.local(d.digit, d.x1 - 0.05, tr - 0.05, D / 2)))
     }
     return { flag, crown, heads, edges }
   }
@@ -912,7 +984,7 @@ export class Monument3D {
         if (k >= 1) {
           pc.t0 = -1
           const d = pc.def
-          const p = this.project(this.local((d.x0 + d.x1) / 2, d.y0, D / 2))
+          const p = this.project(this.local(d.digit, (d.x0 + d.x1) / 2, d.y0, D / 2))
           this.onLand?.(p.x, p.y)
         }
       }
