@@ -3,6 +3,7 @@
 import { CONFIG, responsavelText } from '../config'
 import { FACTS } from '../content/facts'
 import { LEVELS } from '../content/levels'
+import { pct, RESULTADO, subida } from '../content/resultado'
 import { STATEMENTS } from '../content/statements'
 import { mulberry32 } from '../lib/rng'
 import { MAX_TOTAL } from '../lib/score'
@@ -818,6 +819,56 @@ interface Layers {
   H: number
 }
 
+/** Uma linha do placar: nome, barra proporcional e percentual. */
+function viradaRow(c: Card, name: string, v: number, y: number, win: boolean) {
+  const x = c.x0 + 6
+  const w = c.x1 - c.x0 - 12
+  text(c.g, name, x, y, small(win ? GOLD : WHITE))
+  text(c.g, pct(v), x + w, y, small(win ? GOLD : WHITE), { align: 'right' })
+  const by = y + CAP + 2
+  const bw = Math.round((w * v) / 100)
+  rect(c.g, x, by, w, 4, 'blood0')
+  rect(c.g, x, by, bw, 4, win ? 'red' : 'stone3')
+  rect(c.g, x, by, bw, 1, win ? 'redGlow' : 'stoneHi')
+  // marca dos 50%
+  rect(c.g, x + Math.round(w / 2), by - 1, 1, 6, 'goldHi')
+  return by + 8
+}
+
+async function cardVirada(c: Card) {
+  const st = c.story
+  const r = RESULTADO
+  const sc = await scene(c, { crown: true, progress: 1, base: st ? 236 : 218 })
+  vignette(c, st ? 190 : 150, sc.base - 2, 0.92)
+  foreground(c)
+  let y = c.y0 + (st ? 2 : 0)
+  y = head(c, 'A VIRADA', y, GOLD, st ? 4 : 3)
+  const up = `LULA +${pct(subida).replace('%', '')} PONTOS`
+  y = head(c, up, y, WHITE, 1) + 2
+  const turno = (label: string, t: { lula: number; flavio: number }, yy: number) => {
+    const ph = CAP + 4 + 2 * (CAP + 10) + 2
+    panel(c, c.x0, yy, c.x1 - c.x0, ph, label.startsWith('2') ? 'gold' : 'stone3')
+    let ty = yy + 3
+    fine(c, label, c.cx, ty, 'stoneHi', 'center')
+    ty += CAP + 2
+    ty = viradaRow(c, 'LULA', t.lula, ty, t.lula > t.flavio)
+    viradaRow(c, 'FLÁVIO', t.flavio, ty, t.flavio > t.lula)
+    return yy + ph + 4
+  }
+  y = turno('1º TURNO · 4 DE OUTUBRO', r.turno1, y)
+  y = turno('2º TURNO · 25 DE OUTUBRO', r.turno2, y)
+  sprinkle(c, st ? 4 : 2, { x0: c.x0, x1: c.x1, y0: y + 2, y1: sc.base - 24 }, 2)
+  const w = (c.x1 - c.x0 - 10) * 2
+  footer(c, {
+    note: {
+      lines: wrap(`FONTE: TSE, ${r.data2}, 100% DAS SEÇÕES`, w),
+      first: 'goldHi',
+    },
+    cta: 'VEJA O PLACAR NO JOGO:',
+    link: `${shareLink()}&go=placar`,
+  })
+}
+
 async function renderLayers(
   moment: Moment,
   format: Format,
@@ -866,6 +917,9 @@ async function renderLayers(
       break
     case 'plano':
       await cardPlano(c, moment)
+      break
+    case 'virada':
+      await cardVirada(c)
       break
   }
   return { art: art.c, fine: fineL.c, ops: c.ops, drop: c.drop, heroKind: c.heroKind, W, H }
@@ -922,6 +976,7 @@ export function cardFileName(moment: Moment, format: Format, ext = 'png') {
     nivel13: 'nivel-13',
     convite: 'convite-nivel-13',
     plano: 'meu-plano-de-domingo',
+    virada: 'a-virada',
   }
   return `${base[moment.kind]}-${format}.${ext}`
 }

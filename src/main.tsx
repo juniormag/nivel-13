@@ -11,7 +11,7 @@ addEventListener('pointerdown', () => unlockAudio(), { once: true })
 addEventListener('keydown', () => unlockAudio(), { once: true })
 initHistory('title')
 
-// Links do Chuta Aí (?c=, ?d=, ?g=) abrem direto no jogo do dia; ?t= abre um parente do Convence o Tio; ?o= abre um mapa do Onde Foi?; ?go=ir abre a calculadora do IR.
+// Links do Chuta Aí (?c=, ?d=, ?g=) abrem direto no jogo do dia; ?t= abre um parente do Convence o Tio; ?o= abre um mapa do Onde Foi?; ?go=ir abre a calculadora do IR; ?go=placar abre o Placar da Virada.
 {
   const q = new URLSearchParams(location.search)
   if (q.has('c') || q.has('d') || q.has('g')) go('chuta', { c: q.get('c'), d: q.get('d'), g: q.get('g') })
@@ -19,6 +19,7 @@ initHistory('title')
   else if (q.has('o'))
     go('onde', { seed: q.get('o'), vs: q.get('vs') }) // ?o= vazio: mapa do dia (atalho do app)
   else if (q.get('go') === 'ir') go('play', { level: 3 })
+  else if (q.get('go') === 'placar') go('placar')
 }
 
 // gancho de QA em desenvolvimento: window.__go('play', { level: 5 })

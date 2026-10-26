@@ -10,5 +10,7 @@ export type Moment =
   | { kind: 'chute'; n: number; s: number[]; total: number; theme: string }
   /** Meu plano de domingo. Fica só no aparelho: sai apenas dentro da imagem que a pessoa escolher mandar. */
   | { kind: 'plano'; hora: string; doc: string; com: string }
+  /** Placar da virada: resultado oficial do 1º e do 2º turno (src/content/resultado.ts) */
+  | { kind: 'virada' }
 
 export type Format = 'story' | 'feed' | 'square'

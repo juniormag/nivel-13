@@ -1,7 +1,8 @@
-// Placar da Virada: movimento por estado (anônimo), corrente de convites e os fatos que mais convencem.
+// Placar da Virada: resultado oficial do 1º e do 2º turno (com card de share), corrente de convites e os fatos que mais convencem.
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useState } from 'react'
 import { FACTS } from '../../content/facts'
+import { diferenca2, pct, RESULTADO, subida, type Turno } from '../../content/resultado'
 import { api, type Stats } from '../../lib/api'
 import { ShareSheet } from '../../share/ShareSheet'
 import { levelsDone, shareLink, useSave } from '../../state/save'
@@ -11,7 +12,7 @@ import { PixelButton } from '../../ui/PixelButton'
 import { Page, Screen } from '../../ui/Shell'
 import { Tabs } from '../../ui/Tabs'
 import { toast } from '../../ui/Toast'
-import { go, useNav } from '../nav'
+import { useNav } from '../nav'
 
 type Tab = 'virada' | 'corrente' | 'fatos'
 const TABS: { id: Tab; label: string }[] = [
@@ -19,6 +20,75 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'corrente', label: 'Corrente' },
   { id: 'fatos', label: 'Fatos' },
 ]
+
+function Linha({ label, t, gold }: { label: string; t: Turno; gold?: boolean }) {
+  const rows: [string, number][] = [
+    ['Lula', t.lula],
+    ['Flávio', t.flavio],
+  ]
+  const top = Math.max(t.lula, t.flavio)
+  return (
+    <div className={`vr-turno pf ${gold ? 'pf--gold' : 'pf--stone'}`}>
+      <h2 className="sub">{label}</h2>
+      <ol className="plist">
+        {rows.map(([name, v]) => (
+          <li key={name} className={v === top ? 'is-me' : ''}>
+            <div>
+              <div>{name}</div>
+              <span className="pbar">
+                <i style={{ width: `${v}%` }} />
+              </span>
+            </div>
+            <span className="val">{pct(v)}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  )
+}
+
+function Virada({ onShare }: { onShare: () => void }) {
+  const r = RESULTADO
+  return (
+    <div className="stack">
+      <p>
+        No 1º turno, Flávio Bolsonaro ficou na frente. No 2º turno, Lula virou e foi reeleito com{' '}
+        {pct(r.turno2.lula)} dos votos válidos.
+      </p>
+      <Linha label="1º turno · 4 de outubro" t={r.turno1} />
+      <Linha label="2º turno · 25 de outubro" t={r.turno2} gold />
+      <div className="bigstat">
+        <Big
+          n={subida}
+          text={`+${subida.toLocaleString('pt-BR')}`}
+          label="Pontos de Lula do 1º para o 2º turno"
+        />
+        <Big n={diferenca2} label="Votos de diferença no 2º turno" />
+        <Big
+          n={0}
+          text={`${r.ufs2.lula} × ${r.ufs2.flavio}`}
+          label="Estados vencidos (Lula × Flávio, com o DF)"
+        />
+      </div>
+      <div className="actions">
+        <PixelButton tone="red" onClick={onShare}>
+          Compartilhar a virada
+        </PixelButton>
+      </div>
+      <ul className="fc-sources">
+        {r.sources.map((src) => (
+          <li key={src.url}>
+            <a href={src.url} target="_blank" rel="noopener noreferrer">
+              {src.name}
+            </a>{' '}
+            · {src.date}
+          </li>
+        ))}
+      </ul>
+      <p className="note">Percentuais dos votos válidos, com 100% das seções totalizadas pelo TSE.</p>
+    </div>
+  )
+}
 
 function Big({ n, label, text }: { n: number; label: string; text?: string }) {
   const v = useCountUp(n, { from: 0, ms: 500 })
@@ -38,6 +108,7 @@ export default function Placar() {
   const [tab, setTab] = useState<Tab>((params.tab as Tab) ?? 'virada')
   const [stats, setStats] = useState<Stats | null | undefined>(undefined)
   const [invite, setInvite] = useState(false)
+  const [virada, setVirada] = useState(false)
 
   const load = useCallback(async () => {
     setStats(undefined)
@@ -57,7 +128,8 @@ export default function Placar() {
   }
 
   let body: React.ReactNode
-  if (stats === undefined) body = <p className="muted">Carregando o placar…</p>
+  if (tab === 'virada') body = <Virada onShare={() => setVirada(true)} />
+  else if (stats === undefined) body = <p className="muted">Carregando o placar…</p>
   else if (stats === null)
     body = (
       <div className="stack">
@@ -67,48 +139,7 @@ export default function Placar() {
         </div>
       </div>
     )
-  else if (tab === 'virada') {
-    const s = stats
-    const max = Math.max(1, ...s.byUf.map((u) => u.vou + u.virei))
-    body = (
-      <div className="stack">
-        <div className="bigstat">
-          <Big n={s.movimento.vou} label="Vão votar 13" />
-          <Big n={s.movimento.virei} label="Viraram o voto" />
-          <Big n={s.players} label="Jogadores" />
-        </div>
-        <h2 className="sub">Estados com mais gente no movimento</h2>
-        {s.byUf.length ? (
-          <motion.ol className="plist" variants={list} initial="hidden" animate="show">
-            {s.byUf.slice(0, 27).map((u, i) => (
-              <motion.li key={u.uf} variants={rise}>
-                <span className="pos">{i + 1}º</span>
-                <div>
-                  <div>
-                    {u.uf} · {fmt(u.virei)} viradas
-                  </div>
-                  <span className="pbar">
-                    <i style={{ width: `${((u.vou + u.virei) / max) * 100}%` }} />
-                  </span>
-                </div>
-                <span className="val">{fmt(u.vou + u.virei)}</span>
-              </motion.li>
-            ))}
-          </motion.ol>
-        ) : (
-          <p className="muted">Ninguém declarou ainda. Seja o primeiro.</p>
-        )}
-        <p className="note">
-          Declaração anônima e voluntária: só o estado entra na conta, sem nome. Não vale prêmio nem ponto.
-        </p>
-        <div className="actions">
-          <PixelButton tone="red" onClick={() => go('votar')}>
-            {save.movimento ? 'Ver meu compromisso' : 'Entrar no movimento'}
-          </PixelButton>
-        </div>
-      </div>
-    )
-  } else if (tab === 'corrente') {
+  else if (tab === 'corrente') {
     const s = stats
     body = (
       <div className="stack">
@@ -179,7 +210,7 @@ export default function Placar() {
 
   return (
     <Screen world={levelsDone(save) / 13} className="scr--page">
-      <Page eyebrow="Ao vivo" title="Placar da virada" wide>
+      <Page eyebrow="Resultado oficial" title="Placar da virada" wide>
         <motion.div variants={rise}>
           <Tabs tabs={TABS} value={tab} onChange={setTab} label="Seções do placar">
             <div aria-live="polite">{body}</div>
@@ -187,6 +218,7 @@ export default function Placar() {
         </motion.div>
       </Page>
       {invite && <ShareSheet moment={{ kind: 'convite' }} onClose={() => setInvite(false)} />}
+      {virada && <ShareSheet moment={{ kind: 'virada' }} onClose={() => setVirada(false)} />}
     </Screen>
   )
 }

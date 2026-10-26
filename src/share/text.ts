@@ -1,6 +1,7 @@
 // Textos de compartilhamento (WhatsApp primeiro). URL sempre na última linha para gerar o preview.
 // Sem travessão. O plano de domingo nunca entra em texto: só na imagem que a pessoa escolher mandar.
 import { CONFIG } from '../config'
+import { pct, RESULTADO } from '../content/resultado'
 import { emoji, MAX_TOTAL } from '../lib/score'
 import { getSave, shareLink } from '../state/save'
 import type { Moment } from './types'
@@ -95,10 +96,20 @@ export function momentText(m: Moment): string {
     case 'plano':
       // nada do plano sai em texto
       return `Já fiz o meu plano para votar: ${CONFIG.electionLabel}. E você, já fez o seu?`
+    case 'virada': {
+      const r = RESULTADO
+      return [
+        'A virada 🇧🇷',
+        `1º turno: Lula ${pct(r.turno1.lula)} × Flávio ${pct(r.turno1.flavio)}`,
+        `2º turno: Lula ${pct(r.turno2.lula)} × Flávio ${pct(r.turno2.flavio)}`,
+        `Fonte: TSE, ${r.data2}. Veja o placar no jogo:`,
+      ].join('\n')
+    }
   }
 }
 
 /** Link que acompanha o momento (com a corrente). */
 export function momentLink(m: Moment) {
-  return m.kind === 'chute' ? chuteLink(m.n) : shareLink()
+  if (m.kind === 'chute') return chuteLink(m.n)
+  return m.kind === 'virada' ? `${shareLink()}&go=placar` : shareLink()
 }

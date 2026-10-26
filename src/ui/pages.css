@@ -1180,3 +1180,14 @@
     --xp-w: 100px;
   }
 }
+
+/* Placar da Virada: linha de turno sem coluna de posição */
+.vr-turno {
+  padding: var(--sp-3);
+}
+.vr-turno .sub {
+  margin: 0 0 var(--sp-3);
+}
+.vr-turno .plist > li {
+  grid-template-columns: 1fr auto;
+}

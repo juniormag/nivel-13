@@ -49,6 +49,8 @@ function titleOf(m: Moment) {
       return `Chuta Aí #${m.n}`
     case 'plano':
       return 'Meu plano'
+    case 'virada':
+      return 'A virada'
   }
 }
 
